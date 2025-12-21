@@ -1,0 +1,381 @@
+/* =========================
+   ROOT VARIABLES
+   ========================= */
+:root {
+  --card: rgba(8, 10, 20, 0.92);
+
+  --text: #e6e8ff;
+  --muted: #9aa0d6;
+
+  --c-00: #3a3f66;
+  --c-01: #5b6cff;
+  --c-10: #ff9f6e;
+  --c-11: #9b6cff;
+}
+
+/* =========================
+   BASE
+   ========================= */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  background-color: #000;
+  color: var(--text);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  padding: 48px 16px;
+  overflow-x: hidden;
+  position: relative;
+}
+
+/* =========================
+   STAR BACKGROUND
+   ========================= */
+.stars {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background-color: #000;
+
+  /* small stars (infinite tiles) */
+  background-image:
+    radial-gradient(1px 1px at 10% 20%, #fff 100%, transparent),
+    radial-gradient(1px 1px at 30% 80%, #fff 100%, transparent),
+    radial-gradient(1px 1px at 50% 40%, #fff 100%, transparent),
+    radial-gradient(1px 1px at 70% 60%, #fff 100%, transparent),
+    radial-gradient(1px 1px at 90% 10%, #fff 100%, transparent);
+  background-size: 200px 200px;
+  animation: starsMoveSlow 200s linear infinite;
+}
+
+.stars::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(1px 1px at 15% 35%, #fff 100%, transparent),
+    radial-gradient(1px 1px at 25% 75%, #fff 100%, transparent),
+    radial-gradient(1px 1px at 45% 15%, #fff 100%, transparent),
+    radial-gradient(1px 1px at 65% 55%, #fff 100%, transparent),
+    radial-gradient(1px 1px at 85% 85%, #fff 100%, transparent);
+  background-size: 150px 150px;
+  opacity: 0.8;
+  animation: starsMoveMedium 140s linear infinite;
+}
+
+.stars::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(2px 2px at 50px 100px, #fff 100%, transparent),
+    radial-gradient(2px 2px at 180px 30px, #fff 100%, transparent),
+    radial-gradient(2px 2px at 120px 200px, #fff 100%, transparent);
+  background-size: 300px 300px;
+  opacity: 0.4;
+  animation: starsMoveFast 80s linear infinite;
+}
+
+/* endless animations */
+@keyframes starsMoveSlow {
+  from { background-position: 0 0; }
+  to   { background-position: 0 -2000px; }
+}
+
+@keyframes starsMoveMedium {
+  from { background-position: 0 0; }
+  to   { background-position: 0 -3000px; }
+}
+
+@keyframes starsMoveFast {
+  from { background-position: 0 0; }
+  to   { background-position: 0 -4000px; }
+}
+
+/* =========================
+   LAYOUT
+   ========================= */
+.container {
+  max-width: 900px;
+  width: 100%;
+  position: relative;
+  z-index: 1;
+}
+
+h1 {
+  font-size: 2.4rem;
+  text-align: center;
+  margin-bottom: 4px;
+  text-shadow:
+    0 0 12px rgba(255,255,255,0.08),
+    0 0 40px rgba(120,120,255,0.05);
+}
+
+.title {
+  font-size: 3rem;
+  text-align: center;
+  color: rgb(255, 255, 255);
+  margin-bottom: 12px;
+}
+
+.subtitle {
+  text-align: center;
+  color: var(--muted);
+  margin-bottom: 28px;
+}
+
+/* =========================
+   TABS
+   ========================= */
+.tabs {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 32px;
+}
+
+.tab {
+  padding: 10px 18px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.06);
+  color: var(--muted);
+  cursor: pointer;
+  transition: background .25s, color .25s;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.tab-icon.star::before {
+  content: "★";
+  font-size: 1.2rem;
+  color: #ffd36a;
+  text-shadow:
+    0 0 6px rgba(255,211,106,0.35),
+    0 0 12px rgba(255,211,106,0.15);
+
+  display: inline-block;
+  vertical-align: middle;
+
+  position: relative;
+  top: -1px;
+}
+
+.tab-icon.hearts {
+  position: relative;
+  display: inline-flex;
+  gap: 0;
+}
+
+.tab-icon.hearts::before,
+.tab-icon.hearts::after {
+  content: "❤";
+  font-size: 0.9rem;
+  margin-left: -6px;
+}
+
+/* my purple heart */
+.tab-icon.hearts::before {
+  color: #9b6cff;
+  text-shadow:
+    0 0 6px rgba(155,108,255,0.35),
+    0 0 12px rgba(155,108,255,0.15);
+
+  position: relative;
+  left: 4px;
+  top: 1px;
+}
+
+/* vika's pink heart */
+.tab-icon.hearts::after {
+  color: #ff7abf;
+  text-shadow:
+    0 0 6px rgba(255,122,191,0.35),
+    0 0 12px rgba(255,122,191,0.15);
+
+  position: relative;
+  left: 4px;
+  top: 1px;
+}
+
+input[type="radio"] {
+  display: none;
+}
+
+input#tab-unwatched:checked ~ .tabs label[for="tab-unwatched"],
+input#tab-watched:checked ~ .tabs label[for="tab-watched"] {
+  background: rgba(255,255,255,0.16);
+  color: var(--text);
+}
+
+/* =========================
+   LISTS
+   ========================= */
+.lists > ul {
+  display: none;
+}
+
+input#tab-unwatched:checked ~ .lists .unwatched,
+input#tab-watched:checked ~ .lists .watched {
+  display: grid;
+}
+
+ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 14px;
+}
+
+/* =========================
+   CARDS
+   ========================= */
+
+.left {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+li {
+  background: linear-gradient(
+    180deg,
+    rgba(10,10,20,0.95),
+    rgba(5,5,10,0.95)
+  );
+  backdrop-filter: blur(4px);
+
+  border: 1px solid rgba(255,255,255,0.03);
+  border-radius: 18px;
+  padding: 16px 20px;
+
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  border-left: 4px solid transparent;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.45);
+
+  transition: transform .35s ease, box-shadow .35s ease;
+  animation: fadeUp .6s ease both;
+}
+
+li:hover {
+  transform: translateY(-4px) scale(1.01);
+  box-shadow: 0 30px 60px rgba(0,0,0,.65);
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* =========================
+   RATING STARS IN CARDS
+   ========================= */
+
+.rating {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.rating-row {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.rating-name {
+  min-width: 42px;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.rating-stars {
+  display: flex;
+  gap: 3px;
+}
+
+.rating-heart {
+  font-size: 0.9rem;
+  opacity: 0.2;
+}
+
+.rating-heart.vlad.filled {
+  opacity: 1;
+  color: #9b6cff;
+  text-shadow:
+    0 0 6px rgba(155,108,255,0.35),
+    0 0 12px rgba(155,108,255,0.15);
+}
+
+.rating-heart.vika.filled {
+  opacity: 1;
+  color: #ff7abf;
+  text-shadow:
+    0 0 6px rgba(255,122,191,0.35),
+    0 0 12px rgba(255,122,191,0.15);
+}
+
+/* =========================
+   STATUS COLORS
+   ========================= */
+
+li[data-status="00"] { border-color: var(--c-00); }
+li[data-status="01"] { border-color: var(--c-01); }
+li[data-status="10"] { border-color: var(--c-10); }
+li[data-status="11"] { border-color: var(--c-11); }
+
+.status {
+  font-size: .8rem;
+  padding: 6px 12px;
+  border-radius: 999px;
+}
+
+.s-00 { color: var(--c-00); }
+.s-01 { color: var(--c-01); }
+.s-10 { color: var(--c-10); }
+.s-11 { color: var(--c-11); }
+
+/* =========================
+   FOOTER
+   ========================= */
+
+footer {
+  margin: 48px auto 0;
+  width: 100%;
+  text-align: center;
+
+  color: var(--muted);
+  font-size: 0.8rem;
+
+  opacity: 0;
+  transform: translateY(12px);
+
+  transition:
+    opacity 0.6s ease,
+    transform 0.6s ease;
+}
+
+/* visible footer */
+footer.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* instant hide of footer (without animation) */
+footer.instant-hide {
+  transition: none;
+  opacity: 0;
+  transform: translateY(12px);
+}
