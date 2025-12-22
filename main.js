@@ -1,62 +1,93 @@
 const footer = document.querySelector("footer");
+const TAB_INPUT_SELECTOR = 'input[name="tabs"]';
+const UNWATCHED_TAB_ID = "tab-unwatched";
+const UNWATCHED_LIST_SELECTOR = ".unwatched";
+const WATCHED_LIST_SELECTOR = ".watched";
+const RATING_DELIMITER = "|";
+const ANIMATION_STEP_DELAY = 0.2;
+const FOOTER_EXTRA_DELAY = 0.4;
 
-function animateList(listSelector) {
-  const cards = document.querySelectorAll(`${listSelector} li`);
+function hideFooterInstantly() {
+  if (!footer) return;
 
-  // instant hiding of footer
   footer.classList.remove("visible");
   footer.classList.add("instant-hide");
+}
 
-  cards.forEach((card, i) => {
-    card.style.animationDelay = `${i * 0.2}s`;
-  });
-
-  // time when footer will appear
-  const totalDelay = cards.length * 0.2 + 0.4;
+function showFooterWithDelay(totalDelaySeconds) {
+  if (!footer) return;
 
   setTimeout(() => {
     footer.classList.remove("instant-hide");
     footer.classList.add("visible");
-  }, totalDelay * 1000);
+  }, totalDelaySeconds * 1000);
 }
 
-// initial animation
-animateList(".unwatched");
+function animateList(listSelector) {
+  const cards = document.querySelectorAll(`${listSelector} li`);
 
-// remember selected tab
-const tabs = document.querySelectorAll('input[name="tabs"]');
+  hideFooterInstantly();
 
-tabs.forEach(tab => {
-  tab.addEventListener("change", () => {
-    localStorage.setItem("activeTab", tab.id);
-
-    if (tab.id === "tab-unwatched") {
-      animateList(".unwatched");
-    }
-
-    if (tab.id === "tab-watched") {
-      animateList(".watched");
-    }
+  cards.forEach((card, index) => {
+    card.style.animationDelay = `${index * ANIMATION_STEP_DELAY}s`;
   });
-});
 
-// restore tab
-const savedTab = localStorage.getItem("activeTab");
-if (savedTab) {
-  document.getElementById(savedTab).checked = true;
-  animateList(savedTab === "tab-unwatched" ? ".unwatched" : ".watched");
+  const totalDelay = cards.length * ANIMATION_STEP_DELAY + FOOTER_EXTRA_DELAY;
+  showFooterWithDelay(totalDelay);
+}
+
+function persistActiveTab(tabId) {
+  localStorage.setItem("activeTab", tabId);
+}
+
+function restoreActiveTab() {
+  const savedTab = localStorage.getItem("activeTab");
+
+  if (!savedTab) return null;
+
+  const savedTabInput = document.getElementById(savedTab);
+  if (savedTabInput) {
+    savedTabInput.checked = true;
+    return savedTab;
+  }
+
+  return null;
+}
+
+function handleTabChange(tab) {
+  persistActiveTab(tab.id);
+
+  if (tab.id === UNWATCHED_TAB_ID) {
+    animateList(UNWATCHED_LIST_SELECTOR);
+    return;
+  }
+
+  animateList(WATCHED_LIST_SELECTOR);
+}
+
+function initializeTabs() {
+  document.querySelectorAll(TAB_INPUT_SELECTOR).forEach(tab => {
+    tab.addEventListener("change", () => handleTabChange(tab));
+  });
+
+  const restoredTab = restoreActiveTab();
+  if (restoredTab) {
+    animateList(restoredTab === UNWATCHED_TAB_ID ? UNWATCHED_LIST_SELECTOR : WATCHED_LIST_SELECTOR);
+  } else {
+    animateList(UNWATCHED_LIST_SELECTOR);
+  }
 }
 
 function createHearts(score, owner) {
   const wrapper = document.createElement("div");
   wrapper.className = "rating-stars";
 
-  for (let i = 1; i <= 10; i++) {
+  for (let currentScore = 1; currentScore <= 10; currentScore += 1) {
     const heart = document.createElement("span");
     heart.className = `rating-heart ${owner}`;
     heart.textContent = "❤";
 
-    if (i <= score) {
+    if (currentScore <= score) {
       heart.classList.add("filled");
     }
 
@@ -66,49 +97,52 @@ function createHearts(score, owner) {
   return wrapper;
 }
 
+function createRatingRow(name, score) {
+  const row = document.createElement("div");
+  row.className = "rating-row";
+
+  const label = document.createElement("div");
+  label.className = "rating-name";
+  label.textContent = name;
+
+  row.appendChild(label);
+  row.appendChild(createHearts(score, name));
+
+  return row;
+}
+
+function extractScores(metaText) {
+  if (!metaText.includes(RATING_DELIMITER)) return null;
+
+  const [vladPart, vikaPart] = metaText.split(RATING_DELIMITER);
+  const vladScore = parseInt(vladPart.split(":")[1], 10);
+  const vikaScore = parseInt(vikaPart.split(":")[1], 10);
+
+  if (Number.isNaN(vladScore) || Number.isNaN(vikaScore)) return null;
+
+  return { vladScore, vikaScore };
+}
+
+function renderRatings(metaElement, scores) {
+  const rating = document.createElement("div");
+  rating.className = "rating";
+
+  rating.appendChild(createRatingRow("vlad", scores.vladScore));
+  rating.appendChild(createRatingRow("vika", scores.vikaScore));
+
+  metaElement.innerHTML = "";
+  metaElement.appendChild(rating);
+}
 
 function transformRatings() {
   document.querySelectorAll(".watched .meta").forEach(meta => {
-    const text = meta.textContent.trim();
+    const scores = extractScores(meta.textContent.trim());
 
-    if (!text.includes("|")) return;
+    if (!scores) return;
 
-    const [vladPart, vikaPart] = text.split("|");
-
-    const vladScore = parseInt(vladPart.split(":")[1]);
-    const vikaScore = parseInt(vikaPart.split(":")[1]);
-
-    const rating = document.createElement("div");
-    rating.className = "rating";
-
-    // vlad
-    const vladRow = document.createElement("div");
-    vladRow.className = "rating-row";
-
-    const vladName = document.createElement("div");
-    vladName.className = "rating-name";
-    vladName.textContent = "vlad";
-
-    vladRow.appendChild(vladName);
-    vladRow.appendChild(createHearts(vladScore, "vlad"));
-
-    // vika
-    const vikaRow = document.createElement("div");
-    vikaRow.className = "rating-row";
-
-    const vikaName = document.createElement("div");
-    vikaName.className = "rating-name";
-    vikaName.textContent = "vika";
-
-    vikaRow.appendChild(vikaName);
-    vikaRow.appendChild(createHearts(vikaScore, "vika"));
-
-    rating.appendChild(vladRow);
-    rating.appendChild(vikaRow);
-
-    meta.innerHTML = "";
-    meta.appendChild(rating);
+    renderRatings(meta, scores);
   });
 }
 
+initializeTabs();
 transformRatings();
