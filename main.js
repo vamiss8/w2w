@@ -74,10 +74,12 @@ function handleTabChange(tab) {
   persistActiveTab(tab.id);
 
   if (tab.id === UNWATCHED_TAB_ID) {
+    sortUnwatchedStartedToBottom();
     animateList(UNWATCHED_LIST_SELECTOR);
     return;
   }
 
+  sortWatchedByStartDateDesc();
   animateList(WATCHED_LIST_SELECTOR);
 }
 
@@ -204,7 +206,7 @@ function parseISODate(value) {
   return date;
 }
 
-// format ISO date for UI (dd/mm/yyyy)
+// format ISO date for UI (mm/dd/yyyy)
 function formatISOForUI(value) {
   const date = parseISODate(value);
   if (!date) return DATE_PLACEHOLDER_UI;
@@ -264,8 +266,105 @@ function renderWatchDates() {
 }
 
 /* ---------------------------
+   DEFAULT SORTING
+---------------------------- */
+
+// cache initial DOM order to keep sorting stable (ties keep HTML order)
+function cacheInitialOrder() {
+  document.querySelectorAll(".lists ul").forEach(ul => {
+    Array.from(ul.children).forEach((li, index) => {
+      // set only once
+      if (!li.dataset.initialIndex) {
+        li.dataset.initialIndex = String(index);
+      }
+    });
+  });
+}
+
+// get initial order index
+function getInitialIndex(li) {
+  const num = parseInt(li.dataset.initialIndex, 10);
+  return Number.isNaN(num) ? Number.POSITIVE_INFINITY : num;
+}
+
+// helper: re-append sorted items back to UL
+function sortUlItems(ul, comparator) {
+  const items = Array.from(ul.querySelectorAll("li"));
+  items.sort(comparator);
+  items.forEach(li => ul.appendChild(li));
+}
+
+// tab 1: planned first (stable), started last (sorted by start date DESC)
+function sortUnwatchedStartedToBottom() {
+  const ul = document.querySelector(UNWATCHED_LIST_SELECTOR);
+  if (!ul) return;
+
+  sortUlItems(ul, (a, b) => {
+    const aState = getState(a);
+    const bState = getState(b);
+
+    const aIsStarted = aState === STATE_STARTED;
+    const bIsStarted = bState === STATE_STARTED;
+
+    // started goes to the bottom
+    if (aIsStarted !== bIsStarted) return aIsStarted ? 1 : -1;
+
+    // planned group: keep original HTML order
+    if (!aIsStarted && !bIsStarted) {
+      return getInitialIndex(a) - getInitialIndex(b);
+    }
+
+    // started group: sort by start date DESC (newest first)
+    const aDate = parseISODate(a.dataset.start);
+    const bDate = parseISODate(b.dataset.start);
+
+    // missing/invalid dates go to the bottom of the started group
+    if (!aDate && !bDate) return getInitialIndex(a) - getInitialIndex(b);
+    if (!aDate) return 1;
+    if (!bDate) return -1;
+
+    const diff = bDate.getTime() - aDate.getTime(); // DESC
+    if (diff !== 0) return diff;
+
+    // tie-breaker: keep original order stable
+    return getInitialIndex(a) - getInitialIndex(b);
+  });
+}
+
+// tab 2: watched sorted by data-start DESC (newest first)
+// note: if there is start+end, we still sort by start
+function sortWatchedByStartDateDesc() {
+  const ul = document.querySelector(WATCHED_LIST_SELECTOR);
+  if (!ul) return;
+
+  sortUlItems(ul, (a, b) => {
+    const aDate = parseISODate(a.dataset.start);
+    const bDate = parseISODate(b.dataset.start);
+
+    // put missing/invalid dates to the bottom
+    if (!aDate && !bDate) return getInitialIndex(a) - getInitialIndex(b);
+    if (!aDate) return 1;
+    if (!bDate) return -1;
+
+    const diff = bDate.getTime() - aDate.getTime(); // DESC
+    if (diff !== 0) return diff;
+
+    return getInitialIndex(a) - getInitialIndex(b);
+  });
+}
+
+// apply both default sorts
+function applyDefaultSorting() {
+  sortUnwatchedStartedToBottom();
+  sortWatchedByStartDateDesc();
+}
+
+/* ---------------------------
    BOOT
 ---------------------------- */
+
+cacheInitialOrder();
+applyDefaultSorting();
 
 initializeTabs();
 transformRatings();
