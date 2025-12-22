@@ -19,7 +19,7 @@ const STATE_WATCHED = "watched";
    STARFIELD (CANVAS)
 ---------------------------- */
 
-// create a real random starfield + occasional comets (no tiling patterns)
+// create a real random starfield + two comet types (no tiling patterns)
 (function initStarfield() {
   const container = document.querySelector(".stars");
   if (!container) return;
@@ -43,13 +43,26 @@ const STATE_WATCHED = "watched";
   let rafId = null;
   let lastTs = 0;
 
-  // comet scheduling
-  let nextCometAt = 0;
+  // schedules (seconds)
+  let nextBigCometAt = 0;
+  let nextMicroCometAt = 0;
 
-  // tune here
-  const COMET_MIN_INTERVAL = 8;   // seconds
-  const COMET_MAX_INTERVAL = 20;  // seconds
-  const COMET_SPAWN_CHANCE = 0.9; // chance to spawn when time hits
+  // tune here (big comets)
+  const BIG_COMET_MIN_INTERVAL = 10;
+  const BIG_COMET_MAX_INTERVAL = 26;
+  const BIG_COMET_SPAWN_CHANCE = 0.80;
+
+  // tune here (micro meteors)
+  const MICRO_COMET_MIN_INTERVAL = 1.6;
+  const MICRO_COMET_MAX_INTERVAL = 4.2;
+  const MICRO_COMET_SPAWN_CHANCE = 0.92;
+
+  // caps (avoid too many trails at once)
+  const MAX_BIG_COMETS = 1;
+  const MAX_MICRO_COMETS = 4;
+
+  const COMET_KIND_BIG = "big";
+  const COMET_KIND_MICRO = "micro";
 
   function rand(min, max) {
     return min + Math.random() * (max - min);
@@ -73,8 +86,20 @@ const STATE_WATCHED = "watched";
     return Math.random() * w;
   }
 
-  function scheduleNextComet(nowSeconds) {
-    nextCometAt = nowSeconds + rand(COMET_MIN_INTERVAL, COMET_MAX_INTERVAL);
+  function scheduleNextBigComet(nowSeconds) {
+    nextBigCometAt = nowSeconds + rand(BIG_COMET_MIN_INTERVAL, BIG_COMET_MAX_INTERVAL);
+  }
+
+  function scheduleNextMicroComet(nowSeconds) {
+    nextMicroCometAt = nowSeconds + rand(MICRO_COMET_MIN_INTERVAL, MICRO_COMET_MAX_INTERVAL);
+  }
+
+  function countComets(kind) {
+    let count = 0;
+    for (let i = 0; i < comets.length; i += 1) {
+      if (comets[i].kind === kind) count += 1;
+    }
+    return count;
   }
 
   function resize() {
@@ -94,10 +119,12 @@ const STATE_WATCHED = "watched";
     const target = Math.max(320, Math.min(950, Math.round((w * h) / 2400)));
     stars = createStars(target);
 
-    // drop active comets on resize (avoids weird stretched trails)
+    // drop active comets on resize (avoids stretched trails)
     comets = [];
 
-    scheduleNextComet(performance.now() / 1000);
+    const now = performance.now() / 1000;
+    scheduleNextBigComet(now);
+    scheduleNextMicroComet(now);
   }
 
   function createStars(count) {
@@ -179,41 +206,62 @@ const STATE_WATCHED = "watched";
   }
 
   /* ---------------------------
-     COMETS
+     COMETS (TWO TYPES)
   ---------------------------- */
 
-  function spawnComet() {
+  function spawnComet(kind) {
     if (w <= 0 || h <= 0) return;
 
-    // keep comets rare and subtle
-    if (Math.random() > COMET_SPAWN_CHANCE) return;
+    // enforce caps per kind (prevents overdraw)
+    if (kind === COMET_KIND_BIG && countComets(COMET_KIND_BIG) >= MAX_BIG_COMETS) return;
+    if (kind === COMET_KIND_MICRO && countComets(COMET_KIND_MICRO) >= MAX_MICRO_COMETS) return;
+
+    const spawnChance = kind === COMET_KIND_BIG ? BIG_COMET_SPAWN_CHANCE : MICRO_COMET_SPAWN_CHANCE;
+    if (Math.random() > spawnChance) return;
 
     // start slightly outside the viewport
-    const startFromTop = Math.random() < 0.55;
+    const startFromTop = Math.random() < (kind === COMET_KIND_BIG ? 0.55 : 0.70);
 
-    const x = rand(w * 0.10, w * 0.90);
-    const y = startFromTop ? rand(-80, -20) : rand(h * 0.05, h * 0.35);
+    const x = rand(w * 0.08, w * 0.92);
+    const y = startFromTop ? rand(-90, -20) : rand(h * 0.05, h * 0.38);
 
-    // angle: mostly downwards with a slight diagonal
+    // angle: downwards diagonal
     const dir = Math.random() < 0.5 ? -1 : 1; // left/right
-    const angle = rand(Math.PI * 0.20, Math.PI * 0.33); // ~36°..~59°
-    const speed = rand(1100, 1800); // px/sec (fast)
+    const angle = kind === COMET_KIND_BIG
+      ? rand(Math.PI * 0.20, Math.PI * 0.33) // ~36°..~59°
+      : rand(Math.PI * 0.18, Math.PI * 0.30); // slightly "flatter" for micro
+
+    const speed = kind === COMET_KIND_BIG
+      ? rand(1100, 1800)
+      : rand(1400, 2400);
 
     const vx = Math.cos(angle) * speed * dir;
     const vy = Math.sin(angle) * speed;
 
-    const life = rand(0.55, 0.95);   // seconds
-    const length = rand(220, 380);   // px
-    const width = rand(1.2, 2.0);    // px
-    const alpha = rand(0.55, 0.85);
+    const life = kind === COMET_KIND_BIG
+      ? rand(0.55, 0.95)
+      : rand(0.22, 0.45);
 
-    // slight tint: white -> bluish
+    const length = kind === COMET_KIND_BIG
+      ? rand(230, 420)
+      : rand(90, 170);
+
+    const width = kind === COMET_KIND_BIG
+      ? rand(1.2, 2.1)
+      : rand(0.75, 1.15);
+
+    const alpha = kind === COMET_KIND_BIG
+      ? rand(0.55, 0.85)
+      : rand(0.16, 0.32);
+
+    // tint (keep micro more neutral)
     const tintPick = Math.random();
-    const tint =
-      tintPick < 0.70 ? { r: 255, g: 255, b: 255 } :
-                        { r: 210, g: 220, b: 255 };
+    const tint = kind === COMET_KIND_BIG
+      ? (tintPick < 0.70 ? { r: 255, g: 255, b: 255 } : { r: 210, g: 220, b: 255 })
+      : (tintPick < 0.85 ? { r: 255, g: 255, b: 255 } : { r: 230, g: 232, b: 255 });
 
     comets.push({
+      kind,
       x,
       y,
       vx,
@@ -230,15 +278,16 @@ const STATE_WATCHED = "watched";
   function updateComets(dt) {
     for (let i = comets.length - 1; i >= 0; i -= 1) {
       const c = comets[i];
+
       c.age += dt;
       c.x += c.vx * dt;
       c.y += c.vy * dt;
 
       const out =
-        c.x < -c.length - 200 ||
-        c.x > w + c.length + 200 ||
-        c.y < -c.length - 200 ||
-        c.y > h + c.length + 200;
+        c.x < -c.length - 240 ||
+        c.x > w + c.length + 240 ||
+        c.y < -c.length - 240 ||
+        c.y > h + c.length + 240;
 
       if (c.age >= c.life || out) {
         comets.splice(i, 1);
@@ -249,7 +298,7 @@ const STATE_WATCHED = "watched";
   function drawComet(c) {
     // fade in/out
     const p = clamp(c.age / c.life, 0, 1);
-    const fade = p < 0.2 ? (p / 0.2) : (p > 0.85 ? (1 - p) / 0.15 : 1);
+    const fade = p < 0.18 ? (p / 0.18) : (p > 0.86 ? (1 - p) / 0.14 : 1);
     const a = clamp(c.alpha * fade, 0, 1);
 
     // direction unit vector
@@ -261,15 +310,20 @@ const STATE_WATCHED = "watched";
     const tx = c.x - ux * c.length;
     const ty = c.y - uy * c.length;
 
+    // micro meteors should be subtle (less glow)
+    const glowMul = c.kind === COMET_KIND_BIG ? 3.2 : 2.0;
+    const glowAlpha = c.kind === COMET_KIND_BIG ? 0.22 : 0.12;
+    const coreMidStopAlpha = c.kind === COMET_KIND_BIG ? 0.35 : 0.22;
+
     ctx.save();
     ctx.globalCompositeOperation = "lighter";
-
-    // glow pass (soft, wider)
     ctx.lineCap = "round";
-    ctx.lineWidth = c.width * 3.2;
+
+    // glow pass
+    ctx.lineWidth = c.width * glowMul;
 
     let grad = ctx.createLinearGradient(c.x, c.y, tx, ty);
-    grad.addColorStop(0, `rgba(${c.tint.r}, ${c.tint.g}, ${c.tint.b}, ${a * 0.22})`);
+    grad.addColorStop(0, `rgba(${c.tint.r}, ${c.tint.g}, ${c.tint.b}, ${a * glowAlpha})`);
     grad.addColorStop(1, `rgba(${c.tint.r}, ${c.tint.g}, ${c.tint.b}, 0)`);
     ctx.strokeStyle = grad;
 
@@ -278,12 +332,12 @@ const STATE_WATCHED = "watched";
     ctx.lineTo(tx, ty);
     ctx.stroke();
 
-    // core pass (sharp)
+    // core pass
     ctx.lineWidth = c.width;
 
     grad = ctx.createLinearGradient(c.x, c.y, tx, ty);
     grad.addColorStop(0, `rgba(${c.tint.r}, ${c.tint.g}, ${c.tint.b}, ${a})`);
-    grad.addColorStop(0.45, `rgba(${c.tint.r}, ${c.tint.g}, ${c.tint.b}, ${a * 0.35})`);
+    grad.addColorStop(0.45, `rgba(${c.tint.r}, ${c.tint.g}, ${c.tint.b}, ${a * coreMidStopAlpha})`);
     grad.addColorStop(1, `rgba(${c.tint.r}, ${c.tint.g}, ${c.tint.b}, 0)`);
     ctx.strokeStyle = grad;
 
@@ -328,10 +382,16 @@ const STATE_WATCHED = "watched";
       drawStar(s, t);
     }
 
-    // comet scheduling
-    if (t >= nextCometAt) {
-      spawnComet();
-      scheduleNextComet(t);
+    // scheduling: micro meteors
+    if (t >= nextMicroCometAt) {
+      spawnComet(COMET_KIND_MICRO);
+      scheduleNextMicroComet(t);
+    }
+
+    // scheduling: big comets
+    if (t >= nextBigCometAt) {
+      spawnComet(COMET_KIND_BIG);
+      scheduleNextBigComet(t);
     }
 
     // comets
