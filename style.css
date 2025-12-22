@@ -49,61 +49,43 @@ body {
   inset: 0;
   z-index: 0;
   pointer-events: none;
-  background-color: #000;
-
-  /* small stars (infinite tiles) */
-  background-image:
-    radial-gradient(1px 1px at 10% 20%, #fff 100%, transparent),
-    radial-gradient(1px 1px at 30% 80%, #fff 100%, transparent),
-    radial-gradient(1px 1px at 50% 40%, #fff 100%, transparent),
-    radial-gradient(1px 1px at 70% 60%, #fff 100%, transparent),
-    radial-gradient(1px 1px at 90% 10%, #fff 100%, transparent);
-  background-size: 200px 200px;
-  animation: starsMoveSlow 200s linear infinite;
+  background: #000;
+  overflow: hidden;
 }
 
 .stars::before {
   content: "";
   position: absolute;
   inset: 0;
+
+  /* soft nebula haze (spread, not center-biased) */
   background-image:
-    radial-gradient(1px 1px at 15% 35%, #fff 100%, transparent),
-    radial-gradient(1px 1px at 25% 75%, #fff 100%, transparent),
-    radial-gradient(1px 1px at 45% 15%, #fff 100%, transparent),
-    radial-gradient(1px 1px at 65% 55%, #fff 100%, transparent),
-    radial-gradient(1px 1px at 85% 85%, #fff 100%, transparent);
-  background-size: 150px 150px;
-  opacity: 0.8;
-  animation: starsMoveMedium 140s linear infinite;
+    radial-gradient(1200px 900px at 22% 38%, rgba(155, 108, 255, 0.055), transparent 62%),
+    radial-gradient(1200px 900px at 78% 62%, rgba(91, 108, 255, 0.045), transparent 64%);
 }
 
 .stars::after {
   content: "";
   position: absolute;
   inset: 0;
-  background-image:
-    radial-gradient(2px 2px at 50px 100px, #fff 100%, transparent),
-    radial-gradient(2px 2px at 180px 30px, #fff 100%, transparent),
-    radial-gradient(2px 2px at 120px 200px, #fff 100%, transparent);
-  background-size: 300px 300px;
-  opacity: 0.4;
-  animation: starsMoveFast 80s linear infinite;
+
+  /* soft vignette (keeps edges visible) */
+  background: radial-gradient(
+    1600px 1200px at 50% 50%,
+    rgba(0, 0, 0, 0.00) 52%,
+    rgba(0, 0, 0, 0.62) 100%
+  );
 }
 
-/* endless animations */
-@keyframes starsMoveSlow {
-  from { background-position: 0 0; }
-  to { background-position: 0 -2000px; }
-}
+.stars-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
 
-@keyframes starsMoveMedium {
-  from { background-position: 0 0; }
-  to { background-position: 0 -3000px; }
-}
-
-@keyframes starsMoveFast {
-  from { background-position: 0 0; }
-  to { background-position: 0 -4000px; }
+  /* subtle softening so dots feel less “digital” */
+  filter: blur(0.15px);
 }
 
 /* =========================
