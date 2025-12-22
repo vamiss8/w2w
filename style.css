@@ -151,10 +151,10 @@ h1 {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 6px;
 }
 
-.tab-icon.star::before {
+.tab-icon-star::before {
   content: "★";
   font-size: 1.2rem;
   color: #ffd36a;
@@ -167,43 +167,6 @@ h1 {
 
   position: relative;
   top: -1px;
-}
-
-.tab-icon.hearts {
-  position: relative;
-  display: inline-flex;
-  gap: 0;
-}
-
-.tab-icon.hearts::before,
-.tab-icon.hearts::after {
-  content: "❤";
-  font-size: 0.9rem;
-  margin-left: -6px;
-}
-
-/* my purple heart */
-.tab-icon.hearts::before {
-  color: #9b6cff;
-  text-shadow:
-    0 0 6px rgba(155,108,255,0.35),
-    0 0 12px rgba(155,108,255,0.15);
-
-  position: relative;
-  left: 4px;
-  top: 1px;
-}
-
-/* vika's pink heart */
-.tab-icon.hearts::after {
-  color: #ff7abf;
-  text-shadow:
-    0 0 6px rgba(255,122,191,0.35),
-    0 0 12px rgba(255,122,191,0.15);
-
-  position: relative;
-  left: 4px;
-  top: 1px;
 }
 
 input[type="radio"] {
@@ -365,6 +328,65 @@ footer {
   transition:
     opacity 0.6s ease,
     transform 0.6s ease;
+}
+
+/* =========================
+   CROSSED HEARTS
+   ========================= */
+
+.tab-icon-hearts,
+.footer-hearts {
+  position: relative;
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  line-height: 1;
+}
+
+.tab-icon-hearts {
+  margin: 0;           
+  flex: 0 0 24px;  
+  top: 3px;   
+}
+
+.footer-hearts {
+  margin: 0 6px;  
+  top: 4px;   
+  vertical-align: 0px;  
+}
+
+.tab-icon-hearts::before,
+.tab-icon-hearts::after,
+.footer-hearts::before,
+.footer-hearts::after {
+  content: "❤";
+  position: absolute;
+  top: 0;
+  left: 50%;
+  font-size: 0.95rem;  
+  transform-origin: center;
+}
+
+.tab-icon-hearts::before,
+.footer-hearts::before {
+  color: #9b6cff;
+  text-shadow:
+    0 0 6px rgba(155,108,255,0.35),
+    0 0 12px rgba(155,108,255,0.15);
+
+  transform: translateX(-75%) rotate(-22deg);
+  z-index: 2;
+}
+
+.tab-icon-hearts::after,
+.footer-hearts::after {
+  color: #ff7abf;
+  text-shadow:
+    0 0 6px rgba(255,122,191,0.35),
+    0 0 12px rgba(255,122,191,0.15);
+
+  transform: translateX(-25%) rotate(22deg);
+  z-index: 1;
 }
 
 /* visible footer */
