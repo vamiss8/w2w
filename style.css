@@ -10,6 +10,12 @@
   --c-01: #5b6cff;
   --c-10: #ff9f6e;
   --c-11: #9b6cff;
+
+  --font-title: "Cinzel Decorative", serif;
+  --font-body: "Sora", system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  --font-mono: "Space Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  --font-badge: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  --font-content: "IBM Plex Sans", system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
 }
 
 /* =========================
@@ -28,9 +34,10 @@ body {
   min-height: 100vh;
   padding: 48px 16px;
   position: relative;
-  font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
   background-color: #000;
   color: var(--text);
+
+  font-family: var(--font-body);
 }
 
 /* =========================
@@ -110,26 +117,87 @@ body {
   z-index: 1;
 }
 
-h1 {
-  margin-bottom: 4px;
-  font-size: 2.4rem;
-  text-align: center;
-  text-shadow:
-    0 0 12px rgba(255, 255, 255, 0.08),
-    0 0 40px rgba(120, 120, 255, 0.05);
-}
+/* =========================
+   TITLE (CINZEL DECORATIVE)
+   ========================= */
 
 .title {
-  color: rgb(255, 255, 255);
-  margin-bottom: 12px;
-  font-size: 3rem;
+  font-family: var(--font-title);
+  font-weight: 700;
+  font-size: clamp(2.2rem, 5vw, 2.9rem);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
   text-align: center;
+
+  margin: 8px 0 12px;
+
+  /* dark, desaturated “space ink” */
+  color: rgba(230, 232, 255, 0.88);
+
+  /* a heavier, gloomier shadow stack */
+  text-shadow:
+    0 2px 0 rgba(0, 0, 0, 0.75),
+    0 10px 28px rgba(0, 0, 0, 0.85),
+    0 0 28px rgba(155, 108, 255, 0.10);
 }
 
+/* subtle divider “horizon line” under the title */
+.title::after {
+  content: "";
+  display: block;
+  height: 1px;
+  width: min(560px, 78%);
+  margin: 16px auto 0;
+
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(230, 232, 255, 0.88),
+    transparent
+  );
+  opacity: 0.8;
+}
+
+/* =========================
+   SUBTITLE
+   ========================= */
+
 .subtitle {
-  margin-bottom: 28px;
-  text-align: center;
-  color: var(--muted);
+  width: fit-content;
+  margin: 0 auto 28px;
+  padding: 6px 14px 8px;
+
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+
+  color: rgba(230, 232, 255, 0.88);
+  opacity: 0.9;
+
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(230, 232, 255, 0.08);
+  border-left-color: rgba(155, 108, 255, 0.22);
+  border-right-color: rgba(155, 108, 255, 0.22);
+  border-radius: 999px;
+
+  text-shadow:
+    0 2px 0 rgba(0, 0, 0, 0.65),
+    0 0 18px rgba(155, 108, 255, 0.12);
+}
+
+.subtitle::before,
+.subtitle::after {
+  content: "";
+  display: inline-block;
+  width: 4px;
+  height: 4px;
+  margin: 0 10px 2px;
+  border-radius: 50%;
+
+  background: rgba(230, 232, 255, 0.22);
+  box-shadow: 0 0 12px rgba(155, 108, 255, 0.18);
+  opacity: 0.9;
 }
 
 /* =========================
@@ -139,22 +207,104 @@ h1 {
 .tabs {
   display: flex;
   justify-content: center;
-  gap: 12px;
+  gap: 18px;
   margin-bottom: 32px;
+
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  backdrop-filter: none;
+  box-shadow: none;
 }
 
+/* tab */
 .tab {
-  display: flex;
+  position: relative;
+
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 10px;
 
   padding: 10px 18px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.06);
-  color: var(--muted);
+
+  font-family: var(--font-body);
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  line-height: 1;
+
+  color: rgba(154, 160, 214, 0.92);
+  background: transparent;
+
   cursor: pointer;
-  transition: background .25s, color .25s;
+  user-select: none;
+
+  border: 1px solid transparent;
+  transition:
+    background 0.25s ease,
+    color 0.25s ease,
+    border-color 0.25s ease,
+    transform 0.25s ease,
+    box-shadow 0.25s ease;
+}
+
+.tab:hover {
+  background: rgba(253, 250, 250, 0.05);
+  border-color: rgba(230, 232, 255, 0.08);
+  transform: translateY(-1px);
+  box-shadow:
+    0 10px 30px rgba(0, 0, 0, 0.45),
+    0 0 18px rgba(155, 108, 255, 0.10);
+}
+
+/* active tab styling */
+input#tab-unwatched:checked ~ .tabs label[for="tab-unwatched"],
+input#tab-watched:checked ~ .tabs label[for="tab-watched"] {
+  color: rgba(230, 232, 255, 0.92);
+
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.10),
+    rgba(255, 255, 255, 0.04)
+  );
+
+  border-color: rgba(230, 232, 255, 0.12);
+
+  box-shadow:
+    0 12px 36px rgba(0, 0, 0, 0.55),
+    0 0 13px rgba(155, 108, 255, 0.16);
+}
+
+/* active “glow core” */
+input#tab-unwatched:checked ~ .tabs label[for="tab-unwatched"]::after,
+input#tab-watched:checked ~ .tabs label[for="tab-watched"]::after {
+  content: "";
+  position: absolute;
+  inset: -6px;
+  border-radius: 999px;
+  pointer-events: none;
+
+  background: radial-gradient(
+    60% 120% at 50% 50%,
+    rgba(155, 108, 255, 0.14),
+    transparent 70%
+  );
+  filter: blur(6px);
+  opacity: 1;
+}
+
+/* keyboard focus (input focused -> highlight matching label) */
+input#tab-unwatched:focus-visible ~ .tabs label[for="tab-unwatched"],
+input#tab-watched:focus-visible ~ .tabs label[for="tab-watched"] {
+  outline: none;
+  border-color: rgba(255, 211, 106, 0.35);
+  box-shadow:
+    0 0 0 3px rgba(255, 211, 106, 0.12),
+    0 12px 36px rgba(0, 0, 0, 0.55);
 }
 
 .tab-icon-star::before {
@@ -172,14 +322,34 @@ h1 {
   top: -1px;
 }
 
+/* tabs radios (visually hidden, still accessible) */
 input[type="radio"] {
-  display: none;
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+
+  opacity: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
-input#tab-unwatched:checked ~ .tabs label[for="tab-unwatched"],
-input#tab-watched:checked ~ .tabs label[for="tab-watched"] {
-  background: rgba(255, 255, 255, 0.16);
-  color: var(--text);
+input#tab-unwatched:checked ~ .tabs label[for="tab-unwatched"] .tab-icon-star::before {
+  text-shadow:
+    0 0 6px rgba(255, 211, 106, 0.55),
+    0 0 18px rgba(255, 211, 106, 0.35),
+    0 0 34px rgba(255, 211, 106, 0.18);
+}
+
+input#tab-watched:checked ~ .tabs label[for="tab-watched"] .tab-icon-hearts::before,
+input#tab-watched:checked ~ .tabs label[for="tab-watched"] .tab-icon-hearts::after {
+  text-shadow:
+    0 0 8px rgba(155, 108, 255, 0.32),
+    0 0 20px rgba(155, 108, 255, 0.18);
 }
 
 /* =========================
@@ -213,22 +383,46 @@ ul {
   gap: 8px;
 }
 
-/* title + date table */
+/* film title */
 .filmTitle {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
-  gap: 8px;
+  gap: 10px;
+
+  font-family: var(--font-content);
+  font-weight: 600;
+  font-size: 1.02rem;
+  letter-spacing: 0.01em;
+  line-height: 1.2;
+
+  color: rgba(230, 232, 255, 0.94);
+  text-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
 }
 
 /* muted date label */
 .watch-date {
-  font-size: 0.75rem;
-  color: var(--muted);
-  opacity: 0.65;
+  font-family: var(--font-badge);
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+
+  color: rgba(154, 160, 214, 0.86);
+  opacity: 0.9;
   white-space: nowrap;
+
+  margin: 0; /* important: don't push layout */
 }
 
+/* meta line under title */
+.meta {
+  font-family: var(--font-content);
+  font-size: 0.9rem;
+  line-height: 1.35;
+
+  color: rgba(154, 160, 214, 0.9);
+  opacity: 0.78;
+}
 
 li {
   display: flex;
@@ -326,10 +520,17 @@ li[data-status="01"] { border-color: var(--c-01); }
 li[data-status="10"] { border-color: var(--c-10); }
 li[data-status="11"] { border-color: var(--c-11); }
 
+/* status badge text */
 .status {
-  font-size: 0.8rem;
+  font-family: var(--font-badge);
+  letter-spacing: 0.12em;
+  font-size: 0.78rem;
+
   padding: 6px 12px;
   border-radius: 999px;
+
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(230, 232, 255, 0.06);
 }
 
 .s-00 { color: var(--c-00); }
@@ -341,13 +542,18 @@ li[data-status="11"] { border-color: var(--c-11); }
    FOOTER
    ========================= */
 
+/* footer */
 footer {
   margin: 48px auto 0;
   width: 100%;
   text-align: center;
 
-  color: var(--muted);
-  font-size: 0.8rem;
+  font-family: var(--font-body);
+  letter-spacing: 0.08em;
+  text-transform: none;
+
+  color: rgba(154, 160, 214, 0.85);
+  font-size: 0.72rem;
 
   opacity: 0;
   transform: translateY(12px);
@@ -372,14 +578,12 @@ footer {
 
 .tab-icon-hearts {
   margin: 0;           
-  flex: 0 0 24px;  
-  top: 3px;   
+  flex: 0 0 24px;    
 }
 
 .footer-hearts {
   margin: 0 6px;  
-  top: 4px;   
-  vertical-align: 0px;  
+  top: 5px;   
 }
 
 .tab-icon-hearts::before,
