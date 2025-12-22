@@ -7,6 +7,7 @@ const RATING_DELIMITER = "|";
 const ANIMATION_STEP_DELAY = 0.2;
 const FOOTER_EXTRA_DELAY = 0.4;
 
+// instant hiding of footer
 function hideFooterInstantly() {
   if (!footer) return;
 
@@ -14,6 +15,7 @@ function hideFooterInstantly() {
   footer.classList.add("instant-hide");
 }
 
+// showing footer with delay
 function showFooterWithDelay(totalDelaySeconds) {
   if (!footer) return;
 
@@ -23,6 +25,7 @@ function showFooterWithDelay(totalDelaySeconds) {
   }, totalDelaySeconds * 1000);
 }
 
+// animating of film list's appearing
 function animateList(listSelector) {
   const cards = document.querySelectorAll(`${listSelector} li`);
 
@@ -36,10 +39,12 @@ function animateList(listSelector) {
   showFooterWithDelay(totalDelay);
 }
 
+// persisting of active tabs
 function persistActiveTab(tabId) {
   localStorage.setItem("activeTab", tabId);
 }
 
+// restoring of active tabs according to local storage
 function restoreActiveTab() {
   const savedTab = localStorage.getItem("activeTab");
 
@@ -54,6 +59,7 @@ function restoreActiveTab() {
   return null;
 }
 
+// changing of tabs 
 function handleTabChange(tab) {
   persistActiveTab(tab.id);
 
@@ -65,6 +71,7 @@ function handleTabChange(tab) {
   animateList(WATCHED_LIST_SELECTOR);
 }
 
+// initializing of tabs
 function initializeTabs() {
   document.querySelectorAll(TAB_INPUT_SELECTOR).forEach(tab => {
     tab.addEventListener("change", () => handleTabChange(tab));
@@ -78,6 +85,7 @@ function initializeTabs() {
   }
 }
 
+// creating of hearts
 function createHearts(score, owner) {
   const wrapper = document.createElement("div");
   wrapper.className = "rating-stars";
@@ -97,6 +105,7 @@ function createHearts(score, owner) {
   return wrapper;
 }
 
+// creating of rating row
 function createRatingRow(name, score) {
   const row = document.createElement("div");
   row.className = "rating-row";
@@ -111,6 +120,7 @@ function createRatingRow(name, score) {
   return row;
 }
 
+// extracting of scores
 function extractScores(metaText) {
   if (!metaText.includes(RATING_DELIMITER)) return null;
 
@@ -123,6 +133,7 @@ function extractScores(metaText) {
   return { vladScore, vikaScore };
 }
 
+// rendering of ratings
 function renderRatings(metaElement, scores) {
   const rating = document.createElement("div");
   rating.className = "rating";
@@ -134,6 +145,7 @@ function renderRatings(metaElement, scores) {
   metaElement.appendChild(rating);
 }
 
+// transforming of ratings
 function transformRatings() {
   document.querySelectorAll(".watched .meta").forEach(meta => {
     const scores = extractScores(meta.textContent.trim());
