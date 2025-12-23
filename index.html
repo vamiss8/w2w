@@ -35,6 +35,87 @@
       </label>
     </nav>
 
+      <!-- controls -->
+  <section class="controls" aria-label="Sorting and filters">
+
+    <!-- UNWATCHED -->
+    <div class="controls-panel controls-unwatched" role="group" aria-label="Unwatched controls">
+      <div class="control-row">
+        <div class="control-caption">progress</div>
+        <div class="control-group">
+          <input type="radio" name="uw-progress" id="uw-progress-all" checked />
+          <label class="chip" for="uw-progress-all">all</label>
+
+          <input type="radio" name="uw-progress" id="uw-progress-planned" />
+          <label class="chip" for="uw-progress-planned">planned</label>
+
+          <input type="radio" name="uw-progress" id="uw-progress-started" />
+          <label class="chip" for="uw-progress-started">started</label>
+        </div>
+      </div>
+
+      <div class="control-row">
+        <div class="control-caption">status</div>
+        <div class="control-group">
+          <input type="radio" name="uw-status" id="uw-status-all" checked />
+          <label class="chip" for="uw-status-all">all</label>
+
+          <input type="radio" name="uw-status" id="uw-status-00" />
+          <label class="chip" for="uw-status-00">00</label>
+
+          <input type="radio" name="uw-status" id="uw-status-01" />
+          <label class="chip" for="uw-status-01">01</label>
+
+          <input type="radio" name="uw-status" id="uw-status-10" />
+          <label class="chip" for="uw-status-10">10</label>
+
+          <input type="radio" name="uw-status" id="uw-status-11" />
+          <label class="chip" for="uw-status-11">11</label>
+        </div>
+      </div>
+    </div>
+
+    <!-- WATCHED -->
+    <div class="controls-panel controls-watched" role="group" aria-label="Watched controls">
+      <div class="control-row">
+        <div class="control-caption">favorites</div>
+        <div class="control-group">
+          <input type="radio" name="w-sort" id="w-sort-recent" checked />
+          <label class="chip" for="w-sort-recent">recent</label>
+
+          <input type="radio" name="w-sort" id="w-sort-vlad" />
+          <label class="chip" for="w-sort-vlad">vlad favorites</label>
+
+          <input type="radio" name="w-sort" id="w-sort-vika" />
+          <label class="chip" for="w-sort-vika">vika favorites</label>
+
+          <input type="radio" name="w-sort" id="w-sort-avg" />
+          <label class="chip" for="w-sort-avg">overall favorites</label>
+        </div>
+      </div>
+
+      <div class="control-row">
+        <div class="control-caption">status</div>
+        <div class="control-group">
+          <input type="radio" name="w-status" id="w-status-all" checked />
+          <label class="chip" for="w-status-all">all</label>
+
+          <input type="radio" name="w-status" id="w-status-00" />
+          <label class="chip" for="w-status-00">00</label>
+
+          <input type="radio" name="w-status" id="w-status-01" />
+          <label class="chip" for="w-status-01">01</label>
+
+          <input type="radio" name="w-status" id="w-status-10" />
+          <label class="chip" for="w-status-10">10</label>
+
+          <input type="radio" name="w-status" id="w-status-11" />
+          <label class="chip" for="w-status-11">11</label>
+        </div>
+      </div>
+    </div>
+  </section>
+
     <section class="lists" aria-live="polite">
 
       <!-- UNWATCHED -->

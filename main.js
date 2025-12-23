@@ -474,11 +474,28 @@ function showFooterWithDelay(totalDelaySeconds) {
   }, totalDelaySeconds * 1000);
 }
 
-// animate list appearance (staggered cards)
+// restart CSS animation for visible cards (so sorting/filtering feels responsive)
+function restartListAnimations(listSelector) {
+  const cards = document.querySelectorAll(`${listSelector} li:not(.is-hidden)`);
+
+  cards.forEach(card => {
+    card.style.animation = "none";
+  });
+
+  // force reflow once
+  void document.body.offsetHeight;
+
+  cards.forEach(card => {
+    card.style.animation = "";
+  });
+}
+
+// animate list appearance (staggered visible cards)
 function animateList(listSelector) {
-  const cards = document.querySelectorAll(`${listSelector} li`);
+  const cards = document.querySelectorAll(`${listSelector} li:not(.is-hidden)`);
 
   hideFooterInstantly();
+  restartListAnimations(listSelector);
 
   cards.forEach((card, index) => {
     card.style.animationDelay = `${index * ANIMATION_STEP_DELAY}s`;
@@ -509,15 +526,7 @@ function restoreActiveTab() {
 
 function handleTabChange(tab) {
   persistActiveTab(tab.id);
-
-  if (tab.id === UNWATCHED_TAB_ID) {
-    sortUnwatchedStartedToBottom();
-    animateList(UNWATCHED_LIST_SELECTOR);
-    return;
-  }
-
-  sortWatchedByStartDateDesc();
-  animateList(WATCHED_LIST_SELECTOR);
+  applyActiveTabView();
 }
 
 function initializeTabs() {
@@ -525,12 +534,203 @@ function initializeTabs() {
     tab.addEventListener("change", () => handleTabChange(tab));
   });
 
-  const restoredTab = restoreActiveTab();
-  if (restoredTab) {
-    animateList(restoredTab === UNWATCHED_TAB_ID ? UNWATCHED_LIST_SELECTOR : WATCHED_LIST_SELECTOR);
-  } else {
-    animateList(UNWATCHED_LIST_SELECTOR);
+  restoreActiveTab();   // just sets the checked tab if saved
+  applyActiveTabView(); // render based on restored state
+}
+
+/* ---------------------------
+   CONTROLS (SORT/FILTER)
+---------------------------- */
+
+const LS_UW_PROGRESS = "uwProgress";
+const LS_UW_STATUS = "uwStatus";
+const LS_W_SORT = "wSort";
+const LS_W_STATUS = "wStatus";
+
+function getCheckedIdByName(name) {
+  const el = document.querySelector(`input[name="${name}"]:checked`);
+  return el ? el.id : null;
+}
+
+function safeInt(value, fallback = Number.NEGATIVE_INFINITY) {
+  const n = parseInt(value, 10);
+  return Number.isNaN(n) ? fallback : n;
+}
+
+function applyUnwatchedFilters() {
+  const progressId = getCheckedIdByName("uw-progress");
+  const statusId = getCheckedIdByName("uw-status");
+
+  const progress =
+    progressId === "uw-progress-planned" ? STATE_PLANNED :
+    progressId === "uw-progress-started" ? STATE_STARTED :
+    "all";
+
+  const status =
+    statusId === "uw-status-00" ? "00" :
+    statusId === "uw-status-01" ? "01" :
+    statusId === "uw-status-10" ? "10" :
+    statusId === "uw-status-11" ? "11" :
+    "all";
+
+  document.querySelectorAll(`${UNWATCHED_LIST_SELECTOR} li`).forEach(li => {
+    const liState = getState(li);
+    const liStatus = (li.dataset.status || "").trim();
+
+    const matchesProgress = progress === "all" ? true : liState === progress;
+    const matchesStatus = status === "all" ? true : liStatus === status;
+
+    li.classList.toggle("is-hidden", !(matchesProgress && matchesStatus));
+  });
+}
+
+function getWatchedSortMode() {
+  const id = getCheckedIdByName("w-sort");
+
+  if (id === "w-sort-vlad") return "vlad";
+  if (id === "w-sort-vika") return "vika";
+  if (id === "w-sort-avg") return "avg";
+
+  return "recent";
+}
+
+function applyWatchedFilters() {
+  const statusId = getCheckedIdByName("w-status");
+
+  const status =
+    statusId === "w-status-00" ? "00" :
+    statusId === "w-status-01" ? "01" :
+    statusId === "w-status-10" ? "10" :
+    statusId === "w-status-11" ? "11" :
+    "all";
+
+  document.querySelectorAll(`${WATCHED_LIST_SELECTOR} li`).forEach(li => {
+    const liStatus = (li.dataset.status || "").trim();
+    const matchesStatus = status === "all" ? true : liStatus === status;
+    li.classList.toggle("is-hidden", !matchesStatus);
+  });
+}
+
+// watched sorting: recent OR favorites
+function sortWatchedByMode() {
+  const ul = document.querySelector(WATCHED_LIST_SELECTOR);
+  if (!ul) return;
+
+  const mode = getWatchedSortMode();
+
+  sortUlItems(ul, (a, b) => {
+    const aDate = parseISODate(a.dataset.start);
+    const bDate = parseISODate(b.dataset.start);
+
+    // helper: date desc (newest first)
+    function dateDesc() {
+      if (!aDate && !bDate) return getInitialIndex(a) - getInitialIndex(b);
+      if (!aDate) return 1;
+      if (!bDate) return -1;
+
+      const diff = bDate.getTime() - aDate.getTime();
+      if (diff !== 0) return diff;
+
+      return getInitialIndex(a) - getInitialIndex(b);
+    }
+
+    if (mode === "recent") return dateDesc();
+
+    const aVlad = safeInt(a.dataset.vladScore);
+    const bVlad = safeInt(b.dataset.vladScore);
+    const aVika = safeInt(a.dataset.vikaScore);
+    const bVika = safeInt(b.dataset.vikaScore);
+
+    const aScore = mode === "vlad" ? aVlad : mode === "vika" ? aVika : (aVlad + aVika) / 2;
+    const bScore = mode === "vlad" ? bVlad : mode === "vika" ? bVika : (bVlad + bVika) / 2;
+
+    // primary: score desc
+    const scoreDiff = bScore - aScore;
+    if (scoreDiff !== 0) return scoreDiff;
+
+    // secondary: date desc
+    return dateDesc();
+  });
+}
+
+function applyUnwatchedView() {
+  sortUnwatchedStartedToBottom();
+  applyUnwatchedFilters();
+  animateList(UNWATCHED_LIST_SELECTOR);
+}
+
+function applyWatchedView() {
+  sortWatchedByMode();
+  applyWatchedFilters();
+  animateList(WATCHED_LIST_SELECTOR);
+}
+
+function applyActiveTabView() {
+  const activeTab = document.querySelector(`${TAB_INPUT_SELECTOR}:checked`);
+  if (!activeTab) return;
+
+  if (activeTab.id === UNWATCHED_TAB_ID) {
+    applyUnwatchedView();
+    return;
   }
+
+  applyWatchedView();
+}
+
+// persist + restore controls
+function persistControl(key, inputId) {
+  localStorage.setItem(key, inputId);
+}
+
+function restoreControl(key, fallbackId) {
+  const saved = localStorage.getItem(key);
+  const el = document.getElementById(saved || "");
+  const fallback = document.getElementById(fallbackId);
+
+  if (el) {
+    el.checked = true;
+    return;
+  }
+
+  if (fallback) fallback.checked = true;
+}
+
+function initializeControls() {
+  // restore saved states
+  restoreControl(LS_UW_PROGRESS, "uw-progress-all");
+  restoreControl(LS_UW_STATUS, "uw-status-all");
+  restoreControl(LS_W_SORT, "w-sort-recent");
+  restoreControl(LS_W_STATUS, "w-status-all");
+
+  // unwatched group listeners
+  document.querySelectorAll('input[name="uw-progress"]').forEach(input => {
+    input.addEventListener("change", () => {
+      persistControl(LS_UW_PROGRESS, input.id);
+      applyActiveTabView();
+    });
+  });
+
+  document.querySelectorAll('input[name="uw-status"]').forEach(input => {
+    input.addEventListener("change", () => {
+      persistControl(LS_UW_STATUS, input.id);
+      applyActiveTabView();
+    });
+  });
+
+  // watched group listeners
+  document.querySelectorAll('input[name="w-sort"]').forEach(input => {
+    input.addEventListener("change", () => {
+      persistControl(LS_W_SORT, input.id);
+      applyActiveTabView();
+    });
+  });
+
+  document.querySelectorAll('input[name="w-status"]').forEach(input => {
+    input.addEventListener("change", () => {
+      persistControl(LS_W_STATUS, input.id);
+      applyActiveTabView();
+    });
+  });
 }
 
 /* ---------------------------
@@ -597,6 +797,14 @@ function transformRatings() {
   document.querySelectorAll(".watched .meta").forEach(meta => {
     const scores = extractScores(meta.textContent.trim());
     if (!scores) return;
+
+    // store scores on the card for sorting later
+    const li = meta.closest("li");
+    if (li) {
+      li.dataset.vladScore = String(scores.vladScore);
+      li.dataset.vikaScore = String(scores.vikaScore);
+    }
+
     renderRatings(meta, scores);
   });
 }
@@ -801,8 +1009,10 @@ function applyDefaultSorting() {
 ---------------------------- */
 
 cacheInitialOrder();
-applyDefaultSorting();
 
-initializeTabs();
-transformRatings();
-renderWatchDates();
+transformRatings();     // stores scores on watched cards
+renderWatchDates();     // date labels
+initializeControls();   // restore controls + bind events
+
+applyActiveTabView();   // apply filters/sorting + animate for current tab
+initializeTabs();       // binds tab change listeners + restores active tab
