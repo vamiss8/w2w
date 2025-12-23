@@ -539,6 +539,93 @@ function initializeTabs() {
 }
 
 /* ---------------------------
+   FILTERS TOGGLE (PERSIST)
+---------------------------- */
+
+const FILTERS_MENU_ID = "filtersMenu";
+const FILTERS_TOGGLE_SELECTOR = ".filters-toggle";
+
+// localStorage key for menu open state
+const LS_FILTERS_OPEN = "filtersOpen";
+
+function persistFiltersOpen(isOpen) {
+  localStorage.setItem(LS_FILTERS_OPEN, isOpen ? "true" : "false");
+}
+
+function restoreFiltersOpen(defaultOpen = false) {
+  const saved = localStorage.getItem(LS_FILTERS_OPEN);
+  if (saved === null) return defaultOpen;
+  return saved === "true";
+}
+
+function setFiltersOpen(isOpen) {
+  const menu = document.getElementById(FILTERS_MENU_ID);
+  const button = document.querySelector(FILTERS_TOGGLE_SELECTOR);
+  if (!menu || !button) return;
+
+  menu.dataset.open = isOpen ? "true" : "false";
+  button.setAttribute("aria-expanded", isOpen ? "true" : "false");
+  button.classList.toggle("is-open", isOpen);
+
+  // persist state
+  persistFiltersOpen(isOpen);
+}
+
+function initializeFiltersToggle() {
+  const menu = document.getElementById(FILTERS_MENU_ID);
+  const button = document.querySelector(FILTERS_TOGGLE_SELECTOR);
+  if (!menu || !button) return;
+
+  // restore state (closed by default on first ever visit)
+  setFiltersOpen(restoreFiltersOpen(false));
+
+  button.addEventListener("click", () => {
+    const isOpen = menu.dataset.open === "true";
+    setFiltersOpen(!isOpen);
+  });
+}
+
+/* ---------------------------
+   TOOLTIP AUTO-FLIP (UP/DOWN)
+---------------------------- */
+
+function autoFlipTooltip(anchorEl) {
+  const tooltip = anchorEl.querySelector(".tooltip");
+  if (!tooltip) return;
+
+  // reset to default (up)
+  tooltip.classList.remove("tooltip-down");
+
+  const a = anchorEl.getBoundingClientRect();
+  const tooltipHeight = tooltip.offsetHeight || 0;
+
+  // approximate space we need (height + arrow + a bit of air)
+  const needed = tooltipHeight + 18;
+
+  const spaceTop = a.top;
+  const spaceBottom = window.innerHeight - a.bottom;
+
+  // if there's not enough space above, and more space below -> flip down
+  if (needed > spaceTop && spaceBottom > spaceTop) {
+    tooltip.classList.add("tooltip-down");
+  }
+}
+
+function initializeTooltipAutoFlip() {
+  const anchors = document.querySelectorAll(".chip, .info-badge");
+
+  anchors.forEach(anchor => {
+    anchor.addEventListener("mouseenter", () => autoFlipTooltip(anchor));
+    anchor.addEventListener("focusin", () => autoFlipTooltip(anchor));
+  });
+
+  // keep it robust on resize
+  window.addEventListener("resize", () => {
+    // nothing to do until next hover/focus
+  });
+}
+
+/* ---------------------------
    CONTROLS (SORT/FILTER)
 ---------------------------- */
 
@@ -1012,6 +1099,9 @@ cacheInitialOrder();
 
 transformRatings();     // stores scores on watched cards
 renderWatchDates();     // date labels
+
+initializeFiltersToggle(); // filters button (default closed)
+initializeTooltipAutoFlip(); // tooltip auto-flip
 initializeControls();   // restore controls + bind events
 
 applyActiveTabView();   // apply filters/sorting + animate for current tab

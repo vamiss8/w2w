@@ -35,42 +35,93 @@
       </label>
     </nav>
 
-      <!-- controls -->
-  <section class="controls" aria-label="Sorting and filters">
+  <!-- filters toggle -->
+  <div class="filters-bar">
+    <button class="filters-toggle" type="button" aria-expanded="false" aria-controls="filtersMenu">
+      filters <span class="filters-toggle-icon" aria-hidden="true"></span>
+    </button>
+  </div>
+
+  <!-- controls -->
+  <section class="controls" id="filtersMenu" data-open="false" aria-label="Sorting and filters">
 
     <!-- UNWATCHED -->
     <div class="controls-panel controls-unwatched" role="group" aria-label="Unwatched controls">
       <div class="control-row">
-        <div class="control-caption">progress</div>
+        <div class="control-caption">
+          progress
+
+          <span class="info-badge" tabindex="0" role="button" aria-label="Progress info">
+            ?
+            <span class="tooltip tooltip-wide">
+              By default content is sorted by <u>the date we added it to the list</u>.
+            </span>
+          </span>
+        </div>
+
         <div class="control-group">
           <input type="radio" name="uw-progress" id="uw-progress-all" checked />
-          <label class="chip" for="uw-progress-all">all</label>
+          <label class="chip" for="uw-progress-all">
+            all
+            <span class="tooltip">Displays everything.</span>
+          </label>
 
           <input type="radio" name="uw-progress" id="uw-progress-planned" />
-          <label class="chip" for="uw-progress-planned">planned</label>
+          <label class="chip" for="uw-progress-planned">
+            planned
+            <span class="tooltip">Displays everything that is <u>planned</u>.</span>
+          </label>
 
           <input type="radio" name="uw-progress" id="uw-progress-started" />
-          <label class="chip" for="uw-progress-started">started</label>
+          <label class="chip" for="uw-progress-started">
+            started
+            <span class="tooltip">Displays everything that is <u>started</u>.</span>
+          </label>
         </div>
       </div>
 
       <div class="control-row">
-        <div class="control-caption">status</div>
+        <div class="control-caption">
+          status
+
+          <span class="info-badge" tabindex="0" role="button" aria-label="Status info">
+            ?
+            <span class="tooltip tooltip-wide">
+              By default content is sorted by <u>the date we added it to the list</u>, and status <u>does not affect it</u>.
+            </span>
+          </span>
+        </div>
+
         <div class="control-group">
           <input type="radio" name="uw-status" id="uw-status-all" checked />
-          <label class="chip" for="uw-status-all">all</label>
+          <label class="chip" for="uw-status-all">
+            all
+            <span class="tooltip">Displays everything.</span>
+          </label>
 
           <input type="radio" name="uw-status" id="uw-status-00" />
-          <label class="chip" for="uw-status-00">00</label>
+          <label class="chip" for="uw-status-00">
+            00
+            <span class="tooltip">Displays content that none of us watched.</span>
+          </label>
 
           <input type="radio" name="uw-status" id="uw-status-01" />
-          <label class="chip" for="uw-status-01">01</label>
+          <label class="chip" for="uw-status-01">
+            01
+            <span class="tooltip">Displays content that <u>Vlad</u> watched, but not <u>Vika</u>.</span>
+          </label>
 
           <input type="radio" name="uw-status" id="uw-status-10" />
-          <label class="chip" for="uw-status-10">10</label>
+          <label class="chip" for="uw-status-10">
+            10
+            <span class="tooltip">Displays content that <u>Vika</u> watched, but not <u>Vlad</u>.</span>
+          </label>
 
           <input type="radio" name="uw-status" id="uw-status-11" />
-          <label class="chip" for="uw-status-11">11</label>
+          <label class="chip" for="uw-status-11">
+            11
+            <span class="tooltip">Displays content that we want to <u>rewatch</u>.</span>
+          </label>
         </div>
       </div>
     </div>
@@ -78,43 +129,91 @@
     <!-- WATCHED -->
     <div class="controls-panel controls-watched" role="group" aria-label="Watched controls">
       <div class="control-row">
-        <div class="control-caption">favorites</div>
+        <div class="control-caption">
+          favorites
+
+          <span class="info-badge" tabindex="0" role="button" aria-label="Favorites info">
+            ?
+            <span class="tooltip tooltip-wide">
+              By default content is sorted by <u>how recent we watched it</u>.
+            </span>
+          </span>
+        </div>
+
         <div class="control-group">
           <input type="radio" name="w-sort" id="w-sort-recent" checked />
-          <label class="chip" for="w-sort-recent">recent</label>
+          <label class="chip" for="w-sort-recent">
+            recent
+            <span class="tooltip">Displays recently watched content.</span>
+          </label>
 
           <input type="radio" name="w-sort" id="w-sort-vlad" />
-          <label class="chip" for="w-sort-vlad">vlad favorites</label>
+          <label class="chip" for="w-sort-vlad">
+            vlad favorites
+            <span class="tooltip">Displays <u>Vlad's</u> favorite ones.</span>
+          </label>
 
           <input type="radio" name="w-sort" id="w-sort-vika" />
-          <label class="chip" for="w-sort-vika">vika favorites</label>
+          <label class="chip" for="w-sort-vika">
+            vika favorites
+            <span class="tooltip">Displays <u>Vika's</u> favorite ones.</span>
+          </label>
 
           <input type="radio" name="w-sort" id="w-sort-avg" />
-          <label class="chip" for="w-sort-avg">overall favorites</label>
+          <label class="chip" for="w-sort-avg">
+            overall favorites
+            <span class="tooltip">Displays <u>our</u> favorite ones.</span>
+          </label>
         </div>
       </div>
 
       <div class="control-row">
-        <div class="control-caption">status</div>
+        <div class="control-caption">
+          status
+
+          <span class="info-badge" tabindex="0" role="button" aria-label="Status info">
+            ?
+            <span class="tooltip tooltip-wide">
+              By default content is sorted by <u>how recent we watched it</u>, and status <u>does not affect it</u>.
+            </span>
+          </span>
+        </div>
+
         <div class="control-group">
           <input type="radio" name="w-status" id="w-status-all" checked />
-          <label class="chip" for="w-status-all">all</label>
+          <label class="chip" for="w-status-all">
+            all
+            <span class="tooltip">Displays everything.</span>
+          </label>
 
           <input type="radio" name="w-status" id="w-status-00" />
-          <label class="chip" for="w-status-00">00</label>
+          <label class="chip" for="w-status-00">
+            00
+            <span class="tooltip">Displays content that none of us watched.</span>
+          </label>
 
           <input type="radio" name="w-status" id="w-status-01" />
-          <label class="chip" for="w-status-01">01</label>
+          <label class="chip" for="w-status-01">
+            01
+            <span class="tooltip">Displays content that <u>Vlad</u> watched, but not <u>Vika</u>.</span>
+          </label>
 
           <input type="radio" name="w-status" id="w-status-10" />
-          <label class="chip" for="w-status-10">10</label>
+          <label class="chip" for="w-status-10">
+            10
+            <span class="tooltip">Displays content that <u>Vika</u> watched, but not <u>Vlad</u>.</span>
+          </label>
 
           <input type="radio" name="w-status" id="w-status-11" />
-          <label class="chip" for="w-status-11">11</label>
+          <label class="chip" for="w-status-11">
+            11
+            <span class="tooltip">Displays content that we want to <u>rewatch</u>.</span>
+          </label>
         </div>
       </div>
     </div>
   </section>
+
 
     <section class="lists" aria-live="polite">
 
