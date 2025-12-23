@@ -48,13 +48,13 @@ const STATE_WATCHED = "watched";
   let nextMicroCometAt = 0;
 
   // tune here (big comets)
-  const BIG_COMET_MIN_INTERVAL = 10;
-  const BIG_COMET_MAX_INTERVAL = 26;
+  const BIG_COMET_MIN_INTERVAL = 6;
+  const BIG_COMET_MAX_INTERVAL = 18;
   const BIG_COMET_SPAWN_CHANCE = 0.80;
 
   // tune here (micro meteors)
-  const MICRO_COMET_MIN_INTERVAL = 1.6;
-  const MICRO_COMET_MAX_INTERVAL = 4.2;
+  const MICRO_COMET_MIN_INTERVAL = 0.8;
+  const MICRO_COMET_MAX_INTERVAL = 2.1;
   const MICRO_COMET_SPAWN_CHANCE = 0.92;
 
   // caps (avoid too many trails at once)
