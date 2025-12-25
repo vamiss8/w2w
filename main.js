@@ -29,13 +29,22 @@ function getActiveUser() {
 
 function writeLog(action, details = {}) {
   const list = JSON.parse(localStorage.getItem(LS_EVENT_LOG) || "[]");
+
   list.push({
     ts: new Date().toISOString(),
     user: getActiveUser() || "unknown",
     action,
     details,
   });
+
+  // keep log size sane
+  const MAX_LOG_ITEMS = 250;
+  while (list.length > MAX_LOG_ITEMS) list.shift();
+
   localStorage.setItem(LS_EVENT_LOG, JSON.stringify(list));
+
+  // refresh logs ui if present
+  refreshLogsUI();
 }
 
 function setActiveUser(user) {
@@ -55,6 +64,8 @@ function updateUserUI() {
 
   const user = getActiveUser();
   btn.textContent = `USER: ${user ? user.toUpperCase() : "—"}`;
+
+  updateRatingEditability();
 }
 
 function openAuthOverlay() {
@@ -676,6 +687,165 @@ function initializeFiltersToggle() {
 }
 
 /* ---------------------------
+   LOGS WIDGET (BOTTOM LEFT)
+---------------------------- */
+
+const LOGS_PANEL_ID = "logsPanel";
+const LOGS_TOGGLE_ID = "logsToggle";
+const LOGS_LIST_ID = "logsList";
+
+const LS_LOGS_OPEN = "logsOpen";
+
+function persistLogsOpen(isOpen) {
+  localStorage.setItem(LS_LOGS_OPEN, isOpen ? "true" : "false");
+}
+
+function restoreLogsOpen(defaultOpen = false) {
+  const saved = localStorage.getItem(LS_LOGS_OPEN);
+  if (saved === null) return defaultOpen;
+  return saved === "true";
+}
+
+function setLogsOpen(isOpen) {
+  const panel = document.getElementById(LOGS_PANEL_ID);
+  const btn = document.getElementById(LOGS_TOGGLE_ID);
+  if (!panel || !btn) return;
+
+  panel.dataset.open = isOpen ? "true" : "false";
+  btn.setAttribute("aria-expanded", isOpen ? "true" : "false");
+  btn.classList.toggle("is-open", isOpen);
+
+  persistLogsOpen(isOpen);
+
+  // render on open
+  if (isOpen) renderLogs();
+}
+
+function formatTimeAgo(iso) {
+  const ts = new Date(iso).getTime();
+  if (Number.isNaN(ts)) return "unknown time";
+
+  const diffMs = Date.now() - ts;
+  const sec = Math.max(0, Math.floor(diffMs / 1000));
+
+  if (sec < 10) return "just now";
+  if (sec < 60) return `${sec} seconds ago`;
+
+  const min = Math.floor(sec / 60);
+  if (min === 1) return "1 minute ago";
+  if (min < 60) return `${min} minutes ago`;
+
+  const hr = Math.floor(min / 60);
+  if (hr === 1) return "1 hour ago";
+  if (hr < 24) return `${hr} hours ago`;
+
+  const day = Math.floor(hr / 24);
+  if (day === 1) return "1 day ago";
+  return `${day} days ago`;
+}
+
+function capUser(u) {
+  if (!u) return "Unknown";
+  const s = String(u).trim().toLowerCase();
+  return s === "vlad" ? "Vlad" : s === "vika" ? "Vika" : "Unknown";
+}
+
+function logEntryToText(entry) {
+  const user = capUser(entry.user);
+
+  if (entry.action === "login") {
+    const as = (entry.details?.as || "").toString().toUpperCase();
+    return `${user} signed in as ${as}.`;
+  }
+
+  if (entry.action === "rate") {
+    const title = entry.details?.title || "unknown title";
+    const score = entry.details?.score ?? "—";
+    return `${user} rated ${title} ${score}/10 hearts!`;
+  }
+
+  if (entry.action === "comment") {
+    const title = entry.details?.title || "unknown title";
+    const text = entry.details?.text || "";
+    return `${user} left a comment to ${title}: "${text}"`;
+  }
+
+  // fallback
+  return `${user} did ${entry.action}.`;
+}
+
+function renderLogs() {
+  const listEl = document.getElementById(LOGS_LIST_ID);
+  if (!listEl) return;
+
+  const list = JSON.parse(localStorage.getItem(LS_EVENT_LOG) || "[]");
+
+  // newest first
+  const sorted = list.slice().reverse();
+
+  listEl.innerHTML = "";
+
+  if (sorted.length === 0) {
+    const li = document.createElement("li");
+    li.className = "log-item";
+
+    const t = document.createElement("div");
+    t.className = "log-time";
+    t.textContent = "no activity yet";
+
+    const txt = document.createElement("div");
+    txt.className = "log-text";
+    txt.textContent = "pick a user, rate something, move cards, leave comments — it will appear here.";
+
+    li.appendChild(t);
+    li.appendChild(txt);
+    listEl.appendChild(li);
+    return;
+  }
+
+  sorted.forEach(entry => {
+    const li = document.createElement("li");
+    li.className = "log-item";
+
+    const time = document.createElement("div");
+    time.className = "log-time";
+    time.textContent = formatTimeAgo(entry.ts);
+
+    const text = document.createElement("div");
+    text.className = "log-text";
+    text.textContent = logEntryToText(entry);
+
+    li.appendChild(time);
+    li.appendChild(text);
+    listEl.appendChild(li);
+  });
+}
+
+function refreshLogsUI() {
+  const panel = document.getElementById(LOGS_PANEL_ID);
+  if (!panel) return;
+
+  // update only when open (saves work)
+  if (panel.dataset.open === "true") renderLogs();
+}
+
+function initializeLogsWidget() {
+  const panel = document.getElementById(LOGS_PANEL_ID);
+  const btn = document.getElementById(LOGS_TOGGLE_ID);
+  if (!panel || !btn) return;
+
+  setLogsOpen(restoreLogsOpen(false));
+
+  btn.addEventListener("click", () => {
+    const isOpen = panel.dataset.open === "true";
+    setLogsOpen(!isOpen);
+  });
+
+  // keep "time ago" fresh if open
+  window.setInterval(() => refreshLogsUI(), 30 * 1000);
+}
+
+/* ---------------------------
    TOOLTIP AUTO-FLIP (UP/DOWN)
 ---------------------------- */
 
@@ -959,6 +1129,10 @@ function createHearts(score, owner) {
     heart.className = `rating-heart ${owner}`;
     heart.textContent = "❤";
 
+    // data for click handling
+    heart.dataset.owner = owner;
+    heart.dataset.score = String(currentScore);
+
     if (currentScore <= score) {
       heart.classList.add("filled");
     }
@@ -972,6 +1146,7 @@ function createHearts(score, owner) {
 function createRatingRow(name, score) {
   const row = document.createElement("div");
   row.className = "rating-row";
+  row.dataset.owner = name;
 
   const label = document.createElement("div");
   label.className = "rating-name";
@@ -1007,19 +1182,162 @@ function renderRatings(metaElement, scores) {
 }
 
 function transformRatings() {
-  document.querySelectorAll(".watched .meta").forEach(meta => {
-    const scores = extractScores(meta.textContent.trim());
-    if (!scores) return;
+  document.querySelectorAll(".watched li").forEach(li => {
+    const meta = li.querySelector(".meta");
+    if (!meta) return;
 
-    // store scores on the card for sorting later
-    const li = meta.closest("li");
-    if (li) {
-      li.dataset.vladScore = String(scores.vladScore);
-      li.dataset.vikaScore = String(scores.vikaScore);
+    // prefer stored ratings; fallback to meta text parse
+    const stored = getStoredScores(li);
+
+    let scores = null;
+
+    if (stored && (stored.vladScore !== null || stored.vikaScore !== null)) {
+      scores = {
+        vladScore: stored.vladScore ?? 0,
+        vikaScore: stored.vikaScore ?? 0,
+      };
+    } else {
+      scores = extractScores(meta.textContent.trim());
+      if (!scores) return;
+
+      // seed storage once from initial html meta
+      storeScore(li, "vlad", scores.vladScore);
+      storeScore(li, "vika", scores.vikaScore);
     }
+
+    // store scores on the card for sorting
+    li.dataset.vladScore = String(scores.vladScore);
+    li.dataset.vikaScore = String(scores.vikaScore);
 
     renderRatings(meta, scores);
   });
+
+  // apply editability styles
+  updateRatingEditability();
+}
+
+/* ---------------------------
+   RATINGS STORAGE + EDITING
+---------------------------- */
+
+const LS_RATINGS_MAP = "ratingsMap";
+
+// stable per-card key (uses title text)
+function getCardKey(li) {
+  if (!li) return "unknown";
+
+  if (li.dataset.key) return li.dataset.key;
+
+  const titleEl = li.querySelector(".filmTitle");
+  const raw = titleEl ? titleEl.textContent : "";
+  const key = raw.trim().toLowerCase().replace(/\s+/g, " ").slice(0, 120) || "unknown";
+
+  li.dataset.key = key;
+  return key;
+}
+
+function loadRatingsMap() {
+  try {
+    return JSON.parse(localStorage.getItem(LS_RATINGS_MAP) || "{}");
+  } catch {
+    return {};
+  }
+}
+
+function saveRatingsMap(map) {
+  localStorage.setItem(LS_RATINGS_MAP, JSON.stringify(map || {}));
+}
+
+function getStoredScores(li) {
+  const key = getCardKey(li);
+  const map = loadRatingsMap();
+  const entry = map[key];
+  if (!entry) return null;
+
+  const vladScore = parseInt(entry.vlad, 10);
+  const vikaScore = parseInt(entry.vika, 10);
+
+  return {
+    vladScore: Number.isNaN(vladScore) ? null : vladScore,
+    vikaScore: Number.isNaN(vikaScore) ? null : vikaScore,
+  };
+}
+
+function storeScore(li, owner, score) {
+  const key = getCardKey(li);
+  const map = loadRatingsMap();
+
+  if (!map[key]) map[key] = {};
+  map[key][owner] = score;
+
+  saveRatingsMap(map);
+}
+
+function updateRatingEditability() {
+  const active = getActiveUser();
+
+  document.querySelectorAll(".rating-row").forEach(row => {
+    const owner = (row.dataset.owner || "").trim().toLowerCase();
+    row.classList.toggle("is-editable", !!active && owner === active);
+  });
+}
+
+/* ---------------------------
+   RATING CLICK HANDLER
+---------------------------- */
+
+function getTitleFromCard(li) {
+  const t = li?.querySelector(".filmTitle");
+  return t ? t.childNodes[0].textContent.trim() : "unknown title";
+}
+
+function updateHeartsFill(wrapper, score) {
+  wrapper.querySelectorAll(".rating-heart").forEach(h => {
+    const s = parseInt(h.dataset.score || "0", 10);
+    h.classList.toggle("filled", !Number.isNaN(s) && s <= score);
+  });
+}
+
+function handleRatingClick(target) {
+  const heart = target.closest(".rating-heart");
+  if (!heart) return;
+
+  const owner = (heart.dataset.owner || "").trim().toLowerCase();
+  const score = parseInt(heart.dataset.score || "0", 10);
+  if (!owner || Number.isNaN(score)) return;
+
+  const active = getActiveUser();
+  if (!active || active !== owner) return; // only own ratings
+
+  const li = heart.closest("li");
+  if (!li) return;
+
+  // persist
+  storeScore(li, owner, score);
+
+  // update card dataset for sorting
+  if (owner === "vlad") li.dataset.vladScore = String(score);
+  if (owner === "vika") li.dataset.vikaScore = String(score);
+
+  // update ui only for that row
+  const row = heart.closest(".rating-row");
+  if (!row) return;
+
+  const stars = row.querySelector(".rating-stars");
+  if (stars) updateHeartsFill(stars, score);
+
+  // log
+  writeLog("rate", { title: getTitleFromCard(li), score });
+
+  // re-apply watched view if we are on watched tab (so favorites sorting reacts)
+  const activeTab = document.querySelector(`${TAB_INPUT_SELECTOR}:checked`);
+  if (activeTab && activeTab.id !== UNWATCHED_TAB_ID) {
+    applyWatchedView();
+  }
+}
+
+function initializeRatingEditing() {
+  document.addEventListener("click", e => handleRatingClick(e.target));
 }
 
 /* ---------------------------
@@ -1223,11 +1541,13 @@ function applyDefaultSorting() {
 
 cacheInitialOrder();
 
-transformRatings();     // stores scores on watched cards
+transformRatings();     // stores scores on watched cards + renders hearts
 renderWatchDates();     // date labels
 
 initializeAuth(); // auth overlay
 initializeFiltersToggle(); // filters button (default closed)
+initializeLogsWidget(); // logs panel (bottom-left)
+initializeRatingEditing(); // click-to-rate (only own row)
 initializeCardStatusTooltips(); // status tooltips
 initializeTooltipAutoFlip(); // tooltip auto-flip
 initializeControls();   // restore controls + bind events

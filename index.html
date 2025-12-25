@@ -407,6 +407,21 @@
     </footer>
   </main>
 
+  <!-- logs widget (bottom-left) -->
+  <div class="logs-widget" id="logsWidget" aria-live="polite">
+    <button class="logs-toggle" id="logsToggle" type="button" aria-expanded="false" aria-controls="logsPanel">
+      logs <span class="logs-toggle-icon" aria-hidden="true"></span>
+    </button>
+
+    <section class="logs-panel" id="logsPanel" data-open="false" aria-label="Event logs">
+      <div class="logs-head">
+        <div class="logs-head-title">activity</div>
+      </div>
+
+      <ul class="logs-list" id="logsList"></ul>
+    </section>
+  </div>
+
   <script src="main.js"></script>
 </body>
 </html>
