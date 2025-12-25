@@ -16,7 +16,23 @@
 <body>
   <div class="stars"></div>
 
+  <button class="user-pill" id="userToggle" type="button" aria-label="Change user">USER: —</button>
+
+  <!-- auth overlay -->
+  <div class="auth-overlay" id="authOverlay" aria-hidden="true">
+    <div class="auth-card" role="dialog" aria-modal="true" aria-labelledby="authTitle" aria-describedby="authDesc">
+      <div class="auth-title" id="authTitle">sign in</div>
+      <div class="auth-desc" id="authDesc">choose who is using the watchlist</div>
+
+      <div class="auth-actions">
+        <button class="auth-choice" type="button" data-user="vlad">vlad</button>
+        <button class="auth-choice" type="button" data-user="vika">vika</button>
+      </div>
+    </div>
+  </div>
+
   <main class="container">
+
     <header>
       <div class="title">what to watch on a date?</div>
       <div class="subtitle">vika & vlad</div>

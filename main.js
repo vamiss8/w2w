@@ -16,6 +16,96 @@ const STATE_STARTED = "started";
 const STATE_WATCHED = "watched";
 
 /* ---------------------------
+   AUTH (VLAD / VIKA) + LOGS
+---------------------------- */
+
+const LS_ACTIVE_USER = "activeUser";
+const LS_EVENT_LOG = "eventLog";
+
+function getActiveUser() {
+  const v = (localStorage.getItem(LS_ACTIVE_USER) || "").trim().toLowerCase();
+  return v === "vlad" || v === "vika" ? v : null;
+}
+
+function writeLog(action, details = {}) {
+  const list = JSON.parse(localStorage.getItem(LS_EVENT_LOG) || "[]");
+  list.push({
+    ts: new Date().toISOString(),
+    user: getActiveUser() || "unknown",
+    action,
+    details,
+  });
+  localStorage.setItem(LS_EVENT_LOG, JSON.stringify(list));
+}
+
+function setActiveUser(user) {
+  const normalized = String(user || "").trim().toLowerCase();
+  if (normalized !== "vlad" && normalized !== "vika") return;
+
+  localStorage.setItem(LS_ACTIVE_USER, normalized);
+  writeLog("login", { as: normalized });
+
+  updateUserUI();
+  closeAuthOverlay();
+}
+
+function updateUserUI() {
+  const btn = document.getElementById("userToggle");
+  if (!btn) return;
+
+  const user = getActiveUser();
+  btn.textContent = `USER: ${user ? user.toUpperCase() : "—"}`;
+}
+
+function openAuthOverlay() {
+  const overlay = document.getElementById("authOverlay");
+  if (!overlay) return;
+
+  overlay.classList.add("is-open");
+  overlay.setAttribute("aria-hidden", "false");
+  document.body.classList.add("auth-open");
+
+  const first = overlay.querySelector(".auth-choice");
+  if (first) first.focus();
+}
+
+function closeAuthOverlay() {
+  const overlay = document.getElementById("authOverlay");
+  if (!overlay) return;
+
+  overlay.classList.remove("is-open");
+  overlay.setAttribute("aria-hidden", "true");
+  document.body.classList.remove("auth-open");
+}
+
+function initializeAuth() {
+  const overlay = document.getElementById("authOverlay");
+  if (!overlay) return;
+
+  // choices
+  overlay.querySelectorAll(".auth-choice").forEach(btn => {
+    btn.addEventListener("click", () => {
+      setActiveUser(btn.dataset.user);
+    });
+  });
+
+  // switch user button
+  const userBtn = document.getElementById("userToggle");
+  if (userBtn) {
+    userBtn.addEventListener("click", () => {
+      openAuthOverlay();
+    });
+  }
+
+  // initial state
+  updateUserUI();
+
+  if (!getActiveUser()) {
+    openAuthOverlay();
+  }
+}
+
+/* ---------------------------
    STARFIELD (CANVAS)
 ---------------------------- */
 
@@ -1136,6 +1226,7 @@ cacheInitialOrder();
 transformRatings();     // stores scores on watched cards
 renderWatchDates();     // date labels
 
+initializeAuth(); // auth overlay
 initializeFiltersToggle(); // filters button (default closed)
 initializeCardStatusTooltips(); // status tooltips
 initializeTooltipAutoFlip(); // tooltip auto-flip
