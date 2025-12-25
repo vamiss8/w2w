@@ -52,7 +52,6 @@ function setActiveUser(user) {
   if (normalized !== "vlad" && normalized !== "vika") return;
 
   localStorage.setItem(LS_ACTIVE_USER, normalized);
-  writeLog("login", { as: normalized });
 
   updateUserUI();
   closeAuthOverlay();
@@ -750,6 +749,51 @@ function capUser(u) {
   return s === "vlad" ? "Vlad" : s === "vika" ? "Vika" : "Unknown";
 }
 
+function renderLogLine(entry, textEl) {
+  const userRaw = String(entry.user || "").trim().toLowerCase();
+  const user = capUser(userRaw);
+
+  // clear
+  textEl.innerHTML = "";
+
+  if (entry.action === "rate") {
+    const title = entry.details?.title || "unknown title";
+    const score = entry.details?.score ?? "—";
+
+    const em = document.createElement("em");
+    em.className = "log-title";
+    em.textContent = title;
+
+    const scoreEl = document.createElement("span");
+    scoreEl.className = `log-score ${userRaw === "vlad" ? "vlad" : userRaw === "vika" ? "vika" : ""}`;
+    scoreEl.textContent = `${score}/10`;
+
+    textEl.appendChild(document.createTextNode(`${user} rated `));
+    textEl.appendChild(em);
+    textEl.appendChild(document.createTextNode(" "));
+    textEl.appendChild(scoreEl);
+    textEl.appendChild(document.createTextNode(" hearts!"));
+    return;
+  }
+
+  if (entry.action === "comment") {
+    const title = entry.details?.title || "unknown title";
+    const c = entry.details?.text || "";
+
+    const em = document.createElement("em");
+    em.className = "log-title";
+    em.textContent = title;
+
+    textEl.appendChild(document.createTextNode(`${user} left a comment to `));
+    textEl.appendChild(em);
+    textEl.appendChild(document.createTextNode(`: "${c}"`));
+    return;
+  }
+
+  // fallback
+  textEl.textContent = `${user} did ${entry.action}.`;
+}
+
 function logEntryToText(entry) {
   const user = capUser(entry.user);
 
@@ -779,6 +823,12 @@ function renderLogs() {
   if (!listEl) return;
 
   const list = JSON.parse(localStorage.getItem(LS_EVENT_LOG) || "[]");
+
+  // remove login entries (and persist cleaned list)
+  const cleaned = list.filter(e => e && e.action !== "login");
+  if (cleaned.length !== list.length) {
+    localStorage.setItem(LS_EVENT_LOG, JSON.stringify(cleaned));
+  }
 
   // newest first
   const sorted = list.slice().reverse();
@@ -813,7 +863,7 @@ function renderLogs() {
 
     const text = document.createElement("div");
     text.className = "log-text";
-    text.textContent = logEntryToText(entry);
+    renderLogLine(entry, text);
 
     li.appendChild(time);
     li.appendChild(text);
@@ -1326,6 +1376,8 @@ function handleRatingClick(target) {
   const stars = row.querySelector(".rating-stars");
   if (stars) updateHeartsFill(stars, score);
 
+  clearRatingHoverPreview(row);
+
   // log
   writeLog("rate", { title: getTitleFromCard(li), score });
 
@@ -1336,8 +1388,58 @@ function handleRatingClick(target) {
   }
 }
 
+/* ---------------------------
+   RATING HOVER PREVIEW
+---------------------------- */
+
+function setRatingHoverPreview(row, hoverScore) {
+  const hearts = row.querySelectorAll(".rating-heart");
+
+  hearts.forEach(h => {
+    const s = parseInt(h.dataset.score || "0", 10);
+    if (Number.isNaN(s)) return;
+
+    const on = s <= hoverScore;
+
+    h.classList.toggle("hovered", on);
+    h.classList.toggle("hovered-peak", s === hoverScore);
+  });
+}
+
+function clearRatingHoverPreview(row) {
+  row.querySelectorAll(".rating-heart").forEach(h => {
+    h.classList.remove("hovered");
+    h.classList.remove("hovered-peak");
+  });
+}
+
 function initializeRatingEditing() {
+  // click to commit rating
   document.addEventListener("click", e => handleRatingClick(e.target));
+
+  // hover preview (only editable row)
+  document.addEventListener("mouseover", e => {
+    const heart = e.target.closest(".rating-heart");
+    if (!heart) return;
+
+    const row = heart.closest(".rating-row");
+    if (!row || !row.classList.contains("is-editable")) return;
+
+    const score = parseInt(heart.dataset.score || "0", 10);
+    if (Number.isNaN(score)) return;
+
+    setRatingHoverPreview(row, score);
+  });
+
+  document.addEventListener("mouseout", e => {
+    const row = e.target.closest(".rating-row");
+    if (!row || !row.classList.contains("is-editable")) return;
+
+    // clear only when leaving the row (not moving between hearts)
+    if (row.contains(e.relatedTarget)) return;
+
+    clearRatingHoverPreview(row);
+  });
 }
 
 /* ---------------------------

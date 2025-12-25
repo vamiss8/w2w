@@ -963,9 +963,12 @@ li:hover {
 .rating-heart {
   font-size: 0.9rem;
   opacity: 0.2;
+  transform: scale(1);
+  transition: transform 0.12s ease, opacity 0.12s ease;
 }
 
-.rating-heart.vlad.filled {
+.rating-heart.vlad.filled,
+.rating-heart.vlad.hovered {
   opacity: 1;
   color: #9b6cff;
   text-shadow:
@@ -973,12 +976,22 @@ li:hover {
     0 0 12px rgba(155, 108, 255, 0.15);
 }
 
-.rating-heart.vika.filled {
+.rating-heart.vika.filled,
+.rating-heart.vika.hovered {
   opacity: 1;
   color: #ff7abf;
   text-shadow:
     0 0 6px rgba(255, 122, 191, 0.35),
     0 0 12px rgba(255, 122, 191, 0.15);
+}
+
+/* hover preview size */
+.rating-row.is-editable .rating-heart.hovered {
+  transform: scale(1.14);
+}
+
+.rating-row.is-editable .rating-heart.hovered-peak {
+  transform: scale(1.18);
 }
 
 /* =========================
@@ -1461,5 +1474,44 @@ body.auth-open {
 }
 
 .rating-row.is-editable .rating-heart:hover {
-  opacity: 0.85;
+  opacity: 1;
+}
+
+/* =========================
+   LOGS — TITLE + SCORE STYLING
+   ========================= */
+
+.log-title {
+  font-style: normal;
+  font-size: 0.9em;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(230, 232, 255, 0.88);
+
+  margin-inline-start: 4px;
+  margin-inline-end: 3px;
+
+  /* text-decoration: underline; */
+}
+
+.log-score {
+  font-family: var(--font-badge);
+  letter-spacing: 0.12em;
+  font-size: 0.82em;
+  opacity: 0.95;
+  white-space: nowrap;
+}
+
+.log-score.vlad {
+  color: #9b6cff;
+  text-shadow:
+    0 0 6px rgba(155, 108, 255, 0.35),
+    0 0 12px rgba(155, 108, 255, 0.15);
+}
+
+.log-score.vika {
+  color: #ff7abf;
+  text-shadow:
+    0 0 6px rgba(255, 122, 191, 0.35),
+    0 0 12px rgba(255, 122, 191, 0.15);
 }
