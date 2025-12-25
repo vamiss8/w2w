@@ -612,7 +612,7 @@ function autoFlipTooltip(anchorEl) {
 }
 
 function initializeTooltipAutoFlip() {
-  const anchors = document.querySelectorAll(".chip, .info-badge");
+  const anchors = document.querySelectorAll(".chip, .info-badge, .status");
 
   anchors.forEach(anchor => {
     anchor.addEventListener("mouseenter", () => autoFlipTooltip(anchor));
@@ -622,6 +622,42 @@ function initializeTooltipAutoFlip() {
   // keep it robust on resize
   window.addEventListener("resize", () => {
     // nothing to do until next hover/focus
+  });
+}
+
+/* ---------------------------
+   CARD STATUS TOOLTIPS (00/01/10/11)
+---------------------------- */
+
+const STATUS_TOOLTIP_TEXT = {
+  "00": "no one watched.",
+  "01": "vika's first time.",
+  "10": "vlad's first time.",
+  "11": "rewatch.",
+};
+
+function initializeCardStatusTooltips() {
+  document.querySelectorAll(".lists li").forEach(li => {
+    const badge = li.querySelector(".status");
+    if (!badge) return;
+
+    // avoid duplicates
+    if (badge.querySelector(".tooltip")) return;
+
+    const code = (li.dataset.status || badge.textContent || "").trim();
+    const text = STATUS_TOOLTIP_TEXT[code];
+    if (!text) return;
+
+    // keyboard accessibility
+    badge.setAttribute("tabindex", "0");
+    badge.setAttribute("role", "button");
+    badge.setAttribute("aria-label", `Status ${code} info`);
+
+    const tip = document.createElement("span");
+    tip.className = "tooltip";
+    tip.innerHTML = text;
+
+    badge.appendChild(tip);
   });
 }
 
@@ -1101,6 +1137,7 @@ transformRatings();     // stores scores on watched cards
 renderWatchDates();     // date labels
 
 initializeFiltersToggle(); // filters button (default closed)
+initializeCardStatusTooltips(); // status tooltips
 initializeTooltipAutoFlip(); // tooltip auto-flip
 initializeControls();   // restore controls + bind events
 

@@ -384,6 +384,15 @@ input#tab-watched:checked ~ .tabs label[for="tab-watched"] .tab-icon-hearts::aft
   z-index: 1;
 }
 
+/* keep hovered card above neighbors so tooltip isn't overlapped */
+.lists li {
+  position: relative;
+}
+
+.lists li:hover {
+  z-index: 2;
+}
+
 .controls-panel {
   display: none;
   width: 100%;
@@ -465,6 +474,18 @@ input#tab-watched:checked ~ .controls .controls-watched {
   box-shadow:
     0 10px 30px rgba(0, 0, 0, 0.45),
     0 0 18px rgba(155, 108, 255, 0.10);
+}
+
+/* show tooltip on hover/focus (chips + info + status) */
+.chip:hover .tooltip,
+.chip:focus-within .tooltip,
+.info-badge:hover .tooltip,
+.info-badge:focus-within .tooltip,
+.status:hover .tooltip,
+.status:focus-within .tooltip {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(0);
 }
 
 /* active chip (radio checked) */
@@ -919,6 +940,13 @@ li[data-status="11"] { border-color: var(--c-11); }
 
   background: rgba(255, 255, 255, 0.02);
   border: 1px solid rgba(230, 232, 255, 0.06);
+
+  position: relative;   /* important for absolute tooltip positioning */
+  cursor: default;
+}
+
+.status .tooltip {
+  text-transform: uppercase;
 }
 
 .s-00 { color: var(--c-00); }
