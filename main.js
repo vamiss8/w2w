@@ -15,6 +15,224 @@ const STATE_PLANNED = "planned";
 const STATE_STARTED = "started";
 const STATE_WATCHED = "watched";
 
+async function remoteSeedIfEmpty() {
+  const sb = getSupabase();
+  if (!sb) return;
+
+  const { data, error } = await sb.from("cards").select("id").limit(1);
+  if (error) {
+    console.error("[supabase] seed check failed", error);
+    return;
+  }
+
+  if (data && data.length > 0) return;
+
+  const payload = Array.from(document.querySelectorAll(".lists li"))
+    .map(li => readCardPayloadFromLi(li))
+    .filter(Boolean);
+
+  const res = await sb.from("cards").upsert(payload, { onConflict: "id" });
+  if (res.error) console.error("[supabase] seed upsert failed", res.error);
+  else console.log("[supabase] seeded", payload.length, "cards");
+}
+
+/* =========================
+   REMOTE SYNC (SUPABASE)
+   ========================= */
+
+const REMOTE = {
+  enabled: true,
+  url: "https://esdhstxcxxgcexddkxqi.supabase.co",
+  anonKey: "sb_publishable_QduQ2hLqMBoK2p24BkMkeA_-zT31bLM",
+  pollMs: 10_000,
+};
+
+function getSupabase() {
+  if (!REMOTE.enabled) return null;
+  if (!window.supabase) return null;
+
+  if (!getSupabase.client) {
+    getSupabase.client = window.supabase.createClient(REMOTE.url, REMOTE.anonKey);
+  }
+
+  return getSupabase.client;
+}
+
+function getTabFromLi(li) {
+  if (!li) return "unwatched";
+  const parent = li.closest("ul");
+  if (!parent) return "unwatched";
+  return parent.classList.contains("watched") ? "watched" : "unwatched";
+}
+
+function readTitleFromLi(li) {
+  const el = li?.querySelector(".filmTitle");
+  if (!el) return "unknown title";
+  // take only the title node (watch-date label is appended later)
+  return (el.childNodes[0]?.textContent || el.textContent || "").trim();
+}
+
+function readCardPayloadFromLi(li) {
+  const id = parseInt(getCardId(li) || "0", 10);
+  if (!id) return null;
+
+  return {
+    id,
+    title: readTitleFromLi(li),
+    tab: getTabFromLi(li),
+    state: getState(li),
+    status: (li.dataset.status || "00").trim(),
+    start_date: (li.dataset.start || "").trim() || null,
+    end_date: (li.dataset.end || "").trim() || null,
+    vlad_score: parseInt(li.dataset.vladScore || "0", 10) || 0,
+    vika_score: parseInt(li.dataset.vikaScore || "0", 10) || 0,
+  };
+}
+
+function applyRemoteCardToDom(row) {
+  const id = String(row.id);
+  const li = document.querySelector(`.lists li[data-id="${CSS.escape(id)}"]`);
+  if (!li) return;
+
+  li.dataset.status = row.status;
+  li.dataset.state = row.state;
+
+  if (row.start_date) li.dataset.start = row.start_date;
+  else delete li.dataset.start;
+
+  if (row.end_date) li.dataset.end = row.end_date;
+  else delete li.dataset.end;
+
+  li.dataset.vladScore = String(row.vlad_score ?? 0);
+  li.dataset.vikaScore = String(row.vika_score ?? 0);
+
+  // update hearts ui (if already rendered)
+  const vRow = li.querySelector('.rating-row[data-owner="vlad"] .rating-stars');
+  const kRow = li.querySelector('.rating-row[data-owner="vika"] .rating-stars');
+
+  if (vRow) updateHeartsFill(vRow, parseInt(li.dataset.vladScore || "0", 10));
+  if (kRow) updateHeartsFill(kRow, parseInt(li.dataset.vikaScore || "0", 10));
+
+  // update watch-date label
+  upsertWatchDateLabel(li);
+}
+
+let remoteLastSyncIso = null;
+
+async function remoteSeedIfEmpty() {
+  const sb = getSupabase();
+  if (!sb) return;
+
+  const { data, error } = await sb.from("cards").select("id").limit(1);
+  if (error) return;
+
+  if (data && data.length > 0) return;
+
+  const payload = Array.from(document.querySelectorAll(".lists li"))
+    .map(li => readCardPayloadFromLi(li))
+    .filter(Boolean);
+
+  if (payload.length === 0) return;
+
+  await sb.from("cards").upsert(payload, { onConflict: "id" });
+}
+
+/* =========================
+   REMOTE CURSOR HELPERS
+   ========================= */
+
+function maxUpdatedAt(rows) {
+  let max = null;
+  rows.forEach(r => {
+    const v = r.updated_at;
+    if (!v) return;
+    if (!max || String(v) > String(max)) max = v; // iso strings compare ok
+  });
+  return max;
+}
+
+async function remotePullAll() {
+  const sb = getSupabase();
+  if (!sb) return;
+
+  const { data, error } = await sb
+    .from("cards")
+    .select("*")
+    .order("id", { ascending: true });
+
+  if (error || !data) return;
+
+  data.forEach(row => applyRemoteCardToDom(row));
+  applyActiveTabView();
+
+  // cursor: use server updated_at, not client time
+  remoteLastSyncIso = maxUpdatedAt(data) || remoteLastSyncIso;
+}
+
+async function remotePullChanges() {
+  const sb = getSupabase();
+  if (!sb) return;
+
+  const cursor = remoteLastSyncIso || "1970-01-01T00:00:00.000Z";
+
+  const { data, error } = await sb
+    .from("cards")
+    .select("*")
+    .gt("updated_at", cursor)
+    .order("updated_at", { ascending: true });
+
+  if (error || !data) return;
+
+  if (data.length > 0) {
+    data.forEach(row => applyRemoteCardToDom(row));
+    applyActiveTabView();
+
+    remoteLastSyncIso = maxUpdatedAt(data) || remoteLastSyncIso;
+  }
+}
+
+async function remoteUpdateRating(cardId, owner, score) {
+  const sb = getSupabase();
+  if (!sb) return;
+
+  const id = parseInt(cardId, 10);
+  if (Number.isNaN(id)) return;
+
+  const patch = owner === "vlad"
+    ? { vlad_score: score }
+    : { vika_score: score };
+
+  await sb.from("cards").update(patch).eq("id", id);
+}
+
+async function remoteInsertLog(action, details, cardIdOrNull) {
+  const sb = getSupabase();
+  if (!sb) return;
+
+  const user = getActiveUser();
+  if (!user) return;
+
+  const cardId = cardIdOrNull ? parseInt(cardIdOrNull, 10) : null;
+
+  await sb.from("logs").insert({
+    user_name: user,
+    action,
+    card_id: Number.isNaN(cardId) ? null : cardId,
+    details: details || {},
+  });
+}
+
+async function initializeRemoteSync() {
+  if (!REMOTE.enabled) return;
+
+  await remoteSeedIfEmpty();
+  await remotePullAll();
+
+  window.setInterval(() => {
+    remotePullChanges();
+  }, REMOTE.pollMs);
+}
+
 /* ---------------------------
    AUTH (VLAD / VIKA) + LOGS
 ---------------------------- */
@@ -818,22 +1036,82 @@ function logEntryToText(entry) {
   return `${user} did ${entry.action}.`;
 }
 
-function renderLogs() {
+/* =========================
+   LOGS (REMOTE FIRST)
+   ========================= */
+
+async function renderLogs() {
   const listEl = document.getElementById(LOGS_LIST_ID);
   if (!listEl) return;
 
-  const list = JSON.parse(localStorage.getItem(LS_EVENT_LOG) || "[]");
+  listEl.innerHTML = "";
 
-  // remove login entries (and persist cleaned list)
-  const cleaned = list.filter(e => e && e.action !== "login");
-  if (cleaned.length !== list.length) {
-    localStorage.setItem(LS_EVENT_LOG, JSON.stringify(cleaned));
+  const sb = getSupabase();
+
+  // if remote enabled -> load from server
+  if (sb) {
+    const { data, error } = await sb
+      .from("logs")
+      .select("*")
+      .neq("action", "login")
+      .order("ts", { ascending: false })
+      .limit(60);
+
+    if (error || !data) {
+      // fallback ui
+      const li = document.createElement("li");
+      li.className = "log-item";
+      li.innerHTML = `
+        <div class="log-time">logs unavailable</div>
+        <div class="log-text">could not load remote logs.</div>
+      `;
+      listEl.appendChild(li);
+      return;
+    }
+
+    if (data.length === 0) {
+      const li = document.createElement("li");
+      li.className = "log-item";
+      li.innerHTML = `
+        <div class="log-time">no activity yet</div>
+        <div class="log-text">pick a user, rate something, move cards, leave comments — it will appear here.</div>
+      `;
+      listEl.appendChild(li);
+      return;
+    }
+
+    data.forEach(entry => {
+      const li = document.createElement("li");
+      li.className = "log-item";
+
+      const time = document.createElement("div");
+      time.className = "log-time";
+      time.textContent = formatTimeAgo(entry.ts);
+
+      const text = document.createElement("div");
+      text.className = "log-text";
+
+      // reuse your renderer: adapt shape
+      renderLogLine(
+        {
+          user: entry.user_name,
+          action: entry.action,
+          details: entry.details,
+        },
+        text
+      );
+
+      li.appendChild(time);
+      li.appendChild(text);
+      listEl.appendChild(li);
+    });
+
+    return;
   }
 
-  // newest first
+  // fallback to local (old behavior) if remote disabled
+  const list = JSON.parse(localStorage.getItem(LS_EVENT_LOG) || "[]");
   const sorted = list.slice().reverse();
-
-  listEl.innerHTML = "";
 
   if (sorted.length === 0) {
     const li = document.createElement("li");
@@ -1273,17 +1551,26 @@ function transformRatings() {
 const LS_RATINGS_MAP = "ratingsMap";
 
 // stable per-card key (uses title text)
+/* =========================
+   CARD ID (STABLE KEY)
+   ========================= */
+
+function getCardId(li) {
+  const raw = (li?.dataset?.id || "").trim();
+  const n = parseInt(raw, 10);
+  if (!Number.isNaN(n) && n > 0) return String(n);
+  return null;
+}
+
+// stable per-card key
 function getCardKey(li) {
-  if (!li) return "unknown";
+  const id = getCardId(li);
+  if (id) return id;
 
-  if (li.dataset.key) return li.dataset.key;
-
-  const titleEl = li.querySelector(".filmTitle");
+  // fallback (legacy): title-based
+  const titleEl = li?.querySelector(".filmTitle");
   const raw = titleEl ? titleEl.textContent : "";
-  const key = raw.trim().toLowerCase().replace(/\s+/g, " ").slice(0, 120) || "unknown";
-
-  li.dataset.key = key;
-  return key;
+  return raw.trim().toLowerCase().replace(/\s+/g, " ").slice(0, 120) || "unknown";
 }
 
 function loadRatingsMap() {
@@ -1348,7 +1635,7 @@ function updateHeartsFill(wrapper, score) {
   });
 }
 
-function handleRatingClick(target) {
+async function handleRatingClick(target) {
   const heart = target.closest(".rating-heart");
   if (!heart) return;
 
@@ -1362,8 +1649,23 @@ function handleRatingClick(target) {
   const li = heart.closest("li");
   if (!li) return;
 
-  // persist
+  // persist locally for instant ui + offline fallback
   storeScore(li, owner, score);
+
+  const cardId = getCardId(li);
+
+  /* =========================
+     REMOTE FIRST / LOCAL FALLBACK
+     ========================= */
+
+  const sb = getSupabase();
+
+  if (sb && cardId) {
+    await remoteUpdateRating(cardId, owner, score);
+    await remoteInsertLog("rate", { title: getTitleFromCard(li), score }, cardId);
+  } else {
+    writeLog("rate", { title: getTitleFromCard(li), score });
+  }
 
   // update card dataset for sorting
   if (owner === "vlad") li.dataset.vladScore = String(score);
@@ -1377,9 +1679,6 @@ function handleRatingClick(target) {
   if (stars) updateHeartsFill(stars, score);
 
   clearRatingHoverPreview(row);
-
-  // log
-  writeLog("rate", { title: getTitleFromCard(li), score });
 
   // re-apply watched view if we are on watched tab (so favorites sorting reacts)
   const activeTab = document.querySelector(`${TAB_INPUT_SELECTOR}:checked`);
@@ -1645,6 +1944,8 @@ cacheInitialOrder();
 
 transformRatings();     // stores scores on watched cards + renders hearts
 renderWatchDates();     // date labels
+
+initializeRemoteSync(); // remote sync
 
 initializeAuth(); // auth overlay
 initializeFiltersToggle(); // filters button (default closed)
