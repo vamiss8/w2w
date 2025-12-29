@@ -912,13 +912,20 @@ li {
   backdrop-filter: blur(4px);
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.45);
 
-  animation: fadeUp .6s ease both;
+  /* animation: fadeUp .6s ease both; */
   transition: transform .35s ease, box-shadow .35s ease;
 }
 
 li:hover {
   transform: translateY(-4px) scale(1.01);
   box-shadow: 0 30px 60px rgba(0, 0, 0, 0.65);
+}
+
+/* card animations control */
+
+li.is-animating {
+  animation: fadeUp .6s ease both;
+  animation-delay: var(--anim-delay, 0s);
 }
 
 @keyframes fadeUp {

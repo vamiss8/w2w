@@ -15,6 +15,87 @@ const STATE_PLANNED = "planned";
 const STATE_STARTED = "started";
 const STATE_WATCHED = "watched";
 
+/* =========================
+   REALTIME (SUPABASE)
+   ========================= */
+
+let realtimeChannel = null; // --------------------------- declare explicitly ----------------------------
+
+
+async function initializeRealtime() {
+  const sb = getSupabase();
+  if (!sb) return;
+
+  // --------------------------- seed once if db empty ----------------------------
+  await remoteSeedIfEmpty();
+
+  // --------------------------- initial pull ----------------------------
+  await remotePullAll();
+
+  realtimeChannel = sb
+    .channel("w2w-db")
+    .on("postgres_changes", { event: "*", schema: "public", table: "cards" }, payload => {
+      if (payload.eventType === "DELETE") return;
+      if (payload.new) applyRemoteCardToDom(payload.new);
+      scheduleActiveTabView({ animate: false });
+    })
+    .on("postgres_changes", { event: "INSERT", schema: "public", table: "logs" }, payload => {
+      if (!payload.new) return;
+      const panel = document.getElementById(LOGS_PANEL_ID);
+      if (panel && panel.dataset.open === "true") prependRemoteLog(payload.new);
+    })
+    .subscribe((status) => {
+      console.log("[realtime]", status);
+    });
+}
+
+function prependRemoteLog(row) {
+  const listEl = document.getElementById(LOGS_LIST_ID);
+  if (!listEl) return;
+
+  // prevent duplicates if realtime reconnects
+  const key = row.id ? String(row.id) : `${row.ts}-${row.user_name}-${row.action}`;
+  if (listEl.querySelector(`.log-item[data-key="${CSS.escape(key)}"]`)) return;
+
+  const li = document.createElement("li");
+  li.className = "log-item";
+  li.dataset.ts = row.ts;
+  li.dataset.key = key;
+
+  const time = document.createElement("div");
+  time.className = "log-time";
+  time.textContent = formatTimeAgo(row.ts);
+
+  const text = document.createElement("div");
+  text.className = "log-text";
+
+  renderLogLine(
+    { user: row.user_name, action: row.action, details: row.details },
+    text
+  );
+
+  li.appendChild(time);
+  li.appendChild(text);
+
+  // prepend
+  listEl.insertBefore(li, listEl.firstChild);
+
+  // keep list capped
+  const MAX = 60;
+  while (listEl.children.length > MAX) {
+    listEl.removeChild(listEl.lastChild);
+  }
+}
+
+function refreshLogTimesOnly() {
+  document.querySelectorAll(`#${LOGS_LIST_ID} .log-item[data-ts]`).forEach(li => {
+    const ts = li.dataset.ts;
+    const timeEl = li.querySelector(".log-time");
+    if (!timeEl) return;
+    timeEl.textContent = formatTimeAgo(ts);
+  });
+}
+
 async function remoteSeedIfEmpty() {
   const sb = getSupabase();
   if (!sb) return;
@@ -43,7 +124,7 @@ async function remoteSeedIfEmpty() {
 const REMOTE = {
   enabled: true,
   url: "https://esdhstxcxxgcexddkxqi.supabase.co",
-  anonKey: "sb_publishable_QduQ2hLqMBoK2p24BkMkeA_-zT31bLM",
+  anonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVzZGhzdHhjeHhnY2V4ZGRreHFpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY2Nzg1ODcsImV4cCI6MjA4MjI1NDU4N30.Tnes90BskmTxvxNaOSJkI1ah6MuQz7rmnKAeG_mtbiA",
   pollMs: 10_000,
 };
 
@@ -52,7 +133,13 @@ function getSupabase() {
   if (!window.supabase) return null;
 
   if (!getSupabase.client) {
-    getSupabase.client = window.supabase.createClient(REMOTE.url, REMOTE.anonKey);
+    getSupabase.client = window.supabase.createClient(REMOTE.url, REMOTE.anonKey, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+        detectSessionInUrl: false,
+      },
+    });
   }
 
   return getSupabase.client;
@@ -94,48 +181,29 @@ function applyRemoteCardToDom(row) {
   const li = document.querySelector(`.lists li[data-id="${CSS.escape(id)}"]`);
   if (!li) return;
 
-  li.dataset.status = row.status;
-  li.dataset.state = row.state;
-
-  if (row.start_date) li.dataset.start = row.start_date;
-  else delete li.dataset.start;
-
-  if (row.end_date) li.dataset.end = row.end_date;
-  else delete li.dataset.end;
-
   li.dataset.vladScore = String(row.vlad_score ?? 0);
   li.dataset.vikaScore = String(row.vika_score ?? 0);
 
-  // update hearts ui (if already rendered)
+  // --------------------------- keep local cache in sync with server ----------------------------
+  storeScore(li, "vlad", parseInt(li.dataset.vladScore || "0", 10) || 0);
+  storeScore(li, "vika", parseInt(li.dataset.vikaScore || "0", 10) || 0);
+
   const vRow = li.querySelector('.rating-row[data-owner="vlad"] .rating-stars');
   const kRow = li.querySelector('.rating-row[data-owner="vika"] .rating-stars');
-
   if (vRow) updateHeartsFill(vRow, parseInt(li.dataset.vladScore || "0", 10));
   if (kRow) updateHeartsFill(kRow, parseInt(li.dataset.vikaScore || "0", 10));
+
+  // update watch-date label
+  upsertWatchDateLabel(li);
+
+  // update status badge ui (text + color + tooltip)
+  syncStatusBadge(li);
 
   // update watch-date label
   upsertWatchDateLabel(li);
 }
 
 let remoteLastSyncIso = null;
-
-async function remoteSeedIfEmpty() {
-  const sb = getSupabase();
-  if (!sb) return;
-
-  const { data, error } = await sb.from("cards").select("id").limit(1);
-  if (error) return;
-
-  if (data && data.length > 0) return;
-
-  const payload = Array.from(document.querySelectorAll(".lists li"))
-    .map(li => readCardPayloadFromLi(li))
-    .filter(Boolean);
-
-  if (payload.length === 0) return;
-
-  await sb.from("cards").upsert(payload, { onConflict: "id" });
-}
 
 /* =========================
    REMOTE CURSOR HELPERS
@@ -160,10 +228,12 @@ async function remotePullAll() {
     .select("*")
     .order("id", { ascending: true });
 
-  if (error || !data) return;
+  if (error || !data) {
+    console.error("[supabase] remotePullAll failed", error);
+    return;
+  }
 
   data.forEach(row => applyRemoteCardToDom(row));
-  applyActiveTabView();
 
   // cursor: use server updated_at, not client time
   remoteLastSyncIso = maxUpdatedAt(data) || remoteLastSyncIso;
@@ -181,11 +251,16 @@ async function remotePullChanges() {
     .gt("updated_at", cursor)
     .order("updated_at", { ascending: true });
 
-  if (error || !data) return;
+  if (error || !data) {
+    console.error("[supabase] remotePullChanges failed", error);
+    return;
+  }
 
   if (data.length > 0) {
     data.forEach(row => applyRemoteCardToDom(row));
-    applyActiveTabView();
+
+    // re-apply sorting/filters, but do not restart animations
+    scheduleActiveTabView({ animate: false });
 
     remoteLastSyncIso = maxUpdatedAt(data) || remoteLastSyncIso;
   }
@@ -198,11 +273,10 @@ async function remoteUpdateRating(cardId, owner, score) {
   const id = parseInt(cardId, 10);
   if (Number.isNaN(id)) return;
 
-  const patch = owner === "vlad"
-    ? { vlad_score: score }
-    : { vika_score: score };
+  const patch = owner === "vlad" ? { vlad_score: score } : { vika_score: score };
 
-  await sb.from("cards").update(patch).eq("id", id);
+  const { error } = await sb.from("cards").update(patch).eq("id", id);
+  if (error) console.error("[supabase] update rating failed", error);
 }
 
 async function remoteInsertLog(action, details, cardIdOrNull) {
@@ -214,12 +288,14 @@ async function remoteInsertLog(action, details, cardIdOrNull) {
 
   const cardId = cardIdOrNull ? parseInt(cardIdOrNull, 10) : null;
 
-  await sb.from("logs").insert({
+  const { error } = await sb.from("logs").insert({
     user_name: user,
     action,
     card_id: Number.isNaN(cardId) ? null : cardId,
     details: details || {},
   });
+
+  if (error) console.error("[supabase] insert log failed", error);
 }
 
 async function initializeRemoteSync() {
@@ -265,7 +341,7 @@ function writeLog(action, details = {}) {
   refreshLogsUI();
 }
 
-function setActiveUser(user) {
+async function setActiveUser(user) {
   const normalized = String(user || "").trim().toLowerCase();
   if (normalized !== "vlad" && normalized !== "vika") return;
 
@@ -273,6 +349,9 @@ function setActiveUser(user) {
 
   updateUserUI();
   closeAuthOverlay();
+
+  // --------------------------- log login to remote ----------------------------
+  await remoteInsertLog("login", { as: normalized }, null);
 }
 
 function updateUserUI() {
@@ -808,19 +887,57 @@ function restartListAnimations(listSelector) {
   });
 }
 
+function showFooterInstantly() {
+  if (!footer) return;
+
+  footer.classList.remove("instant-hide");
+  footer.classList.add("visible");
+}
+
 // animate list appearance (staggered visible cards)
 function animateList(listSelector) {
   const cards = document.querySelectorAll(`${listSelector} li:not(.is-hidden)`);
 
   hideFooterInstantly();
-  restartListAnimations(listSelector);
+
+  // remove animation class so we can restart it cleanly
+  cards.forEach(card => {
+    card.classList.remove("is-animating");
+    card.style.removeProperty("--anim-delay");
+  });
+
+  // force reflow once
+  void document.body.offsetHeight;
 
   cards.forEach((card, index) => {
-    card.style.animationDelay = `${index * ANIMATION_STEP_DELAY}s`;
+    card.style.setProperty("--anim-delay", `${index * ANIMATION_STEP_DELAY}s`);
+    card.classList.add("is-animating");
   });
 
   const totalDelay = cards.length * ANIMATION_STEP_DELAY + FOOTER_EXTRA_DELAY;
   showFooterWithDelay(totalDelay);
+}
+
+/* =========================
+   VIEW REFRESH SCHEDULER
+   ========================= */
+
+let viewRefreshRaf = 0;
+let viewRefreshAnimate = false;
+
+function scheduleActiveTabView({ animate = false } = {}) {
+  // if any caller wants animation, keep it
+  viewRefreshAnimate = viewRefreshAnimate || !!animate;
+
+  if (viewRefreshRaf) return;
+
+  viewRefreshRaf = requestAnimationFrame(() => {
+    viewRefreshRaf = 0;
+    const doAnimate = viewRefreshAnimate;
+    viewRefreshAnimate = false;
+
+    applyActiveTabView({ animate: doAnimate });
+  });
 }
 
 /* ---------------------------
@@ -844,7 +961,7 @@ function restoreActiveTab() {
 
 function handleTabChange(tab) {
   persistActiveTab(tab.id);
-  applyActiveTabView();
+  scheduleActiveTabView({ animate: true })
 }
 
 function initializeTabs() {
@@ -853,7 +970,6 @@ function initializeTabs() {
   });
 
   restoreActiveTab();   // just sets the checked tab if saved
-  applyActiveTabView(); // render based on restored state
 }
 
 /* ---------------------------
@@ -1053,7 +1169,6 @@ async function renderLogs() {
     const { data, error } = await sb
       .from("logs")
       .select("*")
-      .neq("action", "login")
       .order("ts", { ascending: false })
       .limit(60);
 
@@ -1083,6 +1198,8 @@ async function renderLogs() {
     data.forEach(entry => {
       const li = document.createElement("li");
       li.className = "log-item";
+      li.dataset.ts = entry.ts;
+      li.dataset.key = String(entry.id);
 
       const time = document.createElement("div");
       time.className = "log-time";
@@ -1091,13 +1208,8 @@ async function renderLogs() {
       const text = document.createElement("div");
       text.className = "log-text";
 
-      // reuse your renderer: adapt shape
       renderLogLine(
-        {
-          user: entry.user_name,
-          action: entry.action,
-          details: entry.details,
-        },
+        { user: entry.user_name, action: entry.action, details: entry.details },
         text
       );
 
@@ -1105,6 +1217,7 @@ async function renderLogs() {
       li.appendChild(text);
       listEl.appendChild(li);
     });
+
 
     return;
   }
@@ -1170,7 +1283,7 @@ function initializeLogsWidget() {
   });
 
   // keep "time ago" fresh if open
-  window.setInterval(() => refreshLogsUI(), 30 * 1000);
+  window.setInterval(() => refreshLogTimesOnly(), 30 * 1000);
 }
 
 /* ---------------------------
@@ -1223,6 +1336,63 @@ const STATUS_TOOLTIP_TEXT = {
   "10": "vlad's first time.",
   "11": "rewatch.",
 };
+
+const STATUS_CODES = ["00", "01", "10", "11"];
+
+function normalizeStatusCode(value) {
+  const s = String(value || "").trim();
+  return STATUS_CODES.includes(s) ? s : "00";
+}
+
+function syncStatusBadge(li) {
+  const badge = li?.querySelector(".status");
+  if (!badge) return;
+
+  const code = normalizeStatusCode(li.dataset.status || badge.textContent);
+
+  // keep li data-status normalized
+  li.dataset.status = code;
+
+  // update badge color class (s-00/s-01/...)
+  STATUS_CODES.forEach(c => badge.classList.remove(`s-${c}`));
+  badge.classList.add(`s-${code}`);
+
+  // update badge text without destroying tooltip node
+  const tip = badge.querySelector(".tooltip");
+  let textNode = null;
+
+  badge.childNodes.forEach(n => {
+    if (n.nodeType === Node.TEXT_NODE) textNode = n;
+  });
+
+  if (!textNode) {
+    textNode = document.createTextNode(code);
+    badge.insertBefore(textNode, tip || null);
+  } else {
+    textNode.nodeValue = code;
+  }
+
+  // ensure tooltip exists + matches current code
+  const text = STATUS_TOOLTIP_TEXT[code];
+  if (!text) return;
+
+  badge.setAttribute("tabindex", "0");
+  badge.setAttribute("role", "button");
+  badge.setAttribute("aria-label", `Status ${code} info`);
+
+  if (tip) {
+    tip.innerHTML = text;
+  } else {
+    const newTip = document.createElement("span");
+    newTip.className = "tooltip";
+    newTip.innerHTML = text;
+    badge.appendChild(newTip);
+  }
+}
+
+function syncAllStatusBadges() {
+  document.querySelectorAll(".lists li").forEach(li => syncStatusBadge(li));
+}
 
 function initializeCardStatusTooltips() {
   document.querySelectorAll(".lists li").forEach(li => {
@@ -1364,28 +1534,36 @@ function sortWatchedByMode() {
   });
 }
 
-function applyUnwatchedView() {
+/* =========================
+   APPLY VIEW (ANIMATABLE)
+   ========================= */
+
+function applyUnwatchedView({ animate = true } = {}) {
   sortUnwatchedStartedToBottom();
   applyUnwatchedFilters();
-  animateList(UNWATCHED_LIST_SELECTOR);
+
+  if (animate) animateList(UNWATCHED_LIST_SELECTOR);
+  else showFooterInstantly();
 }
 
-function applyWatchedView() {
+function applyWatchedView({ animate = true } = {}) {
   sortWatchedByMode();
   applyWatchedFilters();
-  animateList(WATCHED_LIST_SELECTOR);
+
+  if (animate) animateList(WATCHED_LIST_SELECTOR);
+  else showFooterInstantly();
 }
 
-function applyActiveTabView() {
+function applyActiveTabView({ animate = true } = {}) {
   const activeTab = document.querySelector(`${TAB_INPUT_SELECTOR}:checked`);
   if (!activeTab) return;
 
   if (activeTab.id === UNWATCHED_TAB_ID) {
-    applyUnwatchedView();
+    applyUnwatchedView({ animate });
     return;
   }
 
-  applyWatchedView();
+  applyWatchedView({ animate });
 }
 
 // persist + restore controls
@@ -1619,10 +1797,6 @@ function updateRatingEditability() {
   });
 }
 
-/* ---------------------------
-   RATING CLICK HANDLER
----------------------------- */
-
 function getTitleFromCard(li) {
   const t = li?.querySelector(".filmTitle");
   return t ? t.childNodes[0].textContent.trim() : "unknown title";
@@ -1635,6 +1809,23 @@ function updateHeartsFill(wrapper, score) {
   });
 }
 
+/* =========================
+   AUTH (SUPABASE EMAIL OTP) — THROTTLED + CORRECT USER
+   ========================= */
+
+const LS_OTP_LAST_AT = "otpLastAtMs";
+const OTP_COOLDOWN_MS = 65_000;
+
+async function getSessionEmailLower(sb) {
+  const { data } = await sb.auth.getSession();
+  const email = data?.session?.user?.email || "";
+  return email.trim().toLowerCase() || null;
+}
+
+/* =========================
+   RATING CLICK HANDLER (NO AUTH)
+   ========================= */
+
 async function handleRatingClick(target) {
   const heart = target.closest(".rating-heart");
   if (!heart) return;
@@ -1644,21 +1835,16 @@ async function handleRatingClick(target) {
   if (!owner || Number.isNaN(score)) return;
 
   const active = getActiveUser();
-  if (!active || active !== owner) return; // only own ratings
+  if (!active || active !== owner) return;
 
   const li = heart.closest("li");
   if (!li) return;
 
+  const cardId = getCardId(li);
+  const sb = getSupabase();
+
   // persist locally for instant ui + offline fallback
   storeScore(li, owner, score);
-
-  const cardId = getCardId(li);
-
-  /* =========================
-     REMOTE FIRST / LOCAL FALLBACK
-     ========================= */
-
-  const sb = getSupabase();
 
   if (sb && cardId) {
     await remoteUpdateRating(cardId, owner, score);
@@ -1671,7 +1857,7 @@ async function handleRatingClick(target) {
   if (owner === "vlad") li.dataset.vladScore = String(score);
   if (owner === "vika") li.dataset.vikaScore = String(score);
 
-  // update ui only for that row
+  // update ui
   const row = heart.closest(".rating-row");
   if (!row) return;
 
@@ -1680,10 +1866,9 @@ async function handleRatingClick(target) {
 
   clearRatingHoverPreview(row);
 
-  // re-apply watched view if we are on watched tab (so favorites sorting reacts)
   const activeTab = document.querySelector(`${TAB_INPUT_SELECTOR}:checked`);
   if (activeTab && activeTab.id !== UNWATCHED_TAB_ID) {
-    applyWatchedView();
+    scheduleActiveTabView({ animate: false });
   }
 }
 
@@ -1936,24 +2121,30 @@ function applyDefaultSorting() {
   sortWatchedByStartDateDesc();
 }
 
-/* ---------------------------
+/* =========================
    BOOT
----------------------------- */
+   ========================= */
 
-cacheInitialOrder();
+(async function boot() {
+  cacheInitialOrder();
 
-transformRatings();     // stores scores on watched cards + renders hearts
-renderWatchDates();     // date labels
+  transformRatings();
+  renderWatchDates();
+  syncAllStatusBadges();
 
-initializeRemoteSync(); // remote sync
+  initializeAuth(); // --------------------------- ui first ----------------------------
+  initializeFiltersToggle();
+  initializeLogsWidget();
+  initializeRatingEditing();
+  initializeTooltipAutoFlip();
+  initializeControls();
+  initializeTabs();
 
-initializeAuth(); // auth overlay
-initializeFiltersToggle(); // filters button (default closed)
-initializeLogsWidget(); // logs panel (bottom-left)
-initializeRatingEditing(); // click-to-rate (only own row)
-initializeCardStatusTooltips(); // status tooltips
-initializeTooltipAutoFlip(); // tooltip auto-flip
-initializeControls();   // restore controls + bind events
+  try {
+    await initializeRealtime();
+  } catch (e) {
+    console.error("[supabase] initializeRealtime crashed", e);
+  }
 
-applyActiveTabView();   // apply filters/sorting + animate for current tab
-initializeTabs();       // binds tab change listeners + restores active tab
+  applyActiveTabView({ animate: true });
+})();
