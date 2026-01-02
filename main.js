@@ -197,22 +197,20 @@ function ensureRightControls(li) {
     right.appendChild(btn);
   }
 
-  // add menu container
-  if (!li.querySelector(".card-menu")) {
-    const menu = document.createElement("div");
+    // --------------------------- menu container (upgrade-safe) ----------------------------
+  let menu = li.querySelector(".card-menu");
+  if (!menu) {
+    menu = document.createElement("div");
     menu.className = "card-menu";
     menu.dataset.open = "false";
-    menu.innerHTML = `
-      <button type="button" data-action="edit">edit</button>
-      <button type="button" data-action="comment">comment</button>
-      <div class="menu-sep"></div>
-      <button type="button" data-action="set-status">set status</button>
-      <button type="button" data-action="mark-planned">mark planned</button>
-      <button type="button" data-action="mark-started">mark started</button>
-      <button type="button" data-action="mark-watched">mark watched</button>
-    `;
     li.appendChild(menu);
   }
+
+  // always rewrite menu so legacy buttons disappear
+  menu.innerHTML = `
+    <button type="button" data-action="edit">edit</button>
+    <button type="button" data-action="comment">comment</button>
+  `;
 }
 
 function ensureCommentsUi(li) {
@@ -226,22 +224,32 @@ function ensureCommentsUi(li) {
     meta.appendChild(box);
   }
 
-  const v = (li.dataset.vladComment || "").trim();
-  const k = (li.dataset.vikaComment || "").trim();
+  const vText = (li.dataset.vladComment || "").trim();
+  const kText = (li.dataset.vikaComment || "").trim();
+
+  const vOpen = (li.dataset.commentOpenVlad || "false") === "true";
+  const kOpen = (li.dataset.commentOpenVika || "false") === "true";
 
   box.innerHTML = "";
 
-  function addLine(who, text) {
-    const line = document.createElement("div");
-    line.className = "comment-line";
-    line.innerHTML = `<span class="who ${who}">${who}</span>${escapeHtml(text)}`;
-    box.appendChild(line);
+  function addToggle(who, text, isOpen) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = `comment-toggle ${who}`;
+    btn.dataset.who = who;
+    btn.textContent = `${who}'s comment`;
+
+    const body = document.createElement("div");
+    body.className = "comment-body";
+    body.dataset.open = isOpen ? "true" : "false";
+    body.textContent = text;
+
+    box.appendChild(btn);
+    box.appendChild(body);
   }
 
-  if (v) addLine("vlad", v);
-  if (k) addLine("vika", k);
-
-  // if no comments -> keep box empty (no placeholder)
+  if (vText) addToggle("vlad", vText, vOpen);
+  if (kText) addToggle("vika", kText, kOpen);
 }
 
 function escapeHtml(str) {
@@ -1354,56 +1362,106 @@ function capUser(u) {
   return s === "vlad" ? "Vlad" : s === "vika" ? "Vika" : "Unknown";
 }
 
+/* =========================
+   LOGS — RENDER HELPERS (COLORED NAMES)
+   ========================= */
+
+function createUserSpan(userRaw, textOverride) {
+  const u = String(userRaw || "").trim().toLowerCase();
+
+  const span = document.createElement("span");
+  span.className = `log-user ${u === "vlad" ? "vlad" : u === "vika" ? "vika" : ""}`;
+  span.textContent = textOverride || capUser(u);
+
+  return span;
+}
+
+function appendText(el, s) {
+  el.appendChild(document.createTextNode(String(s || "")));
+}
+
+/* ---------------------------
+   LOG LINE RENDER (REMOTE + LOCAL)
+---------------------------- */
+
 function renderLogLine(entry, textEl) {
   const userRaw = String(entry.user || "").trim().toLowerCase();
-  const user = capUser(userRaw);
 
   // clear
   textEl.innerHTML = "";
 
-  if (entry.action === "rate") {
-    const title = entry.details?.title || "unknown title";
-    const score = entry.details?.score ?? "—";
+  const title = entry.details?.title || "unknown title";
 
+  // reusable title node
+  function titleEm(text) {
     const em = document.createElement("em");
     em.className = "log-title";
-    em.textContent = title;
+    em.textContent = text || "unknown title";
+    return em;
+  }
+
+  // helper: format watch dates without leaking raw comment etc
+  function describeWatchDates(state, startIso, endIso) {
+    const s = (startIso || "").toString().trim();
+    const e = (endIso || "").toString().trim();
+
+    if (!s && !e) return "removed watch dates";
+
+    if (state === STATE_STARTED) return `set start date to ${formatISOForUI(s)}`;
+
+    if (state === STATE_WATCHED) {
+      if (s && e && s !== e) return `set watch dates to ${formatISOForUI(s)} – ${formatISOForUI(e)}`;
+      const single = s || e;
+      return `set watch date to ${formatISOForUI(single)}`;
+    }
+
+    // fallback
+    if (s && e && s !== e) return `set dates to ${formatISOForUI(s)} – ${formatISOForUI(e)}`;
+    const single = s || e;
+    return `set date to ${formatISOForUI(single)}`;
+  }
+
+  /* ---------------------------
+     ACTIONS
+  ---------------------------- */
+
+  if (entry.action === "login") {
+    const asLower = String(entry.details?.as || "").trim().toLowerCase();
+    textEl.appendChild(createUserSpan(userRaw));
+    appendText(textEl, " signed in.");
+    // textEl.appendChild(createUserSpan(asLower, asLower ? asLower.toUpperCase() : "—"));
+    return;
+  }
+
+  if (entry.action === "rate") {
+    const score = entry.details?.score ?? "—";
 
     const scoreEl = document.createElement("span");
     scoreEl.className = `log-score ${userRaw === "vlad" ? "vlad" : userRaw === "vika" ? "vika" : ""}`;
     scoreEl.textContent = `${score}/10`;
 
-    textEl.appendChild(document.createTextNode(`${user} rated `));
-    textEl.appendChild(em);
-    textEl.appendChild(document.createTextNode(" "));
+    textEl.appendChild(createUserSpan(userRaw));
+    appendText(textEl, " rated ");
+    textEl.appendChild(titleEm(title));
+    appendText(textEl, " ");
     textEl.appendChild(scoreEl);
-    textEl.appendChild(document.createTextNode(" hearts!"));
+    appendText(textEl, " hearts!");
     return;
   }
 
   if (entry.action === "comment") {
-    const title = entry.details?.title || "unknown title";
-    const c = entry.details?.text || "";
-
-    const em = document.createElement("em");
-    em.className = "log-title";
-    em.textContent = title;
-
-    textEl.appendChild(document.createTextNode(`${user} left a comment to `));
-    textEl.appendChild(em);
-    textEl.appendChild(document.createTextNode(`: "${c}"`));
+    textEl.appendChild(createUserSpan(userRaw));
+    appendText(textEl, " left a comment on ");
+    textEl.appendChild(titleEm(title));
+    // appendText(textEl, ".");
     return;
   }
 
-    if (entry.action === "add_card") {
-    const title = entry.details?.title || "unknown title";
-    const em = document.createElement("em");
-    em.className = "log-title";
-    em.textContent = title;
-
-    textEl.appendChild(document.createTextNode(`${user} added `));
-    textEl.appendChild(em);
-    textEl.appendChild(document.createTextNode("."));
+  if (entry.action === "add_card") {
+    textEl.appendChild(createUserSpan(userRaw));
+    appendText(textEl, " added ");
+    textEl.appendChild(titleEm(title));
+    // appendText(textEl, ".");
     return;
   }
 
@@ -1411,54 +1469,63 @@ function renderLogLine(entry, textEl) {
     const from = entry.details?.from || "unknown";
     const to = entry.details?.to || "unknown";
 
-    const emA = document.createElement("em");
-    emA.className = "log-title";
-    emA.textContent = from;
-
-    const emB = document.createElement("em");
-    emB.className = "log-title";
-    emB.textContent = to;
-
-    textEl.appendChild(document.createTextNode(`${user} renamed `));
-    textEl.appendChild(emA);
-    textEl.appendChild(document.createTextNode(" to "));
-    textEl.appendChild(emB);
-    textEl.appendChild(document.createTextNode("."));
+    textEl.appendChild(createUserSpan(userRaw));
+    appendText(textEl, " renamed ");
+    textEl.appendChild(titleEm(from));
+    appendText(textEl, " to ");
+    textEl.appendChild(titleEm(to));
     return;
   }
 
   if (entry.action === "set_state") {
-    const title = entry.details?.title || "unknown title";
     const from = entry.details?.from || "—";
     const to = entry.details?.to || "—";
 
-    const em = document.createElement("em");
-    em.className = "log-title";
-    em.textContent = title;
-
-    textEl.appendChild(document.createTextNode(`${user} changed state of `));
-    textEl.appendChild(em);
-    textEl.appendChild(document.createTextNode(` from ${from} to ${to}.`));
+    textEl.appendChild(createUserSpan(userRaw));
+    appendText(textEl, " changed state of ");
+    textEl.appendChild(titleEm(title));
+    appendText(textEl, ` from ${from} to ${to}.`);
     return;
   }
 
   if (entry.action === "set_status") {
-    const title = entry.details?.title || "unknown title";
     const from = entry.details?.from || "—";
     const to = entry.details?.to || "—";
 
-    const em = document.createElement("em");
-    em.className = "log-title";
-    em.textContent = title;
-
-    textEl.appendChild(document.createTextNode(`${user} changed status of `));
-    textEl.appendChild(em);
-    textEl.appendChild(document.createTextNode(` from ${from} to ${to}.`));
+    textEl.appendChild(createUserSpan(userRaw));
+    appendText(textEl, " changed status of ");
+    textEl.appendChild(titleEm(title));
+    appendText(textEl, ` from ${from} to ${to}.`);
     return;
   }
 
-  // fallback
-  textEl.textContent = `${user} did ${entry.action}.`;
+  if (entry.action === "set_watch_dates") {
+    const state = entry.details?.state || "";
+    const toStart = entry.details?.to_start || null;
+    const toEnd = entry.details?.to_end || null;
+
+    textEl.appendChild(createUserSpan(userRaw));
+    appendText(textEl, " ");
+    appendText(textEl, describeWatchDates(state, toStart, toEnd));
+    appendText(textEl, " of ");
+    textEl.appendChild(titleEm(title));
+    // appendText(textEl, ".");
+    return;
+  }
+
+  /* ---------------------------
+     LEGACY / FALLBACK
+  ---------------------------- */
+
+  if (entry.action === "edit_card") {
+    textEl.appendChild(createUserSpan(userRaw));
+    appendText(textEl, " saved changes on ");
+    textEl.appendChild(titleEm(title));
+    return;
+  }
+
+  textEl.appendChild(createUserSpan(userRaw));
+  appendText(textEl, ` did ${entry.action}.`);
 }
 
 function logEntryToText(entry) {
@@ -1477,9 +1544,39 @@ function logEntryToText(entry) {
 
   if (entry.action === "comment") {
     const title = entry.details?.title || "unknown title";
-    const text = entry.details?.text || "";
-    return `${user} left a comment to ${title}: "${text}"`;
+    const c = entry.details?.text || "";
+    return `${user} left a comment to ${title}: "${c}"`;
   }
+
+  if (entry.action === "add_card") {
+    const title = entry.details?.title || "unknown title";
+    return `${user} added ${title}.`;
+  }
+
+  if (entry.action === "edit_title") {
+    const from = entry.details?.from || "unknown";
+    const to = entry.details?.to || "unknown";
+    return `${user} renamed ${from} to ${to}.`;
+  }
+
+  if (entry.action === "edit_card") {
+    const title = entry.details?.title || "unknown title";
+    return `${user} edited ${title}.`;
+  }
+
+  if (entry.action === "set_state") {
+    const title = entry.details?.title || "unknown title";
+    const from = entry.details?.from || "—";
+    const to = entry.details?.to || "—";
+    return `${user} changed state of ${title} from ${from} to ${to}.`;
+  }
+
+  // if (entry.action === "set_status") {
+  //   const title = entry.details?.title || "unknown title";
+  //   const from = entry.details?.from || "—";
+  //   const to = entry.details?.to || "—";
+  //   return `${user} changed status of ${title} from ${from} to ${to}.`;
+  // }
 
   // fallback
   return `${user} did ${entry.action}.`;
@@ -2632,6 +2729,8 @@ function openCommentModal(li) {
 function closeAllCardMenus() {
   document.querySelectorAll(".card-menu[data-open='true']").forEach(m => {
     m.dataset.open = "false";
+    const li = m.closest("li");
+    if (li) li.classList.remove("menu-open");
   });
 }
 
@@ -2641,7 +2740,11 @@ function toggleCardMenu(li) {
 
   const open = menu.dataset.open === "true";
   closeAllCardMenus();
-  menu.dataset.open = open ? "false" : "true";
+
+  const next = open ? "false" : "true";
+  menu.dataset.open = next;
+
+  li.classList.toggle("menu-open", next === "true");
 }
 
 async function setCardStatus(li, nextStatus) {
@@ -2715,7 +2818,68 @@ async function saveCommentForActiveUser(li, text) {
 
   const row = await remoteUpdateCard(id, patch);
   if (row) {
-    await remoteInsertLog("comment", { title: getTitleFromCard(li), text: String(text || "") }, id);
+    // await remoteInsertLog("comment", { title: getTitleFromCard(li), text: String(text || "") }, id);
+    await remoteInsertLog("comment", { title: getTitleFromCard(li) }, id);
+  }
+}
+
+/* =========================
+   EDIT LOGS — FIELD DIFFS
+   ========================= */
+
+function snapshotCardForLogs(li) {
+  return {
+    title: getTitleFromCard(li),
+    tab: getTabFromLi(li),
+    state: getState(li),
+    status: normalizeStatusCode(li.dataset.status || "00"),
+    start_date: (li.dataset.start || "").trim() || null,
+    end_date: (li.dataset.end || "").trim() || null,
+  };
+}
+
+function normalizeRowForLogs(row) {
+  return {
+    title: row.title || "unknown title",
+    tab: row.tab || TAB_UNWATCHED,
+    state: row.state || STATE_PLANNED,
+    status: normalizeStatusCode(row.status || "00"),
+    start_date: row.start_date ? String(row.start_date) : null,
+    end_date: row.end_date ? String(row.end_date) : null,
+  };
+}
+
+async function logEditDiffs(before, after, cardId) {
+  // title rename
+  if (before.title !== after.title) {
+    await remoteInsertLog("edit_title", { from: before.title, to: after.title }, cardId);
+  }
+
+  // state change
+  if (before.state !== after.state) {
+    await remoteInsertLog("set_state", { title: after.title, from: before.state, to: after.state }, cardId);
+  }
+
+  // status change
+  if (before.status !== after.status) {
+    await remoteInsertLog("set_status", { title: after.title, from: before.status, to: after.status }, cardId);
+  }
+
+  // watch dates change (start/end)
+  const bs = before.start_date || "";
+  const be = before.end_date || "";
+  const as = after.start_date || "";
+  const ae = after.end_date || "";
+
+  if (bs !== as || be !== ae) {
+    await remoteInsertLog("set_watch_dates", {
+      title: after.title,
+      state: after.state,
+      from_start: before.start_date,
+      from_end: before.end_date,
+      to_start: after.start_date,
+      to_end: after.end_date,
+    }, cardId);
   }
 }
 
@@ -2738,6 +2902,25 @@ function initializeCardUi() {
 
   // card menu toggle + menu actions (event delegation)
   document.addEventListener("click", async e => {
+    // --------------------------- comment toggle ----------------------------
+    const cToggle = e.target.closest(".comment-toggle");
+    if (cToggle) {
+      const li = cToggle.closest("li");
+      if (!li) return;
+
+      const who = (cToggle.dataset.who || "").trim().toLowerCase();
+      const body = cToggle.nextElementSibling;
+      if (!body || !body.classList.contains("comment-body")) return;
+
+      const open = body.dataset.open === "true";
+      body.dataset.open = open ? "false" : "true";
+
+      if (who === "vlad") li.dataset.commentOpenVlad = open ? "false" : "true";
+      if (who === "vika") li.dataset.commentOpenVika = open ? "false" : "true";
+
+      return;
+    }
+
     const actionsBtn = e.target.closest(".card-actions");
     if (actionsBtn) {
       const li = actionsBtn.closest("li");
@@ -2758,21 +2941,6 @@ function initializeCardUi() {
 
       if (action === "edit") openEditCardModal(li);
       if (action === "comment") openCommentModal(li);
-
-      if (action === "mark-planned") await setCardState(li, STATE_PLANNED);
-      if (action === "mark-started") await setCardState(li, STATE_STARTED);
-      if (action === "mark-watched") await setCardState(li, STATE_WATCHED);
-
-      if (action === "set-status") {
-        // quick cycle: 00 -> 01 -> 10 -> 11 -> 00
-        const cur = normalizeStatusCode(li.dataset.status || "00");
-        const next =
-          cur === "00" ? "01" :
-          cur === "01" ? "10" :
-          cur === "10" ? "11" : "00";
-
-        await setCardStatus(li, next);
-      }
 
       return;
     }
@@ -2835,16 +3003,16 @@ function initializeCardUi() {
 
       if (cardModalMode === "edit" && cardModalCardId) {
         const li = document.querySelector(`.lists li[data-id="${CSS.escape(String(cardModalCardId))}"]`);
-        const fromTitle = li ? getTitleFromCard(li) : null;
+        const before = li ? snapshotCardForLogs(li) : null;
 
         const row = await remoteUpdateCard(cardModalCardId, payload);
 
-        if (row && fromTitle && fromTitle !== row.title) {
-          await remoteInsertLog("edit_title", { from: fromTitle, to: row.title }, row.id);
-        } else if (row) {
-          await remoteInsertLog("edit_card", { title: row.title }, row.id);
+        if (row && before) {
+          const after = normalizeRowForLogs(row);
+          await logEditDiffs(before, after, row.id);
         }
       }
+
 
       closeModal(CARD_MODAL_ID);
     });
