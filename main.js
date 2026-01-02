@@ -145,6 +145,234 @@ function getSupabase() {
   return getSupabase.client;
 }
 
+/* =========================
+   CARD CRUD + UI HELPERS
+   ========================= */
+
+const TAB_UNWATCHED = "unwatched";
+const TAB_WATCHED = "watched";
+
+function todayIsoDate() {
+  const d = new Date();
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+function generateCardId() {
+  // note: stays under 2^53 (safe integer)
+  return Date.now() * 1000 + Math.floor(Math.random() * 1000);
+}
+
+function getListsUlByTab(tab) {
+  return tab === TAB_WATCHED
+    ? document.querySelector(WATCHED_LIST_SELECTOR)
+    : document.querySelector(UNWATCHED_LIST_SELECTOR);
+}
+
+function ensureRightControls(li) {
+  if (!li) return;
+
+  const status = li.querySelector(".status");
+  if (!status) return;
+
+  // already wrapped
+  if (status.parentElement && status.parentElement.classList.contains("right")) return;
+
+  const right = document.createElement("div");
+  right.className = "right";
+
+  // move status into right
+  li.insertBefore(right, status);
+  right.appendChild(status);
+
+  // add menu button
+  if (!li.querySelector(".card-actions")) {
+    const btn = document.createElement("button");
+    btn.className = "card-actions";
+    btn.type = "button";
+    btn.setAttribute("aria-label", "Card actions");
+    btn.textContent = "⋯";
+    right.appendChild(btn);
+  }
+
+  // add menu container
+  if (!li.querySelector(".card-menu")) {
+    const menu = document.createElement("div");
+    menu.className = "card-menu";
+    menu.dataset.open = "false";
+    menu.innerHTML = `
+      <button type="button" data-action="edit">edit</button>
+      <button type="button" data-action="comment">comment</button>
+      <div class="menu-sep"></div>
+      <button type="button" data-action="set-status">set status</button>
+      <button type="button" data-action="mark-planned">mark planned</button>
+      <button type="button" data-action="mark-started">mark started</button>
+      <button type="button" data-action="mark-watched">mark watched</button>
+    `;
+    li.appendChild(menu);
+  }
+}
+
+function ensureCommentsUi(li) {
+  const meta = li.querySelector(".meta");
+  if (!meta) return;
+
+  let box = meta.querySelector(".comment-lines");
+  if (!box) {
+    box = document.createElement("div");
+    box.className = "comment-lines";
+    meta.appendChild(box);
+  }
+
+  const v = (li.dataset.vladComment || "").trim();
+  const k = (li.dataset.vikaComment || "").trim();
+
+  box.innerHTML = "";
+
+  function addLine(who, text) {
+    const line = document.createElement("div");
+    line.className = "comment-line";
+    line.innerHTML = `<span class="who ${who}">${who}</span>${escapeHtml(text)}`;
+    box.appendChild(line);
+  }
+
+  if (v) addLine("vlad", v);
+  if (k) addLine("vika", k);
+
+  // if no comments -> keep box empty (no placeholder)
+}
+
+function escapeHtml(str) {
+  return String(str || "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function setCardDatasetFromRow(li, row) {
+  li.dataset.id = String(row.id);
+  li.dataset.status = String(row.status || "00");
+  li.dataset.state = String(row.state || "planned");
+
+  li.dataset.start = row.start_date ? String(row.start_date) : "";
+  li.dataset.end = row.end_date ? String(row.end_date) : "";
+
+  li.dataset.vladScore = String(row.vlad_score ?? 0);
+  li.dataset.vikaScore = String(row.vika_score ?? 0);
+
+  li.dataset.vladComment = String(row.vlad_comment ?? "");
+  li.dataset.vikaComment = String(row.vika_comment ?? "");
+}
+
+function createCardLiFromRow(row) {
+  const li = document.createElement("li");
+  li.dataset.id = String(row.id);
+
+  li.innerHTML = `
+    <div class="left">
+      <div class="filmTitle"></div>
+      <div class="meta">—</div>
+    </div>
+    <div class="status">00</div>
+  `;
+
+  const title = li.querySelector(".filmTitle");
+  if (title) title.textContent = row.title || "unknown title";
+
+  // set initial order index so stable sorting works
+  li.dataset.initialIndex = String(Number.MAX_SAFE_INTEGER - 1);
+
+  setCardDatasetFromRow(li, row);
+
+  // tooltip + color class + date label
+  syncStatusBadge(li);
+  upsertWatchDateLabel(li);
+
+  ensureRightControls(li);
+
+  // if this is watched -> render rating widget in meta
+  if (row.tab === TAB_WATCHED) {
+    const meta = li.querySelector(".meta");
+    if (meta) {
+      renderRatings(meta, { vladScore: row.vlad_score ?? 0, vikaScore: row.vika_score ?? 0 });
+    }
+  }
+
+  ensureCommentsUi(li);
+  return li;
+}
+
+function moveCardToTab(li, tab) {
+  const targetUl = getListsUlByTab(tab);
+  if (!targetUl) return;
+
+  const currentUl = li.closest("ul");
+  if (currentUl === targetUl) return;
+
+  targetUl.appendChild(li);
+}
+
+function ensureCardExistsFromRow(row) {
+  const id = String(row.id);
+  let li = document.querySelector(`.lists li[data-id="${CSS.escape(id)}"]`);
+
+  if (!li) {
+    li = createCardLiFromRow(row);
+    const ul = getListsUlByTab(row.tab);
+    if (ul) ul.appendChild(li);
+
+    // make sure layout is upgraded
+    ensureRightControls(li);
+    return li;
+  }
+
+  return li;
+}
+
+async function remoteInsertCard(payload) {
+  const sb = getSupabase();
+  if (!sb) return null;
+
+  const { data, error } = await sb
+    .from("cards")
+    .insert(payload)
+    .select("*")
+    .single();
+
+  if (error) {
+    console.error("[supabase] insert card failed", error);
+    return null;
+  }
+
+  return data;
+}
+
+async function remoteUpdateCard(cardId, patch) {
+  const sb = getSupabase();
+  if (!sb) return null;
+
+  const id = parseInt(String(cardId), 10);
+  if (Number.isNaN(id)) return null;
+
+  const { data, error } = await sb
+    .from("cards")
+    .update(patch)
+    .eq("id", id)
+    .select("*")
+    .single();
+
+  if (error) {
+    console.error("[supabase] update card failed", error);
+    return null;
+  }
+
+  return data;
+}
+
 function getTabFromLi(li) {
   if (!li) return "unwatched";
   const parent = li.closest("ul");
@@ -173,34 +401,70 @@ function readCardPayloadFromLi(li) {
     end_date: (li.dataset.end || "").trim() || null,
     vlad_score: parseInt(li.dataset.vladScore || "0", 10) || 0,
     vika_score: parseInt(li.dataset.vikaScore || "0", 10) || 0,
+    vlad_comment: (li.dataset.vladComment || "").trim(),
+    vika_comment: (li.dataset.vikaComment || "").trim(),
   };
 }
 
 function applyRemoteCardToDom(row) {
-  const id = String(row.id);
-  const li = document.querySelector(`.lists li[data-id="${CSS.escape(id)}"]`);
+  const li = ensureCardExistsFromRow(row);
   if (!li) return;
 
-  li.dataset.vladScore = String(row.vlad_score ?? 0);
-  li.dataset.vikaScore = String(row.vika_score ?? 0);
+  // update all datasets
+  setCardDatasetFromRow(li, row);
 
-  // --------------------------- keep local cache in sync with server ----------------------------
+  // keep local cache in sync with server (ratings)
   storeScore(li, "vlad", parseInt(li.dataset.vladScore || "0", 10) || 0);
   storeScore(li, "vika", parseInt(li.dataset.vikaScore || "0", 10) || 0);
 
-  const vRow = li.querySelector('.rating-row[data-owner="vlad"] .rating-stars');
-  const kRow = li.querySelector('.rating-row[data-owner="vika"] .rating-stars');
-  if (vRow) updateHeartsFill(vRow, parseInt(li.dataset.vladScore || "0", 10));
-  if (kRow) updateHeartsFill(kRow, parseInt(li.dataset.vikaScore || "0", 10));
+  // move between tabs if needed
+  moveCardToTab(li, row.tab);
 
-  // update watch-date label
-  upsertWatchDateLabel(li);
+  // update title
+  const titleEl = li.querySelector(".filmTitle");
+  if (titleEl) {
+    // keep only title text node clean (watch-date appended later)
+    titleEl.childNodes.forEach(n => {
+      if (n.nodeType === Node.TEXT_NODE) n.nodeValue = row.title || "unknown title";
+    });
 
-  // update status badge ui (text + color + tooltip)
+    // if there was no text node yet
+    if (!titleEl.childNodes.length) titleEl.textContent = row.title || "unknown title";
+  }
+
+  // watched tab: ensure rating widget exists and matches db
+  if (row.tab === TAB_WATCHED) {
+    const meta = li.querySelector(".meta");
+    if (meta) {
+      const hasRating = !!meta.querySelector(".rating");
+      if (!hasRating) {
+        renderRatings(meta, { vladScore: row.vlad_score ?? 0, vikaScore: row.vika_score ?? 0 });
+      } else {
+        const vRow = li.querySelector('.rating-row[data-owner="vlad"] .rating-stars');
+        const kRow = li.querySelector('.rating-row[data-owner="vika"] .rating-stars');
+        if (vRow) updateHeartsFill(vRow, parseInt(li.dataset.vladScore || "0", 10));
+        if (kRow) updateHeartsFill(kRow, parseInt(li.dataset.vikaScore || "0", 10));
+      }
+    }
+  } else {
+    // unwatched: keep meta as dash if it has no rating container
+    const meta = li.querySelector(".meta");
+    if (meta && meta.querySelector(".rating")) {
+      meta.innerHTML = "—";
+    }
+  }
+
+  // status + tooltips
   syncStatusBadge(li);
 
-  // update watch-date label
+  // dates label
   upsertWatchDateLabel(li);
+
+  // comments
+  ensureCommentsUi(li);
+
+  // editability (ratings) depends on active user
+  updateRatingEditability();
 }
 
 let remoteLastSyncIso = null;
@@ -312,6 +576,13 @@ async function initializeRemoteSync() {
 /* ---------------------------
    AUTH (VLAD / VIKA) + LOGS
 ---------------------------- */
+
+const LOGS_MORE_ID = "logsMore";
+const LOGS_PAGE_SIZE = 20;
+
+let logsCursorTs = null;
+let logsHasMore = true;
+let logsIsLoading = false;
 
 const LS_ACTIVE_USER = "activeUser";
 const LS_EVENT_LOG = "eventLog";
@@ -1124,6 +1395,68 @@ function renderLogLine(entry, textEl) {
     return;
   }
 
+    if (entry.action === "add_card") {
+    const title = entry.details?.title || "unknown title";
+    const em = document.createElement("em");
+    em.className = "log-title";
+    em.textContent = title;
+
+    textEl.appendChild(document.createTextNode(`${user} added `));
+    textEl.appendChild(em);
+    textEl.appendChild(document.createTextNode("."));
+    return;
+  }
+
+  if (entry.action === "edit_title") {
+    const from = entry.details?.from || "unknown";
+    const to = entry.details?.to || "unknown";
+
+    const emA = document.createElement("em");
+    emA.className = "log-title";
+    emA.textContent = from;
+
+    const emB = document.createElement("em");
+    emB.className = "log-title";
+    emB.textContent = to;
+
+    textEl.appendChild(document.createTextNode(`${user} renamed `));
+    textEl.appendChild(emA);
+    textEl.appendChild(document.createTextNode(" to "));
+    textEl.appendChild(emB);
+    textEl.appendChild(document.createTextNode("."));
+    return;
+  }
+
+  if (entry.action === "set_state") {
+    const title = entry.details?.title || "unknown title";
+    const from = entry.details?.from || "—";
+    const to = entry.details?.to || "—";
+
+    const em = document.createElement("em");
+    em.className = "log-title";
+    em.textContent = title;
+
+    textEl.appendChild(document.createTextNode(`${user} changed state of `));
+    textEl.appendChild(em);
+    textEl.appendChild(document.createTextNode(` from ${from} to ${to}.`));
+    return;
+  }
+
+  if (entry.action === "set_status") {
+    const title = entry.details?.title || "unknown title";
+    const from = entry.details?.from || "—";
+    const to = entry.details?.to || "—";
+
+    const em = document.createElement("em");
+    em.className = "log-title";
+    em.textContent = title;
+
+    textEl.appendChild(document.createTextNode(`${user} changed status of `));
+    textEl.appendChild(em);
+    textEl.appendChild(document.createTextNode(` from ${from} to ${to}.`));
+    return;
+  }
+
   // fallback
   textEl.textContent = `${user} did ${entry.action}.`;
 }
@@ -1161,30 +1494,48 @@ async function renderLogs() {
   if (!listEl) return;
 
   listEl.innerHTML = "";
+  logsCursorTs = null;
+  logsHasMore = true;
+
+  const moreBtn = document.getElementById(LOGS_MORE_ID);
+  if (moreBtn) {
+    moreBtn.disabled = true;
+    moreBtn.textContent = "loading...";
+  }
+
+  await loadMoreLogsPage({ reset: true });
+
+  if (moreBtn) {
+    moreBtn.disabled = !logsHasMore;
+    moreBtn.textContent = logsHasMore ? "load more" : "no more";
+  }
+}
+
+async function loadMoreLogsPage({ reset = false } = {}) {
+  const listEl = document.getElementById(LOGS_LIST_ID);
+  if (!listEl) return;
+
+  if (logsIsLoading) return;
+  if (!logsHasMore && !reset) return;
+
+  logsIsLoading = true;
+
+  const moreBtn = document.getElementById(LOGS_MORE_ID);
+  if (moreBtn) {
+    moreBtn.disabled = true;
+    moreBtn.textContent = "loading...";
+  }
 
   const sb = getSupabase();
 
-  // if remote enabled -> load from server
-  if (sb) {
-    const { data, error } = await sb
-      .from("logs")
-      .select("*")
-      .order("ts", { ascending: false })
-      .limit(60);
+  if (!sb) {
+    // fallback: local only (keep old behavior but still "paged")
+    const list = JSON.parse(localStorage.getItem(LS_EVENT_LOG) || "[]").slice().reverse();
 
-    if (error || !data) {
-      // fallback ui
-      const li = document.createElement("li");
-      li.className = "log-item";
-      li.innerHTML = `
-        <div class="log-time">logs unavailable</div>
-        <div class="log-text">could not load remote logs.</div>
-      `;
-      listEl.appendChild(li);
-      return;
-    }
+    const start = reset ? 0 : listEl.children.length;
+    const page = list.slice(start, start + LOGS_PAGE_SIZE);
 
-    if (data.length === 0) {
+    if (page.length === 0 && listEl.children.length === 0) {
       const li = document.createElement("li");
       li.className = "log-item";
       li.innerHTML = `
@@ -1192,14 +1543,19 @@ async function renderLogs() {
         <div class="log-text">pick a user, rate something, move cards, leave comments — it will appear here.</div>
       `;
       listEl.appendChild(li);
+      logsHasMore = false;
+      logsIsLoading = false;
+      if (moreBtn) {
+        moreBtn.disabled = true;
+        moreBtn.textContent = "no more";
+      }
       return;
     }
 
-    data.forEach(entry => {
+    page.forEach(entry => {
       const li = document.createElement("li");
       li.className = "log-item";
       li.dataset.ts = entry.ts;
-      li.dataset.key = String(entry.id);
 
       const time = document.createElement("div");
       time.className = "log-time";
@@ -1207,46 +1563,79 @@ async function renderLogs() {
 
       const text = document.createElement("div");
       text.className = "log-text";
-
-      renderLogLine(
-        { user: entry.user_name, action: entry.action, details: entry.details },
-        text
-      );
+      renderLogLine(entry, text);
 
       li.appendChild(time);
       li.appendChild(text);
       listEl.appendChild(li);
     });
 
+    logsHasMore = (start + page.length) < list.length;
 
+    logsIsLoading = false;
+    if (moreBtn) {
+      moreBtn.disabled = !logsHasMore;
+      moreBtn.textContent = logsHasMore ? "load more" : "no more";
+    }
     return;
   }
 
-  // fallback to local (old behavior) if remote disabled
-  const list = JSON.parse(localStorage.getItem(LS_EVENT_LOG) || "[]");
-  const sorted = list.slice().reverse();
+  // remote paging by cursor ts
+  let q = sb
+    .from("logs")
+    .select("*")
+    .order("ts", { ascending: false })
+    .limit(LOGS_PAGE_SIZE);
 
-  if (sorted.length === 0) {
+  if (logsCursorTs) {
+    q = q.lt("ts", logsCursorTs);
+  }
+
+  const { data, error } = await q;
+
+  if (error || !data) {
     const li = document.createElement("li");
     li.className = "log-item";
-
-    const t = document.createElement("div");
-    t.className = "log-time";
-    t.textContent = "no activity yet";
-
-    const txt = document.createElement("div");
-    txt.className = "log-text";
-    txt.textContent = "pick a user, rate something, move cards, leave comments — it will appear here.";
-
-    li.appendChild(t);
-    li.appendChild(txt);
+    li.innerHTML = `
+      <div class="log-time">logs unavailable</div>
+      <div class="log-text">could not load remote logs.</div>
+    `;
     listEl.appendChild(li);
+
+    logsHasMore = false;
+    logsIsLoading = false;
+
+    if (moreBtn) {
+      moreBtn.disabled = true;
+      moreBtn.textContent = "no more";
+    }
     return;
   }
 
-  sorted.forEach(entry => {
+  if (data.length === 0 && listEl.children.length === 0) {
     const li = document.createElement("li");
     li.className = "log-item";
+    li.innerHTML = `
+      <div class="log-time">no activity yet</div>
+      <div class="log-text">pick a user, rate something, move cards, leave comments — it will appear here.</div>
+    `;
+    listEl.appendChild(li);
+
+    logsHasMore = false;
+    logsIsLoading = false;
+
+    if (moreBtn) {
+      moreBtn.disabled = true;
+      moreBtn.textContent = "no more";
+    }
+    return;
+  }
+
+  data.forEach(entry => {
+    const li = document.createElement("li");
+    li.className = "log-item";
+    li.dataset.ts = entry.ts;
+    li.dataset.key = String(entry.id);
 
     const time = document.createElement("div");
     time.className = "log-time";
@@ -1254,12 +1643,28 @@ async function renderLogs() {
 
     const text = document.createElement("div");
     text.className = "log-text";
-    renderLogLine(entry, text);
+
+    renderLogLine(
+      { user: entry.user_name, action: entry.action, details: entry.details },
+      text
+    );
 
     li.appendChild(time);
     li.appendChild(text);
     listEl.appendChild(li);
   });
+
+  // update cursor
+  const last = data[data.length - 1];
+  logsCursorTs = last ? last.ts : logsCursorTs;
+
+  logsHasMore = data.length === LOGS_PAGE_SIZE;
+  logsIsLoading = false;
+
+  if (moreBtn) {
+    moreBtn.disabled = !logsHasMore;
+    moreBtn.textContent = logsHasMore ? "load more" : "no more";
+  }
 }
 
 function refreshLogsUI() {
@@ -1284,6 +1689,13 @@ function initializeLogsWidget() {
 
   // keep "time ago" fresh if open
   window.setInterval(() => refreshLogTimesOnly(), 30 * 1000);
+
+  const moreBtn = document.getElementById(LOGS_MORE_ID);
+  if (moreBtn) {
+    moreBtn.addEventListener("click", () => {
+      loadMoreLogsPage();
+    });
+  }
 }
 
 /* ---------------------------
@@ -2115,6 +2527,360 @@ function sortWatchedByStartDateDesc() {
   });
 }
 
+/* =========================
+   CARD MODALS + ACTIONS
+   ========================= */
+
+const CARD_MODAL_ID = "cardModal";
+const CARD_FORM_ID = "cardForm";
+
+const COMMENT_MODAL_ID = "commentModal";
+const COMMENT_FORM_ID = "commentForm";
+
+let cardModalMode = "add"; // --------------------------- add | edit ----------------------------
+let cardModalCardId = null;
+
+let commentModalCardId = null;
+
+function openModal(id) {
+  const overlay = document.getElementById(id);
+  if (!overlay) return;
+
+  overlay.classList.add("is-open");
+  overlay.setAttribute("aria-hidden", "false");
+  document.body.classList.add("auth-open"); // reuse body lock
+}
+
+function closeModal(id) {
+  const overlay = document.getElementById(id);
+  if (!overlay) return;
+
+  overlay.classList.remove("is-open");
+  overlay.setAttribute("aria-hidden", "true");
+  document.body.classList.remove("auth-open");
+}
+
+function fillCardModalFromLi(li) {
+  const title = readTitleFromLi(li);
+
+  document.getElementById("cardTitle").value = title;
+  document.getElementById("cardTab").value = getTabFromLi(li);
+  document.getElementById("cardState").value = getState(li);
+  document.getElementById("cardStatus").value = normalizeStatusCode(li.dataset.status || "00");
+
+  document.getElementById("cardStart").value = (li.dataset.start || "").trim();
+  document.getElementById("cardEnd").value = (li.dataset.end || "").trim();
+}
+
+function openAddCardModal(prefTab) {
+  cardModalMode = "add";
+  cardModalCardId = null;
+
+  document.getElementById("cardModalTitle").textContent = "add card";
+  document.getElementById("cardModalDesc").textContent = "create a new entry in the list";
+
+  document.getElementById("cardTitle").value = "";
+  document.getElementById("cardTab").value = prefTab === TAB_WATCHED ? TAB_WATCHED : TAB_UNWATCHED;
+  document.getElementById("cardState").value = "planned";
+  document.getElementById("cardStatus").value = "00";
+  document.getElementById("cardStart").value = "";
+  document.getElementById("cardEnd").value = "";
+
+  openModal(CARD_MODAL_ID);
+
+  const input = document.getElementById("cardTitle");
+  if (input) input.focus();
+}
+
+function openEditCardModal(li) {
+  cardModalMode = "edit";
+  cardModalCardId = getCardId(li);
+
+  document.getElementById("cardModalTitle").textContent = "edit card";
+  document.getElementById("cardModalDesc").textContent = "update fields and sync to the server";
+
+  fillCardModalFromLi(li);
+
+  openModal(CARD_MODAL_ID);
+
+  const input = document.getElementById("cardTitle");
+  if (input) input.focus();
+}
+
+function openCommentModal(li) {
+  const active = getActiveUser();
+  if (!active) {
+    openAuthOverlay();
+    return;
+  }
+
+  commentModalCardId = getCardId(li);
+
+  const current =
+    active === "vlad"
+      ? (li.dataset.vladComment || "")
+      : (li.dataset.vikaComment || "");
+
+  document.getElementById("commentText").value = current;
+
+  openModal(COMMENT_MODAL_ID);
+
+  const area = document.getElementById("commentText");
+  if (area) area.focus();
+}
+
+function closeAllCardMenus() {
+  document.querySelectorAll(".card-menu[data-open='true']").forEach(m => {
+    m.dataset.open = "false";
+  });
+}
+
+function toggleCardMenu(li) {
+  const menu = li.querySelector(".card-menu");
+  if (!menu) return;
+
+  const open = menu.dataset.open === "true";
+  closeAllCardMenus();
+  menu.dataset.open = open ? "false" : "true";
+}
+
+async function setCardStatus(li, nextStatus) {
+  const id = getCardId(li);
+  if (!id) return;
+
+  const from = normalizeStatusCode(li.dataset.status || "00");
+  const to = normalizeStatusCode(nextStatus);
+
+  if (from === to) return;
+
+  const row = await remoteUpdateCard(id, { status: to });
+  if (row) {
+    await remoteInsertLog("set_status", { title: getTitleFromCard(li), from, to }, id);
+  }
+}
+
+async function setCardState(li, nextState) {
+  const id = getCardId(li);
+  if (!id) return;
+
+  const from = getState(li);
+  const to = nextState;
+
+  if (from === to) return;
+
+  const patch = { state: to };
+
+  // state implies tab and dates
+  if (to === STATE_PLANNED) {
+    patch.tab = TAB_UNWATCHED;
+    patch.start_date = null;
+    patch.end_date = null;
+  }
+
+  if (to === STATE_STARTED) {
+    patch.tab = TAB_UNWATCHED;
+    patch.start_date = li.dataset.start || todayIsoDate();
+    patch.end_date = null;
+  }
+
+  if (to === STATE_WATCHED) {
+    patch.tab = TAB_WATCHED;
+
+    const start = (li.dataset.start || "").trim();
+    if (start) {
+      patch.start_date = start;
+      patch.end_date = todayIsoDate();
+    } else {
+      patch.start_date = todayIsoDate();
+      patch.end_date = null;
+    }
+  }
+
+  const row = await remoteUpdateCard(id, patch);
+  if (row) {
+    await remoteInsertLog("set_state", { title: getTitleFromCard(li), from, to }, id);
+  }
+}
+
+async function saveCommentForActiveUser(li, text) {
+  const active = getActiveUser();
+  if (!active) return;
+
+  const id = getCardId(li);
+  if (!id) return;
+
+  const key = active === "vlad" ? "vlad_comment" : "vika_comment";
+  const patch = {};
+  patch[key] = String(text || "");
+
+  const row = await remoteUpdateCard(id, patch);
+  if (row) {
+    await remoteInsertLog("comment", { title: getTitleFromCard(li), text: String(text || "") }, id);
+  }
+}
+
+function initializeCardUi() {
+  // upgrade all existing cards layout
+  document.querySelectorAll(".lists li").forEach(li => {
+    ensureRightControls(li);
+    ensureCommentsUi(li);
+  });
+
+  // add button
+  const addBtn = document.getElementById("addToggle");
+  if (addBtn) {
+    addBtn.addEventListener("click", () => {
+      const activeTab = document.querySelector(`${TAB_INPUT_SELECTOR}:checked`);
+      const pref = activeTab && activeTab.id === UNWATCHED_TAB_ID ? TAB_UNWATCHED : TAB_WATCHED;
+      openAddCardModal(pref);
+    });
+  }
+
+  // card menu toggle + menu actions (event delegation)
+  document.addEventListener("click", async e => {
+    const actionsBtn = e.target.closest(".card-actions");
+    if (actionsBtn) {
+      const li = actionsBtn.closest("li");
+      if (!li) return;
+      toggleCardMenu(li);
+      return;
+    }
+
+    const menuBtn = e.target.closest(".card-menu button[data-action]");
+    if (menuBtn) {
+      const li = menuBtn.closest("li");
+      if (!li) return;
+
+      const action = menuBtn.dataset.action;
+
+      // close menu immediately
+      closeAllCardMenus();
+
+      if (action === "edit") openEditCardModal(li);
+      if (action === "comment") openCommentModal(li);
+
+      if (action === "mark-planned") await setCardState(li, STATE_PLANNED);
+      if (action === "mark-started") await setCardState(li, STATE_STARTED);
+      if (action === "mark-watched") await setCardState(li, STATE_WATCHED);
+
+      if (action === "set-status") {
+        // quick cycle: 00 -> 01 -> 10 -> 11 -> 00
+        const cur = normalizeStatusCode(li.dataset.status || "00");
+        const next =
+          cur === "00" ? "01" :
+          cur === "01" ? "10" :
+          cur === "10" ? "11" : "00";
+
+        await setCardStatus(li, next);
+      }
+
+      return;
+    }
+
+    // click outside closes menus
+    if (!e.target.closest(".card-menu") && !e.target.closest(".card-actions")) {
+      closeAllCardMenus();
+    }
+  });
+
+  // card modal wiring
+  const cardCancel = document.getElementById("cardCancel");
+  if (cardCancel) cardCancel.addEventListener("click", () => closeModal(CARD_MODAL_ID));
+
+  const cardForm = document.getElementById(CARD_FORM_ID);
+  if (cardForm) {
+    cardForm.addEventListener("submit", async e => {
+      e.preventDefault();
+
+      const title = (document.getElementById("cardTitle").value || "").trim();
+      if (!title) return;
+
+      const tab = document.getElementById("cardTab").value;
+      const state = document.getElementById("cardState").value;
+      const status = document.getElementById("cardStatus").value;
+
+      const start = (document.getElementById("cardStart").value || "").trim();
+      const end = (document.getElementById("cardEnd").value || "").trim();
+
+      // normalize state->tab (guard)
+      const safeTab =
+        state === STATE_WATCHED ? TAB_WATCHED :
+        TAB_UNWATCHED;
+
+      const payload = {
+        title,
+        tab: safeTab,
+        state,
+        status: normalizeStatusCode(status),
+        start_date: start || null,
+        end_date: end || null,
+      };
+
+      if (cardModalMode === "add") {
+        const id = generateCardId();
+
+        const row = await remoteInsertCard({
+          id,
+          ...payload,
+          vlad_score: 0,
+          vika_score: 0,
+          vlad_comment: "",
+          vika_comment: "",
+        });
+
+        if (row) {
+          await remoteInsertLog("add_card", { title: row.title }, row.id);
+        }
+      }
+
+      if (cardModalMode === "edit" && cardModalCardId) {
+        const li = document.querySelector(`.lists li[data-id="${CSS.escape(String(cardModalCardId))}"]`);
+        const fromTitle = li ? getTitleFromCard(li) : null;
+
+        const row = await remoteUpdateCard(cardModalCardId, payload);
+
+        if (row && fromTitle && fromTitle !== row.title) {
+          await remoteInsertLog("edit_title", { from: fromTitle, to: row.title }, row.id);
+        } else if (row) {
+          await remoteInsertLog("edit_card", { title: row.title }, row.id);
+        }
+      }
+
+      closeModal(CARD_MODAL_ID);
+    });
+  }
+
+  // comment modal wiring
+  const commentCancel = document.getElementById("commentCancel");
+  if (commentCancel) commentCancel.addEventListener("click", () => closeModal(COMMENT_MODAL_ID));
+
+  const commentForm = document.getElementById(COMMENT_FORM_ID);
+  if (commentForm) {
+    commentForm.addEventListener("submit", async e => {
+      e.preventDefault();
+
+      const id = commentModalCardId;
+      if (!id) return;
+
+      const li = document.querySelector(`.lists li[data-id="${CSS.escape(String(id))}"]`);
+      if (!li) return;
+
+      const text = (document.getElementById("commentText").value || "").trim();
+      await saveCommentForActiveUser(li, text);
+
+      closeModal(COMMENT_MODAL_ID);
+    });
+  }
+
+  // esc closes modals
+  document.addEventListener("keydown", e => {
+    if (e.key !== "Escape") return;
+    closeAllCardMenus();
+    closeModal(CARD_MODAL_ID);
+    closeModal(COMMENT_MODAL_ID);
+  });
+}
+
 // apply both default sorts
 function applyDefaultSorting() {
   sortUnwatchedStartedToBottom();
@@ -2132,7 +2898,8 @@ function applyDefaultSorting() {
   renderWatchDates();
   syncAllStatusBadges();
 
-  initializeAuth(); // --------------------------- ui first ----------------------------
+  initializeAuth(); // --------------------------- ui first ----------------------------\
+  initializeCardUi();
   initializeFiltersToggle();
   initializeLogsWidget();
   initializeRatingEditing();

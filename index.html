@@ -53,10 +53,15 @@
 
   <!-- filters toggle -->
   <div class="filters-bar">
+    <button class="add-toggle" id="addToggle" type="button" aria-label="Add new card">
+      add <span class="add-toggle-icon" aria-hidden="true"></span>
+    </button>
+
     <button class="filters-toggle" type="button" aria-expanded="false" aria-controls="filtersMenu">
       filters <span class="filters-toggle-icon" aria-hidden="true"></span>
     </button>
   </div>
+
 
   <!-- controls -->
   <section class="controls" id="filtersMenu" data-open="false" aria-label="Sorting and filters">
@@ -419,8 +424,97 @@
       </div>
 
       <ul class="logs-list" id="logsList"></ul>
+
+      <div class="logs-foot">
+        <button class="logs-more" id="logsMore" type="button" aria-label="Load more logs">
+          load more
+        </button>
+      </div>
+
     </section>
   </div>
+
+  <!-- card modal (add/edit) -->
+  <div class="modal-overlay" id="cardModal" aria-hidden="true">
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="cardModalTitle">
+      <div class="modal-title" id="cardModalTitle">add card</div>
+      <div class="modal-desc" id="cardModalDesc">create a new entry in the list</div>
+
+      <form class="modal-form" id="cardForm">
+        <label class="field">
+          <span class="field-label">title</span>
+          <input class="field-input" id="cardTitle" type="text" autocomplete="off" placeholder="e.g. The Fifth Element" required />
+        </label>
+
+        <div class="field-grid">
+          <label class="field">
+            <span class="field-label">tab</span>
+            <select class="field-select" id="cardTab">
+              <option value="unwatched">unwatched</option>
+              <option value="watched">watched</option>
+            </select>
+          </label>
+
+          <label class="field">
+            <span class="field-label">state</span>
+            <select class="field-select" id="cardState">
+              <option value="planned">planned</option>
+              <option value="started">started</option>
+              <option value="watched">watched</option>
+            </select>
+          </label>
+
+          <label class="field">
+            <span class="field-label">status</span>
+            <select class="field-select" id="cardStatus">
+              <option value="00">00</option>
+              <option value="01">01</option>
+              <option value="10">10</option>
+              <option value="11">11</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="field-grid">
+          <label class="field">
+            <span class="field-label">start date</span>
+            <input class="field-input" id="cardStart" type="date" />
+          </label>
+
+          <label class="field">
+            <span class="field-label">end date</span>
+            <input class="field-input" id="cardEnd" type="date" />
+          </label>
+        </div>
+
+        <div class="modal-actions">
+          <button class="modal-btn ghost" id="cardCancel" type="button">cancel</button>
+          <button class="modal-btn" id="cardSave" type="submit">save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- comment modal -->
+  <div class="modal-overlay" id="commentModal" aria-hidden="true">
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="commentModalTitle">
+      <div class="modal-title" id="commentModalTitle">comment</div>
+      <div class="modal-desc" id="commentModalDesc">leave a short note for this title</div>
+
+      <form class="modal-form" id="commentForm">
+        <label class="field">
+          <span class="field-label">text</span>
+          <textarea class="field-textarea" id="commentText" rows="4" placeholder="type here..."></textarea>
+        </label>
+
+        <div class="modal-actions">
+          <button class="modal-btn ghost" id="commentCancel" type="button">cancel</button>
+          <button class="modal-btn" id="commentSave" type="submit">save</button>
+        </div>
+      </form>
+    </div>
+  </div>  
+
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="main.js"></script>
