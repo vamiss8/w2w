@@ -2963,6 +2963,39 @@ function initializeCardUi() {
 
   // card menu toggle + menu actions (event delegation)
   document.addEventListener("click", async e => {
+
+    // --------------------------- delete modal actions ----------------------------
+    const deleteCancelBtn = e.target.closest("#deleteCancel");
+    if (deleteCancelBtn) {
+      deleteModalTargetLi = null;
+      closeModal("deleteModal");
+      return;
+    }
+
+    const deleteConfirmBtn = e.target.closest("#deleteConfirm");
+    if (deleteConfirmBtn) {
+      if (!deleteModalTargetLi) return;
+
+      const li = deleteModalTargetLi;
+      const id = getCardId(li);
+      const title = getTitleFromCard(li);
+
+      // close immediately for responsive feel
+      closeModal("deleteModal");
+      deleteModalTargetLi = null;
+
+      if (!id) return;
+
+      const success = await remoteDeleteCard(id);
+      if (success) {
+        li.remove();
+        // record action in logs
+        await remoteInsertLog("delete_card", { title }, null);
+        scheduleActiveTabView({ animate: false });
+      }
+      return;
+    }
+    
     // --------------------------- comment toggle ----------------------------
     const cToggle = e.target.closest(".comment-toggle");
     if (cToggle) {
@@ -3099,42 +3132,6 @@ function initializeCardUi() {
       await saveCommentForActiveUser(li, text);
 
       closeModal(COMMENT_MODAL_ID);
-    });
-  }
-
-  // delete modal wiring
-  const deleteCancel = document.getElementById("deleteCancel");
-  if (deleteCancel) {
-    deleteCancel.addEventListener("click", e => {
-      e.preventDefault();
-      deleteModalTargetLi = null;
-      closeModal("deleteModal");
-    });
-  }
-
-  const deleteConfirm = document.getElementById("deleteConfirm");
-  if (deleteConfirm) {
-    deleteConfirm.addEventListener("click", async e => {
-      e.preventDefault();
-      if (!deleteModalTargetLi) return;
-
-      const li = deleteModalTargetLi;
-      const id = getCardId(li);
-      const title = getTitleFromCard(li);
-
-      // close immediately for responsive feel
-      closeModal("deleteModal");
-      deleteModalTargetLi = null;
-
-      if (!id) return;
-
-      const success = await remoteDeleteCard(id);
-      if (success) {
-        li.remove();
-        // record action in logs
-        await remoteInsertLog("delete_card", { title }, null);
-        scheduleActiveTabView({ animate: false });
-      }
     });
   }
 
