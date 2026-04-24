@@ -518,5 +518,17 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="main.js"></script>
+
+  <div class="modal-overlay" id="deleteModal" aria-hidden="true">
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="deleteModalTitle">
+      <div class="modal-title" id="deleteModalTitle">delete card</div>
+      <div class="modal-desc" id="deleteModalDesc">are you sure?</div>
+
+      <div class="modal-actions" style="margin-top: 24px;">
+        <button class="modal-btn ghost" id="deleteCancel" type="button">cancel</button>
+        <button class="modal-btn" id="deleteConfirm" type="button" style="color: #ff7abf; border-color: rgba(255, 122, 191, 0.35);">delete</button>
+      </div>
+    </div>
+  </div>
 </body>
 </html>

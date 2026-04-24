@@ -393,33 +393,45 @@ async function remoteUpdateCard(cardId, patch) {
    CARD DELETION
    ========================= */
 
+let deleteModalTargetLi = null;
+
 async function remoteDeleteCard(cardId) {
   const sb = getSupabase();
   if (!sb) return false;
 
-  const { error } = await sb.from("cards").delete().eq("id", parseInt(cardId, 10));
+  // add .select() to catch silent rls blocks
+  const { data, error } = await sb
+    .from("cards")
+    .delete()
+    .eq("id", parseInt(cardId, 10))
+    .select();
+
   if (error) {
-    console.error("[supabase] delete failed", error);
+    console.error("[supabase] delete error", error);
     return false;
   }
+
+  // if 0 rows returned, rls blocked it
+  if (!data || data.length === 0) {
+    alert("could not delete from db! please check supabase rls policies for delete.");
+    return false;
+  }
+
   return true;
 }
 
-async function deleteCard(li) {
-  const id = getCardId(li);
+function deleteCard(li) {
   const title = getTitleFromCard(li);
-  if (!id) return;
+  if (!title) return;
 
-  // confirm before deletion
-  if (!confirm(`delete "${title}"?`)) return;
-
-  const success = await remoteDeleteCard(id);
-  if (success) {
-    li.remove();
-    // record action in logs
-    await remoteInsertLog("delete_card", { title }, null);
-    scheduleActiveTabView({ animate: false });
+  deleteModalTargetLi = li;
+  
+  const desc = document.getElementById("deleteModalDesc");
+  if (desc) {
+    desc.innerHTML = `are you sure you want to delete <br><span style="color: rgba(230, 232, 255, 0.94); font-weight: 600; font-family: var(--font-content); margin-top: 6px; display: inline-block;">${escapeHtml(title)}</span>?`;
   }
+
+  openModal("deleteModal");
 }
 
 function getTabFromLi(li) {
@@ -3090,12 +3102,49 @@ function initializeCardUi() {
     });
   }
 
+  // delete modal wiring
+  const deleteCancel = document.getElementById("deleteCancel");
+  if (deleteCancel) {
+    deleteCancel.addEventListener("click", e => {
+      e.preventDefault();
+      deleteModalTargetLi = null;
+      closeModal("deleteModal");
+    });
+  }
+
+  const deleteConfirm = document.getElementById("deleteConfirm");
+  if (deleteConfirm) {
+    deleteConfirm.addEventListener("click", async e => {
+      e.preventDefault();
+      if (!deleteModalTargetLi) return;
+
+      const li = deleteModalTargetLi;
+      const id = getCardId(li);
+      const title = getTitleFromCard(li);
+
+      // close immediately for responsive feel
+      closeModal("deleteModal");
+      deleteModalTargetLi = null;
+
+      if (!id) return;
+
+      const success = await remoteDeleteCard(id);
+      if (success) {
+        li.remove();
+        // record action in logs
+        await remoteInsertLog("delete_card", { title }, null);
+        scheduleActiveTabView({ animate: false });
+      }
+    });
+  }
+
   // esc closes modals
   document.addEventListener("keydown", e => {
     if (e.key !== "Escape") return;
     closeAllCardMenus();
     closeModal(CARD_MODAL_ID);
     closeModal(COMMENT_MODAL_ID);
+    closeModal("deleteModal");
   });
 }
 
