@@ -6,7 +6,7 @@ const UNWATCHED_LIST_SELECTOR = ".unwatched";
 const WATCHED_LIST_SELECTOR = ".watched";
 
 const RATING_DELIMITER = "|";
-const ANIMATION_STEP_DELAY = 0.2;
+const ANIMATION_STEP_DELAY = 0.08;
 const FOOTER_EXTRA_DELAY = 0.4;
 
 // date label config
@@ -35,7 +35,13 @@ async function initializeRealtime() {
   realtimeChannel = sb
     .channel("w2w-db")
     .on("postgres_changes", { event: "*", schema: "public", table: "cards" }, payload => {
-      if (payload.eventType === "DELETE") return;
+      if (payload.eventType === "DELETE") {
+        // handle remote delete
+        const li = document.querySelector(`.lists li[data-id="${CSS.escape(String(payload.old.id))}"]`);
+        if (li) li.remove();
+        scheduleActiveTabView({ animate: false });
+        return;
+      }
       if (payload.new) applyRemoteCardToDom(payload.new);
       scheduleActiveTabView({ animate: false });
     })
@@ -210,6 +216,8 @@ function ensureRightControls(li) {
   menu.innerHTML = `
     <button type="button" data-action="edit">edit</button>
     <button type="button" data-action="comment">comment</button>
+    <div class="menu-sep"></div>
+    <button type="button" data-action="delete" style="color: #ff7abf;">delete</button>
   `;
 }
 
@@ -379,6 +387,39 @@ async function remoteUpdateCard(cardId, patch) {
   }
 
   return data;
+}
+
+/* =========================
+   CARD DELETION
+   ========================= */
+
+async function remoteDeleteCard(cardId) {
+  const sb = getSupabase();
+  if (!sb) return false;
+
+  const { error } = await sb.from("cards").delete().eq("id", parseInt(cardId, 10));
+  if (error) {
+    console.error("[supabase] delete failed", error);
+    return false;
+  }
+  return true;
+}
+
+async function deleteCard(li) {
+  const id = getCardId(li);
+  const title = getTitleFromCard(li);
+  if (!id) return;
+
+  // confirm before deletion
+  if (!confirm(`delete "${title}"?`)) return;
+
+  const success = await remoteDeleteCard(id);
+  if (success) {
+    li.remove();
+    // record action in logs
+    await remoteInsertLog("delete_card", { title }, null);
+    scheduleActiveTabView({ animate: false });
+  }
 }
 
 function getTabFromLi(li) {
@@ -1510,6 +1551,14 @@ function renderLogLine(entry, textEl) {
     appendText(textEl, " of ");
     textEl.appendChild(titleEm(title));
     // appendText(textEl, ".");
+    return;
+  }
+
+  // log format for card deletion
+  if (entry.action === "delete_card") {
+    textEl.appendChild(createUserSpan(userRaw));
+    appendText(textEl, " deleted ");
+    textEl.appendChild(titleEm(title));
     return;
   }
 
@@ -2941,6 +2990,7 @@ function initializeCardUi() {
 
       if (action === "edit") openEditCardModal(li);
       if (action === "comment") openCommentModal(li);
+      if (action === "delete") deleteCard(li); // handle card delete
 
       return;
     }
