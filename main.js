@@ -2964,6 +2964,17 @@ function initializeCardUi() {
   // card menu toggle + menu actions (event delegation)
   document.addEventListener("click", async e => {
 
+    // --------------------------- secret gift actions ----------------------------
+    if (e.target.closest("#secretGiftToggle")) {
+      openModal("giftModal");
+      return;
+    }
+
+    if (e.target.closest("#giftClose")) {
+      closeModal("giftModal");
+      return;
+    }
+
     // --------------------------- delete modal actions ----------------------------
     const deleteCancelBtn = e.target.closest("#deleteCancel");
     if (deleteCancelBtn) {
@@ -3142,6 +3153,7 @@ function initializeCardUi() {
     closeModal(CARD_MODAL_ID);
     closeModal(COMMENT_MODAL_ID);
     closeModal("deleteModal");
+    closeModal("giftModal");
   });
 }
 

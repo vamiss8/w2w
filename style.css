@@ -2190,3 +2190,90 @@ li.menu-open {
     0 0 6px rgba(255, 122, 191, 0.35),
     0 0 12px rgba(255, 122, 191, 0.15);
 }
+
+/* =========================
+   SECRET GIFT
+   ========================= */
+
+.secret-gift {
+  position: fixed;
+  top: calc(16px + env(safe-area-inset-top));
+  left: calc(16px + env(safe-area-inset-left));
+  z-index: 50;
+
+  width: 72px;  
+  height: 72px; 
+  border-radius: 50%;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background: rgba(255, 255, 255, 0.05);
+  border: 2px solid rgba(255, 122, 191, 0.4); 
+  
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  box-shadow:
+    0 12px 28px rgba(0, 0, 0, 0.6),
+    0 0 24px rgba(255, 122, 191, 0.35);
+
+  transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+  animation: floatGift 3s ease-in-out infinite; 
+}
+
+.secret-gift:hover {
+  transform: scale(1.15) rotate(8deg);
+  border-color: rgba(255, 122, 191, 0.65);
+  box-shadow:
+    0 16px 36px rgba(0, 0, 0, 0.7),
+    0 0 32px rgba(255, 122, 191, 0.5);
+}
+
+.gift-icon {
+  font-size: 2.4rem; 
+  transform: translateY(-2px);
+}
+
+@keyframes floatGift {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); } 
+}
+
+.gift-modal-card {
+  border-color: rgba(255, 122, 191, 0.25);
+  box-shadow: 
+    0 30px 80px rgba(0, 0, 0, 0.85),
+    0 0 40px rgba(255, 122, 191, 0.15);
+}
+
+.gift-art-wrapper {
+  width: 100%;
+  max-height: 400px;
+  border-radius: 14px;
+  overflow: hidden;
+  margin-bottom: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: rgba(0,0,0,0.3);
+}
+
+.gift-art {
+  width: 100%;
+  height: auto;
+  object-fit: cover;
+  display: block;
+}
+
+.gift-text {
+  font-family: var(--font-title);
+  font-weight: 700;
+  font-size: clamp(1.1rem, 3vw, 1.3rem);
+  line-height: 1.45;
+  color: rgba(230, 232, 255, 0.95);
+  text-align: center;
+  margin-bottom: 24px;
+  text-shadow: 0 2px 12px rgba(255, 122, 191, 0.25);
+}
