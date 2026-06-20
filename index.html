@@ -17,6 +17,7 @@
   <div class="stars"></div>
 
   <button class="user-pill" id="userToggle" type="button" aria-label="Change user">USER: —</button>
+  <button class="wishlist-toggle" id="wishlistToggle" type="button" aria-label="Open Wishlists">WISHLISTS</button>
 
   <!-- auth overlay -->
   <div class="auth-overlay" id="authOverlay" aria-hidden="true">
@@ -531,8 +532,8 @@
     </div>
   </div>
 
-  <button class="secret-gift" id="secretGiftToggle" type="button" aria-label="A gift for us">
-    <span class="gift-icon">🎁</span>
+  <button class="love-toggle" id="secretGiftToggle" type="button" aria-label="Our art">
+    <span class="header-hearts"></span>
   </button>
 
   <div class="modal-overlay" id="giftModal" aria-hidden="true">
@@ -540,10 +541,6 @@
       
       <div class="gift-art-wrapper">
         <img src="april25_fixed.PNG" alt="Our Art" class="gift-art" />
-      </div>
-
-      <div class="gift-text">
-        we've been together for 6 months, now we have a whole 2 lives to continue this story
       </div>
 
       <div class="modal-actions">
@@ -554,5 +551,54 @@
 
     </div>
   </div>
+
+<div class="modal-overlay" id="wishlistModal" aria-hidden="true">
+    <div class="modal-card wishlist-modal-card" role="dialog" aria-modal="true">
+      <div class="modal-title">our wishlists</div>
+      <div class="modal-desc">gifts we dream about</div>
+
+      <div class="wishlist-columns">
+        <div class="wishlist-col">
+          <div class="wishlist-col-header vlad">vlad</div>
+          <ul class="wishes-list" id="wishesVlad"></ul>
+          <button class="add-wish-btn" data-owner="vlad">+ add wish</button>
+        </div>
+        
+        <div class="wishlist-col">
+          <div class="wishlist-col-header vika">vika</div>
+          <ul class="wishes-list" id="wishesVika"></ul>
+          <button class="add-wish-btn" data-owner="vika">+ add wish</button>
+        </div>
+      </div>
+
+      <div class="modal-actions" style="margin-top: 24px;">
+        <button class="modal-btn ghost" id="wishlistClose" type="button">close</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="wishAddModal" aria-hidden="true">
+    <div class="modal-card" role="dialog" aria-modal="true">
+      <div class="modal-title" id="wishAddTitle">add wish</div>
+      
+      <div class="modal-form" id="wishAddForm">
+        <input type="hidden" id="wishAddOwner" value="" />
+        <label class="field">
+          <span class="field-label">title</span>
+          <input class="field-input" id="wishInputTitle" type="text" autocomplete="off" placeholder="e.g. Lego Star Wars" />
+        </label>
+        <label class="field">
+          <span class="field-label">link (optional)</span>
+          <input class="field-input" id="wishInputLink" type="text" autocomplete="off" placeholder="e.g. meow.com or https://..." />
+        </label>
+
+        <div class="modal-actions">
+          <button class="modal-btn ghost" id="wishAddCancel" type="button">cancel</button>
+          <button class="modal-btn" id="wishAddSave" type="button">save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
 </body>
 </html>

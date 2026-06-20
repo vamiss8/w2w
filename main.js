@@ -50,6 +50,9 @@ async function initializeRealtime() {
       const panel = document.getElementById(LOGS_PANEL_ID);
       if (panel && panel.dataset.open === "true") prependRemoteLog(payload.new);
     })
+    .on("postgres_changes", { event: "*", schema: "public", table: "wishes" }, payload => {
+      remotePullWishes();
+    })
     .subscribe((status) => {
       console.log("[realtime]", status);
     });
@@ -3154,6 +3157,8 @@ function initializeCardUi() {
     closeModal(COMMENT_MODAL_ID);
     closeModal("deleteModal");
     closeModal("giftModal");
+    closeModal("wishlistModal");
+    closeModal("wishAddModal");
   });
 }
 
@@ -3161,6 +3166,148 @@ function initializeCardUi() {
 function applyDefaultSorting() {
   sortUnwatchedStartedToBottom();
   sortWatchedByStartDateDesc();
+}
+
+/* =========================
+   WISHLISTS (REMOTE + UI)
+   ========================= */
+
+let wishesData = [];
+
+async function remotePullWishes() {
+  const sb = getSupabase();
+  if (!sb) return;
+
+  const { data, error } = await sb
+    .from("wishes")
+    .select("*")
+    .order("added_at", { ascending: true });
+
+  if (error) {
+    console.error("[supabase] wishes pull failed", error);
+    return;
+  }
+  wishesData = data || [];
+  renderWishes();
+}
+
+function renderWishes() {
+  const vladContainer = document.getElementById("wishesVlad");
+  const vikaContainer = document.getElementById("wishesVika");
+  if (!vladContainer || !vikaContainer) return;
+
+  vladContainer.innerHTML = "";
+  vikaContainer.innerHTML = "";
+
+  wishesData.forEach(w => {
+    const li = document.createElement("li");
+    li.className = "wish-item";
+    
+    let linkHtml = "";
+    if (w.link) {
+      linkHtml = `<a href="${w.link}" target="_blank" class="wish-link">link ↗</a>`;
+    }
+
+    li.innerHTML = `
+      <div class="wish-info">
+        <span class="wish-title">${escapeHtml(w.title)}</span>
+        ${linkHtml}
+      </div>
+      <button class="wish-delete" data-id="${w.id}" title="delete wish">×</button>
+    `;
+
+    if (w.owner === "vlad") vladContainer.appendChild(li);
+    else vikaContainer.appendChild(li);
+  });
+}
+
+async function remoteInsertWish(owner, title, link) {
+  const sb = getSupabase();
+  if (!sb) return;
+
+  const id = Date.now() * 1000 + Math.floor(Math.random() * 1000);
+  const payload = { id, owner, title, link: link || null };
+
+  const { error } = await sb.from("wishes").insert(payload);
+  if (error) console.error("[supabase] wish insert failed", error);
+}
+
+async function remoteDeleteWish(id) {
+  const sb = getSupabase();
+  if (!sb) return;
+
+  const { error } = await sb.from("wishes").delete().eq("id", parseInt(id, 10));
+  if (error) console.error("[supabase] wish delete failed", error);
+}
+
+function initializeWishlists() {
+  // open wishlist modal
+  const toggle = document.getElementById("wishlistToggle");
+  if (toggle) toggle.addEventListener("click", () => openModal("wishlistModal"));
+
+  // global click handler for wishlist buttons
+  document.addEventListener("click", async e => {
+    
+    // close main wishlist modal
+    if (e.target.closest("#wishlistClose")) {
+      closeModal("wishlistModal");
+      return;
+    }
+
+    // open add wish modal
+    const addBtn = e.target.closest(".add-wish-btn");
+    if (addBtn) {
+      const owner = addBtn.dataset.owner;
+      document.getElementById("wishAddOwner").value = owner;
+      document.getElementById("wishInputTitle").value = "";
+      document.getElementById("wishInputLink").value = "";
+      document.getElementById("wishAddTitle").textContent = `add wish for ${owner}`;
+      
+      closeModal("wishlistModal"); 
+      openModal("wishAddModal");
+      return;
+    }
+
+    // cancel adding wish
+    if (e.target.closest("#wishAddCancel")) {
+      closeModal("wishAddModal");
+      openModal("wishlistModal");
+      return;
+    }
+
+    // save new wish
+    if (e.target.closest("#wishAddSave")) {
+      const owner = document.getElementById("wishAddOwner").value;
+      const title = (document.getElementById("wishInputTitle").value || "").trim();
+      let link = (document.getElementById("wishInputLink").value || "").trim();
+
+      if (!title) {
+        alert("please enter a title!");
+        return;
+      }
+
+      // auto-prepend https:// if missing
+      if (link && !link.startsWith("http://") && !link.startsWith("https://")) {
+        link = "https://" + link;
+      }
+
+      await remoteInsertWish(owner, title, link);
+      
+      closeModal("wishAddModal");
+      openModal("wishlistModal"); 
+      return;
+    }
+
+    // delete wish
+    const delBtn = e.target.closest(".wish-delete");
+    if (delBtn) {
+      const id = delBtn.dataset.id;
+      if (confirm("delete this wish?")) {
+        await remoteDeleteWish(id);
+      }
+      return;
+    }
+  });
 }
 
 /* =========================
@@ -3182,8 +3329,10 @@ function applyDefaultSorting() {
   initializeTooltipAutoFlip();
   initializeControls();
   initializeTabs();
+  initializeWishlists();
 
   try {
+    await remotePullWishes();
     await initializeRealtime();
   } catch (e) {
     console.error("[supabase] initializeRealtime crashed", e);
