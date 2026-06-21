@@ -3159,6 +3159,7 @@ function initializeCardUi() {
     closeModal("giftModal");
     closeModal("wishlistModal");
     closeModal("wishAddModal");
+    closeModal("wishDeleteModal")
   });
 }
 
@@ -3208,12 +3209,16 @@ function renderWishes() {
       linkHtml = `<a href="${w.link}" target="_blank" class="wish-link">link ↗</a>`;
     }
 
+    // inject custom tooltip inside the button and remove native title
     li.innerHTML = `
       <div class="wish-info">
         <span class="wish-title">${escapeHtml(w.title)}</span>
         ${linkHtml}
       </div>
-      <button class="wish-delete" data-id="${w.id}" title="delete wish">×</button>
+      <button class="wish-delete" data-id="${w.id}" type="button">
+        ×
+        <span class="tooltip">delete wish</span>
+      </button>
     `;
 
     if (w.owner === "vlad") vladContainer.appendChild(li);
@@ -3239,6 +3244,9 @@ async function remoteDeleteWish(id) {
   const { error } = await sb.from("wishes").delete().eq("id", parseInt(id, 10));
   if (error) console.error("[supabase] wish delete failed", error);
 }
+
+// global variable to store target wish id
+let wishDeleteTargetId = null;
 
 function initializeWishlists() {
   // open wishlist modal
@@ -3298,13 +3306,32 @@ function initializeWishlists() {
       return;
     }
 
-    // delete wish
+    // trigger delete wish modal
     const delBtn = e.target.closest(".wish-delete");
     if (delBtn) {
-      const id = delBtn.dataset.id;
-      if (confirm("delete this wish?")) {
-        await remoteDeleteWish(id);
-      }
+      wishDeleteTargetId = delBtn.dataset.id;
+      closeModal("wishlistModal");
+      openModal("wishDeleteModal");
+      return;
+    }
+
+    // cancel delete wish
+    if (e.target.closest("#wishDeleteCancel")) {
+      wishDeleteTargetId = null;
+      closeModal("wishDeleteModal");
+      openModal("wishlistModal");
+      return;
+    }
+
+    // confirm delete wish
+    if (e.target.closest("#wishDeleteConfirm")) {
+      if (!wishDeleteTargetId) return;
+      
+      await remoteDeleteWish(wishDeleteTargetId);
+      wishDeleteTargetId = null;
+      
+      closeModal("wishDeleteModal");
+      openModal("wishlistModal");
       return;
     }
   });
