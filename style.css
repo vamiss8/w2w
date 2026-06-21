@@ -2525,12 +2525,13 @@ li.menu-open {
     0 0 18px rgba(155, 108, 255, 0.10);
 }
 
-/* animate out to the left */
+/* animate out to the left and make visible */
 .wish-delete:hover .tooltip,
 .wish-delete:focus-visible .tooltip {
+  opacity: 1;
+  visibility: visible;
   transform: translateX(0) translateY(-50%);
 }
-
 /* position tooltip to the left of the button to prevent clipping and scrolling */
 .wish-delete .tooltip {
   top: 50%;
