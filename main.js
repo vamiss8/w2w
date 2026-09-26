@@ -156,11 +156,6 @@ function todayIsoDate() {
   return `${yyyy}-${mm}-${dd}`;
 }
 
-function generateCardId() {
-  // note: stays under 2^53 (safe integer)
-  return Date.now() * 1000 + Math.floor(Math.random() * 1000);
-}
-
 function getListsUlByTab(tab) {
   return tab === TAB_WATCHED
     ? document.querySelector(WATCHED_LIST_SELECTOR)
@@ -2864,10 +2859,9 @@ function initializeCardUi() {
       };
 
       if (cardModalMode === "add") {
-        const id = generateCardId();
-
+        // no id: the database numbers cards itself and rejects one sent from
+        // here. the row it returns carries the id it chose
         const row = await remoteInsertCard({
-          id,
           ...payload,
           vlad_score: 0,
           vika_score: 0,
@@ -2994,8 +2988,8 @@ async function remoteInsertWish(owner, title, link) {
   const sb = getSupabase();
   if (!sb) return;
 
-  const id = Date.now() * 1000 + Math.floor(Math.random() * 1000);
-  const payload = { id, owner, title, link: link || null };
+  // the database numbers wishes itself, the same way it numbers cards
+  const payload = { owner, title, link: link || null };
 
   const { error } = await sb.from("wishes").insert(payload);
   if (error) console.error("[supabase] wish insert failed", error);
