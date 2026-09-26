@@ -5,7 +5,6 @@ const UNWATCHED_TAB_ID = "tab-unwatched";
 const UNWATCHED_LIST_SELECTOR = ".unwatched";
 const WATCHED_LIST_SELECTOR = ".watched";
 
-const RATING_DELIMITER = "|";
 const ANIMATION_STEP_DELAY = 0.08;
 const FOOTER_EXTRA_DELAY = 0.4;
 
@@ -25,9 +24,6 @@ let realtimeChannel = null; // --------------------------- declare explicitly --
 async function initializeRealtime() {
   const sb = getSupabase();
   if (!sb) return;
-
-  // --------------------------- seed once if db empty ----------------------------
-  await remoteSeedIfEmpty();
 
   // --------------------------- initial pull ----------------------------
   await remotePullAll();
@@ -103,27 +99,6 @@ function refreshLogTimesOnly() {
     if (!timeEl) return;
     timeEl.textContent = formatTimeAgo(ts);
   });
-}
-
-async function remoteSeedIfEmpty() {
-  const sb = getSupabase();
-  if (!sb) return;
-
-  const { data, error } = await sb.from("cards").select("id").limit(1);
-  if (error) {
-    console.error("[supabase] seed check failed", error);
-    return;
-  }
-
-  if (data && data.length > 0) return;
-
-  const payload = Array.from(document.querySelectorAll(".lists li"))
-    .map(li => readCardPayloadFromLi(li))
-    .filter(Boolean);
-
-  const res = await sb.from("cards").upsert(payload, { onConflict: "id" });
-  if (res.error) console.error("[supabase] seed upsert failed", res.error);
-  else console.log("[supabase] seeded", payload.length, "cards");
 }
 
 /* =========================
@@ -451,35 +426,12 @@ function readTitleFromLi(li) {
   return (el.childNodes[0]?.textContent || el.textContent || "").trim();
 }
 
-function readCardPayloadFromLi(li) {
-  const id = parseInt(getCardId(li) || "0", 10);
-  if (!id) return null;
-
-  return {
-    id,
-    title: readTitleFromLi(li),
-    tab: getTabFromLi(li),
-    state: getState(li),
-    status: (li.dataset.status || "00").trim(),
-    start_date: (li.dataset.start || "").trim() || null,
-    end_date: (li.dataset.end || "").trim() || null,
-    vlad_score: parseInt(li.dataset.vladScore || "0", 10) || 0,
-    vika_score: parseInt(li.dataset.vikaScore || "0", 10) || 0,
-    vlad_comment: (li.dataset.vladComment || "").trim(),
-    vika_comment: (li.dataset.vikaComment || "").trim(),
-  };
-}
-
 function applyRemoteCardToDom(row) {
   const li = ensureCardExistsFromRow(row);
   if (!li) return;
 
   // update all datasets
   setCardDatasetFromRow(li, row);
-
-  // keep local cache in sync with server (ratings)
-  storeScore(li, "vlad", parseInt(li.dataset.vladScore || "0", 10) || 0);
-  storeScore(li, "vika", parseInt(li.dataset.vikaScore || "0", 10) || 0);
 
   // move between tabs if needed
   moveCardToTab(li, row.tab);
@@ -629,7 +581,6 @@ async function remoteInsertLog(action, details, cardIdOrNull) {
 async function initializeRemoteSync() {
   if (!REMOTE.enabled) return;
 
-  await remoteSeedIfEmpty();
   await remotePullAll();
 
   window.setInterval(() => {
@@ -1963,35 +1914,6 @@ function syncStatusBadge(li) {
   }
 }
 
-function syncAllStatusBadges() {
-  document.querySelectorAll(".lists li").forEach(li => syncStatusBadge(li));
-}
-
-function initializeCardStatusTooltips() {
-  document.querySelectorAll(".lists li").forEach(li => {
-    const badge = li.querySelector(".status");
-    if (!badge) return;
-
-    // avoid duplicates
-    if (badge.querySelector(".tooltip")) return;
-
-    const code = (li.dataset.status || badge.textContent || "").trim();
-    const text = STATUS_TOOLTIP_TEXT[code];
-    if (!text) return;
-
-    // keyboard accessibility
-    badge.setAttribute("tabindex", "0");
-    badge.setAttribute("role", "button");
-    badge.setAttribute("aria-label", `Status ${code} info`);
-
-    const tip = document.createElement("span");
-    tip.className = "tooltip";
-    tip.innerHTML = text;
-
-    badge.appendChild(tip);
-  });
-}
-
 /* ---------------------------
    CONTROLS (SORT/FILTER)
 ---------------------------- */
@@ -2196,7 +2118,7 @@ function initializeControls() {
 }
 
 /* ---------------------------
-   RATINGS (TEXT -> HEARTS)
+   RATINGS (HEARTS)
 ---------------------------- */
 
 function createHearts(score, owner) {
@@ -2237,18 +2159,6 @@ function createRatingRow(name, score) {
   return row;
 }
 
-function extractScores(metaText) {
-  if (!metaText.includes(RATING_DELIMITER)) return null;
-
-  const [vladPart, vikaPart] = metaText.split(RATING_DELIMITER);
-  const vladScore = parseInt(vladPart.split(":")[1], 10);
-  const vikaScore = parseInt(vikaPart.split(":")[1], 10);
-
-  if (Number.isNaN(vladScore) || Number.isNaN(vikaScore)) return null;
-
-  return { vladScore, vikaScore };
-}
-
 function renderRatings(metaElement, scores) {
   const rating = document.createElement("div");
   rating.className = "rating";
@@ -2260,50 +2170,8 @@ function renderRatings(metaElement, scores) {
   metaElement.appendChild(rating);
 }
 
-function transformRatings() {
-  document.querySelectorAll(".watched li").forEach(li => {
-    const meta = li.querySelector(".meta");
-    if (!meta) return;
-
-    // prefer stored ratings; fallback to meta text parse
-    const stored = getStoredScores(li);
-
-    let scores = null;
-
-    if (stored && (stored.vladScore !== null || stored.vikaScore !== null)) {
-      scores = {
-        vladScore: stored.vladScore ?? 0,
-        vikaScore: stored.vikaScore ?? 0,
-      };
-    } else {
-      scores = extractScores(meta.textContent.trim());
-      if (!scores) return;
-
-      // seed storage once from initial html meta
-      storeScore(li, "vlad", scores.vladScore);
-      storeScore(li, "vika", scores.vikaScore);
-    }
-
-    // store scores on the card for sorting
-    li.dataset.vladScore = String(scores.vladScore);
-    li.dataset.vikaScore = String(scores.vikaScore);
-
-    renderRatings(meta, scores);
-  });
-
-  // apply editability styles
-  updateRatingEditability();
-}
-
-/* ---------------------------
-   RATINGS STORAGE + EDITING
----------------------------- */
-
-const LS_RATINGS_MAP = "ratingsMap";
-
-// stable per-card key (uses title text)
 /* =========================
-   CARD ID (STABLE KEY)
+   CARD ID
    ========================= */
 
 function getCardId(li) {
@@ -2313,53 +2181,9 @@ function getCardId(li) {
   return null;
 }
 
-// stable per-card key
-function getCardKey(li) {
-  const id = getCardId(li);
-  if (id) return id;
-
-  // fallback (legacy): title-based
-  const titleEl = li?.querySelector(".filmTitle");
-  const raw = titleEl ? titleEl.textContent : "";
-  return raw.trim().toLowerCase().replace(/\s+/g, " ").slice(0, 120) || "unknown";
-}
-
-function loadRatingsMap() {
-  try {
-    return JSON.parse(localStorage.getItem(LS_RATINGS_MAP) || "{}");
-  } catch {
-    return {};
-  }
-}
-
-function saveRatingsMap(map) {
-  localStorage.setItem(LS_RATINGS_MAP, JSON.stringify(map || {}));
-}
-
-function getStoredScores(li) {
-  const key = getCardKey(li);
-  const map = loadRatingsMap();
-  const entry = map[key];
-  if (!entry) return null;
-
-  const vladScore = parseInt(entry.vlad, 10);
-  const vikaScore = parseInt(entry.vika, 10);
-
-  return {
-    vladScore: Number.isNaN(vladScore) ? null : vladScore,
-    vikaScore: Number.isNaN(vikaScore) ? null : vikaScore,
-  };
-}
-
-function storeScore(li, owner, score) {
-  const key = getCardKey(li);
-  const map = loadRatingsMap();
-
-  if (!map[key]) map[key] = {};
-  map[key][owner] = score;
-
-  saveRatingsMap(map);
-}
+/* ---------------------------
+   RATINGS EDITING
+---------------------------- */
 
 function updateRatingEditability() {
   const active = getActiveUser();
@@ -2415,9 +2239,6 @@ async function handleRatingClick(target) {
 
   const cardId = getCardId(li);
   const sb = getSupabase();
-
-  // persist locally for instant ui + offline fallback
-  storeScore(li, owner, score);
 
   if (sb && cardId) {
     await remoteUpdateRating(cardId, owner, score);
@@ -2593,11 +2414,6 @@ function upsertWatchDateLabel(li) {
   label.textContent = text;
 
   titleEl.appendChild(label);
-}
-
-// render dates for all cards
-function renderWatchDates() {
-  document.querySelectorAll(".lists li").forEach(li => upsertWatchDateLabel(li));
 }
 
 /* ---------------------------
@@ -2948,12 +2764,6 @@ async function logEditDiffs(before, after, cardId) {
 }
 
 function initializeCardUi() {
-  // upgrade all existing cards layout
-  document.querySelectorAll(".lists li").forEach(li => {
-    ensureRightControls(li);
-    ensureCommentsUi(li);
-  });
-
   // add button
   const addBtn = document.getElementById("addToggle");
   if (addBtn) {
@@ -3343,10 +3153,6 @@ function initializeWishlists() {
 
 (async function boot() {
   cacheInitialOrder();
-
-  transformRatings();
-  renderWatchDates();
-  syncAllStatusBadges();
 
   initializeAuth(); // --------------------------- ui first ----------------------------\
   initializeCardUi();
