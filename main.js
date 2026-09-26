@@ -385,29 +385,44 @@ async function remoteUpdateCard(cardId, patch) {
 
 let deleteModalTargetLi = null;
 
+// "deleted" when this call removed the row, "gone" when there was no row left
+// to remove, "failed" otherwise
 async function remoteDeleteCard(cardId) {
   const sb = getSupabase();
-  if (!sb) return false;
+  if (!sb) return "failed";
 
-  // add .select() to catch silent rls blocks
+  const id = parseInt(cardId, 10);
+
+  // .select() hands back the deleted rows, so an empty answer means nothing
+  // was deleted, which a plain delete would report as success
   const { data, error } = await sb
     .from("cards")
     .delete()
-    .eq("id", parseInt(cardId, 10))
+    .eq("id", id)
     .select();
 
   if (error) {
     console.error("[supabase] delete error", error);
-    return false;
+    return "failed";
   }
 
-  // if 0 rows returned, rls blocked it
-  if (!data || data.length === 0) {
-    alert("could not delete from db! please check supabase rls policies for delete.");
-    return false;
-  }
+  if (data && data.length > 0) return "deleted";
 
-  return true;
+  // nothing deleted means either a policy refused, or there was no row to
+  // begin with: removed from another tab, or never in the database at all.
+  // only the first is worth an alert, the second just means this page was
+  // behind. the alert used to blame the policies for both, and a card that
+  // existed only on screen could not be deleted at all
+  const { data: row, error: checkError } = await sb
+    .from("cards")
+    .select("id")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (!checkError && !row) return "gone";
+
+  alert("could not delete from db! please check supabase rls policies for delete.");
+  return "failed";
 }
 
 function deleteCard(li) {
@@ -2782,12 +2797,15 @@ function initializeCardUi() {
 
       if (!id) return;
 
-      const success = await remoteDeleteCard(id);
-      if (success) {
-        li.remove();
-        // record action in logs
+      const result = await remoteDeleteCard(id);
+      if (result === "failed") return;
+
+      li.remove();
+      scheduleActiveTabView({ animate: false });
+
+      // only a delete that actually happened goes into the activity log
+      if (result === "deleted") {
         await remoteInsertLog("delete_card", { title }, null);
-        scheduleActiveTabView({ animate: false });
       }
       return;
     }
