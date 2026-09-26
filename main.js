@@ -5,7 +5,6 @@ const UNWATCHED_TAB_ID = "tab-unwatched";
 const UNWATCHED_LIST_SELECTOR = ".unwatched";
 const WATCHED_LIST_SELECTOR = ".watched";
 
-const RATING_DELIMITER = "|";
 const ANIMATION_STEP_DELAY = 0.08;
 const FOOTER_EXTRA_DELAY = 0.4;
 
@@ -25,9 +24,6 @@ let realtimeChannel = null; // --------------------------- declare explicitly --
 async function initializeRealtime() {
   const sb = getSupabase();
   if (!sb) return;
-
-  // --------------------------- seed once if db empty ----------------------------
-  await remoteSeedIfEmpty();
 
   // --------------------------- initial pull ----------------------------
   await remotePullAll();
@@ -53,9 +49,22 @@ async function initializeRealtime() {
     .on("postgres_changes", { event: "*", schema: "public", table: "wishes" }, payload => {
       remotePullWishes();
     })
-    .subscribe((status) => {
+    .subscribe(status => {
       console.log("[realtime]", status);
+
+      // events sent while the socket is down are lost for good, so every join
+      // starts from a full pull. that covers a reconnect after a sleeping
+      // laptop, and on the first join the gap between the boot pull and the
+      // moment the channel was actually listening
+      if (status === "SUBSCRIBED") resyncFromRemote();
     });
+}
+
+async function resyncFromRemote() {
+  await remotePullAll();
+  await remotePullWishes();
+  refreshLogsUI();
+  scheduleActiveTabView({ animate: false });
 }
 
 function prependRemoteLog(row) {
@@ -105,27 +114,6 @@ function refreshLogTimesOnly() {
   });
 }
 
-async function remoteSeedIfEmpty() {
-  const sb = getSupabase();
-  if (!sb) return;
-
-  const { data, error } = await sb.from("cards").select("id").limit(1);
-  if (error) {
-    console.error("[supabase] seed check failed", error);
-    return;
-  }
-
-  if (data && data.length > 0) return;
-
-  const payload = Array.from(document.querySelectorAll(".lists li"))
-    .map(li => readCardPayloadFromLi(li))
-    .filter(Boolean);
-
-  const res = await sb.from("cards").upsert(payload, { onConflict: "id" });
-  if (res.error) console.error("[supabase] seed upsert failed", res.error);
-  else console.log("[supabase] seeded", payload.length, "cards");
-}
-
 /* =========================
    REMOTE SYNC (SUPABASE)
    ========================= */
@@ -134,7 +122,6 @@ const REMOTE = {
   enabled: true,
   url: "https://esdhstxcxxgcexddkxqi.supabase.co",
   anonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVzZGhzdHhjeHhnY2V4ZGRreHFpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY2Nzg1ODcsImV4cCI6MjA4MjI1NDU4N30.Tnes90BskmTxvxNaOSJkI1ah6MuQz7rmnKAeG_mtbiA",
-  pollMs: 10_000,
 };
 
 function getSupabase() {
@@ -167,11 +154,6 @@ function todayIsoDate() {
   const mm = String(d.getMonth() + 1).padStart(2, "0");
   const dd = String(d.getDate()).padStart(2, "0");
   return `${yyyy}-${mm}-${dd}`;
-}
-
-function generateCardId() {
-  // note: stays under 2^53 (safe integer)
-  return Date.now() * 1000 + Math.floor(Math.random() * 1000);
 }
 
 function getListsUlByTab(tab) {
@@ -302,9 +284,6 @@ function createCardLiFromRow(row) {
   const title = li.querySelector(".filmTitle");
   if (title) title.textContent = row.title || "unknown title";
 
-  // set initial order index so stable sorting works
-  li.dataset.initialIndex = String(Number.MAX_SAFE_INTEGER - 1);
-
   setCardDatasetFromRow(li, row);
 
   // tooltip + color class + date label
@@ -398,29 +377,44 @@ async function remoteUpdateCard(cardId, patch) {
 
 let deleteModalTargetLi = null;
 
+// "deleted" when this call removed the row, "gone" when there was no row left
+// to remove, "failed" otherwise
 async function remoteDeleteCard(cardId) {
   const sb = getSupabase();
-  if (!sb) return false;
+  if (!sb) return "failed";
 
-  // add .select() to catch silent rls blocks
+  const id = parseInt(cardId, 10);
+
+  // .select() hands back the deleted rows, so an empty answer means nothing
+  // was deleted, which a plain delete would report as success
   const { data, error } = await sb
     .from("cards")
     .delete()
-    .eq("id", parseInt(cardId, 10))
+    .eq("id", id)
     .select();
 
   if (error) {
     console.error("[supabase] delete error", error);
-    return false;
+    return "failed";
   }
 
-  // if 0 rows returned, rls blocked it
-  if (!data || data.length === 0) {
-    alert("could not delete from db! please check supabase rls policies for delete.");
-    return false;
-  }
+  if (data && data.length > 0) return "deleted";
 
-  return true;
+  // nothing deleted means either a policy refused, or there was no row to
+  // begin with: removed from another tab, or never in the database at all.
+  // only the first is worth an alert, the second just means this page was
+  // behind. the alert used to blame the policies for both, and a card that
+  // existed only on screen could not be deleted at all
+  const { data: row, error: checkError } = await sb
+    .from("cards")
+    .select("id")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (!checkError && !row) return "gone";
+
+  alert("could not delete from db! please check supabase rls policies for delete.");
+  return "failed";
 }
 
 function deleteCard(li) {
@@ -451,35 +445,12 @@ function readTitleFromLi(li) {
   return (el.childNodes[0]?.textContent || el.textContent || "").trim();
 }
 
-function readCardPayloadFromLi(li) {
-  const id = parseInt(getCardId(li) || "0", 10);
-  if (!id) return null;
-
-  return {
-    id,
-    title: readTitleFromLi(li),
-    tab: getTabFromLi(li),
-    state: getState(li),
-    status: (li.dataset.status || "00").trim(),
-    start_date: (li.dataset.start || "").trim() || null,
-    end_date: (li.dataset.end || "").trim() || null,
-    vlad_score: parseInt(li.dataset.vladScore || "0", 10) || 0,
-    vika_score: parseInt(li.dataset.vikaScore || "0", 10) || 0,
-    vlad_comment: (li.dataset.vladComment || "").trim(),
-    vika_comment: (li.dataset.vikaComment || "").trim(),
-  };
-}
-
 function applyRemoteCardToDom(row) {
   const li = ensureCardExistsFromRow(row);
   if (!li) return;
 
   // update all datasets
   setCardDatasetFromRow(li, row);
-
-  // keep local cache in sync with server (ratings)
-  storeScore(li, "vlad", parseInt(li.dataset.vladScore || "0", 10) || 0);
-  storeScore(li, "vika", parseInt(li.dataset.vikaScore || "0", 10) || 0);
 
   // move between tabs if needed
   moveCardToTab(li, row.tab);
@@ -531,22 +502,6 @@ function applyRemoteCardToDom(row) {
   updateRatingEditability();
 }
 
-let remoteLastSyncIso = null;
-
-/* =========================
-   REMOTE CURSOR HELPERS
-   ========================= */
-
-function maxUpdatedAt(rows) {
-  let max = null;
-  rows.forEach(r => {
-    const v = r.updated_at;
-    if (!v) return;
-    if (!max || String(v) > String(max)) max = v; // iso strings compare ok
-  });
-  return max;
-}
-
 async function remotePullAll() {
   const sb = getSupabase();
   if (!sb) return;
@@ -563,35 +518,14 @@ async function remotePullAll() {
 
   data.forEach(row => applyRemoteCardToDom(row));
 
-  // cursor: use server updated_at, not client time
-  remoteLastSyncIso = maxUpdatedAt(data) || remoteLastSyncIso;
-}
-
-async function remotePullChanges() {
-  const sb = getSupabase();
-  if (!sb) return;
-
-  const cursor = remoteLastSyncIso || "1970-01-01T00:00:00.000Z";
-
-  const { data, error } = await sb
-    .from("cards")
-    .select("*")
-    .gt("updated_at", cursor)
-    .order("updated_at", { ascending: true });
-
-  if (error || !data) {
-    console.error("[supabase] remotePullChanges failed", error);
-    return;
-  }
-
-  if (data.length > 0) {
-    data.forEach(row => applyRemoteCardToDom(row));
-
-    // re-apply sorting/filters, but do not restart animations
-    scheduleActiveTabView({ animate: false });
-
-    remoteLastSyncIso = maxUpdatedAt(data) || remoteLastSyncIso;
-  }
+  // the database is the whole truth, so a card it did not return is gone.
+  // realtime alone never says so for certain: an event sent while the socket
+  // was down does not arrive, and an id edited by hand comes in as an update
+  // for a card nobody has seen, with nothing that would ever remove the old one
+  const live = new Set(data.map(row => String(row.id)));
+  document.querySelectorAll(".lists li[data-id]").forEach(li => {
+    if (!live.has(li.dataset.id)) li.remove();
+  });
 }
 
 async function remoteUpdateRating(cardId, owner, score) {
@@ -624,17 +558,6 @@ async function remoteInsertLog(action, details, cardIdOrNull) {
   });
 
   if (error) console.error("[supabase] insert log failed", error);
-}
-
-async function initializeRemoteSync() {
-  if (!REMOTE.enabled) return;
-
-  await remoteSeedIfEmpty();
-  await remotePullAll();
-
-  window.setInterval(() => {
-    remotePullChanges();
-  }, REMOTE.pollMs);
 }
 
 /* ---------------------------
@@ -1885,17 +1808,24 @@ function autoFlipTooltip(anchorEl) {
   }
 }
 
-function initializeTooltipAutoFlip() {
-  const anchors = document.querySelectorAll(".chip, .info-badge, .status");
+const TOOLTIP_ANCHOR_SELECTOR = ".chip, .info-badge, .status";
 
-  anchors.forEach(anchor => {
-    anchor.addEventListener("mouseenter", () => autoFlipTooltip(anchor));
-    anchor.addEventListener("focusin", () => autoFlipTooltip(anchor));
+// listens on the document instead of on every anchor: cards are drawn from the
+// database after this runs, so listeners attached one by one at boot never
+// reached the status badge of a single card
+function initializeTooltipAutoFlip() {
+  document.addEventListener("mouseover", e => {
+    const anchor = e.target.closest(TOOLTIP_ANCHOR_SELECTOR);
+    if (!anchor) return;
+    // mouseover also fires between an anchor's own children, and only the
+    // way in needs a fresh measurement, the same moment mouseenter used to catch
+    if (anchor.contains(e.relatedTarget)) return;
+    autoFlipTooltip(anchor);
   });
 
-  // keep it robust on resize
-  window.addEventListener("resize", () => {
-    // nothing to do until next hover/focus
+  document.addEventListener("focusin", e => {
+    const anchor = e.target.closest(TOOLTIP_ANCHOR_SELECTOR);
+    if (anchor) autoFlipTooltip(anchor);
   });
 }
 
@@ -1961,35 +1891,6 @@ function syncStatusBadge(li) {
     newTip.innerHTML = text;
     badge.appendChild(newTip);
   }
-}
-
-function syncAllStatusBadges() {
-  document.querySelectorAll(".lists li").forEach(li => syncStatusBadge(li));
-}
-
-function initializeCardStatusTooltips() {
-  document.querySelectorAll(".lists li").forEach(li => {
-    const badge = li.querySelector(".status");
-    if (!badge) return;
-
-    // avoid duplicates
-    if (badge.querySelector(".tooltip")) return;
-
-    const code = (li.dataset.status || badge.textContent || "").trim();
-    const text = STATUS_TOOLTIP_TEXT[code];
-    if (!text) return;
-
-    // keyboard accessibility
-    badge.setAttribute("tabindex", "0");
-    badge.setAttribute("role", "button");
-    badge.setAttribute("aria-label", `Status ${code} info`);
-
-    const tip = document.createElement("span");
-    tip.className = "tooltip";
-    tip.innerHTML = text;
-
-    badge.appendChild(tip);
-  });
 }
 
 /* ---------------------------
@@ -2076,16 +1977,17 @@ function sortWatchedByMode() {
     const aDate = parseISODate(a.dataset.start);
     const bDate = parseISODate(b.dataset.start);
 
-    // helper: date desc (newest first)
+    // helper: date desc (newest first), and on the same date the card added
+    // last, so the title you just logged lands on top of that day
     function dateDesc() {
-      if (!aDate && !bDate) return getInitialIndex(a) - getInitialIndex(b);
+      if (!aDate && !bDate) return compareAddedDesc(a, b);
       if (!aDate) return 1;
       if (!bDate) return -1;
 
       const diff = bDate.getTime() - aDate.getTime();
       if (diff !== 0) return diff;
 
-      return getInitialIndex(a) - getInitialIndex(b);
+      return compareAddedDesc(a, b);
     }
 
     if (mode === "recent") return dateDesc();
@@ -2196,7 +2098,7 @@ function initializeControls() {
 }
 
 /* ---------------------------
-   RATINGS (TEXT -> HEARTS)
+   RATINGS (HEARTS)
 ---------------------------- */
 
 function createHearts(score, owner) {
@@ -2237,18 +2139,6 @@ function createRatingRow(name, score) {
   return row;
 }
 
-function extractScores(metaText) {
-  if (!metaText.includes(RATING_DELIMITER)) return null;
-
-  const [vladPart, vikaPart] = metaText.split(RATING_DELIMITER);
-  const vladScore = parseInt(vladPart.split(":")[1], 10);
-  const vikaScore = parseInt(vikaPart.split(":")[1], 10);
-
-  if (Number.isNaN(vladScore) || Number.isNaN(vikaScore)) return null;
-
-  return { vladScore, vikaScore };
-}
-
 function renderRatings(metaElement, scores) {
   const rating = document.createElement("div");
   rating.className = "rating";
@@ -2260,50 +2150,8 @@ function renderRatings(metaElement, scores) {
   metaElement.appendChild(rating);
 }
 
-function transformRatings() {
-  document.querySelectorAll(".watched li").forEach(li => {
-    const meta = li.querySelector(".meta");
-    if (!meta) return;
-
-    // prefer stored ratings; fallback to meta text parse
-    const stored = getStoredScores(li);
-
-    let scores = null;
-
-    if (stored && (stored.vladScore !== null || stored.vikaScore !== null)) {
-      scores = {
-        vladScore: stored.vladScore ?? 0,
-        vikaScore: stored.vikaScore ?? 0,
-      };
-    } else {
-      scores = extractScores(meta.textContent.trim());
-      if (!scores) return;
-
-      // seed storage once from initial html meta
-      storeScore(li, "vlad", scores.vladScore);
-      storeScore(li, "vika", scores.vikaScore);
-    }
-
-    // store scores on the card for sorting
-    li.dataset.vladScore = String(scores.vladScore);
-    li.dataset.vikaScore = String(scores.vikaScore);
-
-    renderRatings(meta, scores);
-  });
-
-  // apply editability styles
-  updateRatingEditability();
-}
-
-/* ---------------------------
-   RATINGS STORAGE + EDITING
----------------------------- */
-
-const LS_RATINGS_MAP = "ratingsMap";
-
-// stable per-card key (uses title text)
 /* =========================
-   CARD ID (STABLE KEY)
+   CARD ID
    ========================= */
 
 function getCardId(li) {
@@ -2313,53 +2161,9 @@ function getCardId(li) {
   return null;
 }
 
-// stable per-card key
-function getCardKey(li) {
-  const id = getCardId(li);
-  if (id) return id;
-
-  // fallback (legacy): title-based
-  const titleEl = li?.querySelector(".filmTitle");
-  const raw = titleEl ? titleEl.textContent : "";
-  return raw.trim().toLowerCase().replace(/\s+/g, " ").slice(0, 120) || "unknown";
-}
-
-function loadRatingsMap() {
-  try {
-    return JSON.parse(localStorage.getItem(LS_RATINGS_MAP) || "{}");
-  } catch {
-    return {};
-  }
-}
-
-function saveRatingsMap(map) {
-  localStorage.setItem(LS_RATINGS_MAP, JSON.stringify(map || {}));
-}
-
-function getStoredScores(li) {
-  const key = getCardKey(li);
-  const map = loadRatingsMap();
-  const entry = map[key];
-  if (!entry) return null;
-
-  const vladScore = parseInt(entry.vlad, 10);
-  const vikaScore = parseInt(entry.vika, 10);
-
-  return {
-    vladScore: Number.isNaN(vladScore) ? null : vladScore,
-    vikaScore: Number.isNaN(vikaScore) ? null : vikaScore,
-  };
-}
-
-function storeScore(li, owner, score) {
-  const key = getCardKey(li);
-  const map = loadRatingsMap();
-
-  if (!map[key]) map[key] = {};
-  map[key][owner] = score;
-
-  saveRatingsMap(map);
-}
+/* ---------------------------
+   RATINGS EDITING
+---------------------------- */
 
 function updateRatingEditability() {
   const active = getActiveUser();
@@ -2415,9 +2219,6 @@ async function handleRatingClick(target) {
 
   const cardId = getCardId(li);
   const sb = getSupabase();
-
-  // persist locally for instant ui + offline fallback
-  storeScore(li, owner, score);
 
   if (sb && cardId) {
     await remoteUpdateRating(cardId, owner, score);
@@ -2595,31 +2396,20 @@ function upsertWatchDateLabel(li) {
   titleEl.appendChild(label);
 }
 
-// render dates for all cards
-function renderWatchDates() {
-  document.querySelectorAll(".lists li").forEach(li => upsertWatchDateLabel(li));
-}
-
 /* ---------------------------
    DEFAULT SORTING
 ---------------------------- */
 
-// cache initial DOM order to keep sorting stable (ties keep HTML order)
-function cacheInitialOrder() {
-  document.querySelectorAll(".lists ul").forEach(ul => {
-    Array.from(ul.children).forEach((li, index) => {
-      // set only once
-      if (!li.dataset.initialIndex) {
-        li.dataset.initialIndex = String(index);
-      }
-    });
-  });
+// the order cards were added in. ids only ever grow, so comparing two of them
+// compares when the cards were added, and every device agrees on the answer.
+// ties used to fall back on the order cards happened to be drawn in, which
+// put the card added last at the bottom of its day, under older ones
+function compareAdded(a, b) {
+  return Number(getCardId(a)) - Number(getCardId(b));
 }
 
-// get initial order index
-function getInitialIndex(li) {
-  const num = parseInt(li.dataset.initialIndex, 10);
-  return Number.isNaN(num) ? Number.POSITIVE_INFINITY : num;
+function compareAddedDesc(a, b) {
+  return compareAdded(b, a);
 }
 
 // helper: re-append sorted items back to UL
@@ -2644,9 +2434,9 @@ function sortUnwatchedStartedToBottom() {
     // started goes to the bottom
     if (aIsStarted !== bIsStarted) return aIsStarted ? 1 : -1;
 
-    // planned group: keep original HTML order
+    // planned group: in the order it was added
     if (!aIsStarted && !bIsStarted) {
-      return getInitialIndex(a) - getInitialIndex(b);
+      return compareAdded(a, b);
     }
 
     // started group: sort by start date DESC (newest first)
@@ -2654,37 +2444,15 @@ function sortUnwatchedStartedToBottom() {
     const bDate = parseISODate(b.dataset.start);
 
     // missing/invalid dates go to the bottom of the started group
-    if (!aDate && !bDate) return getInitialIndex(a) - getInitialIndex(b);
+    if (!aDate && !bDate) return compareAddedDesc(a, b);
     if (!aDate) return 1;
     if (!bDate) return -1;
 
     const diff = bDate.getTime() - aDate.getTime(); // DESC
     if (diff !== 0) return diff;
 
-    // tie-breaker: keep original order stable
-    return getInitialIndex(a) - getInitialIndex(b);
-  });
-}
-
-// tab 2: watched sorted by data-start DESC (newest first)
-// note: if there is start+end, we still sort by start
-function sortWatchedByStartDateDesc() {
-  const ul = document.querySelector(WATCHED_LIST_SELECTOR);
-  if (!ul) return;
-
-  sortUlItems(ul, (a, b) => {
-    const aDate = parseISODate(a.dataset.start);
-    const bDate = parseISODate(b.dataset.start);
-
-    // put missing/invalid dates to the bottom
-    if (!aDate && !bDate) return getInitialIndex(a) - getInitialIndex(b);
-    if (!aDate) return 1;
-    if (!bDate) return -1;
-
-    const diff = bDate.getTime() - aDate.getTime(); // DESC
-    if (diff !== 0) return diff;
-
-    return getInitialIndex(a) - getInitialIndex(b);
+    // same day: the card added last first, the same way the dates run
+    return compareAddedDesc(a, b);
   });
 }
 
@@ -2948,12 +2716,6 @@ async function logEditDiffs(before, after, cardId) {
 }
 
 function initializeCardUi() {
-  // upgrade all existing cards layout
-  document.querySelectorAll(".lists li").forEach(li => {
-    ensureRightControls(li);
-    ensureCommentsUi(li);
-  });
-
   // add button
   const addBtn = document.getElementById("addToggle");
   if (addBtn) {
@@ -3000,12 +2762,15 @@ function initializeCardUi() {
 
       if (!id) return;
 
-      const success = await remoteDeleteCard(id);
-      if (success) {
-        li.remove();
-        // record action in logs
+      const result = await remoteDeleteCard(id);
+      if (result === "failed") return;
+
+      li.remove();
+      scheduleActiveTabView({ animate: false });
+
+      // only a delete that actually happened goes into the activity log
+      if (result === "deleted") {
         await remoteInsertLog("delete_card", { title }, null);
-        scheduleActiveTabView({ animate: false });
       }
       return;
     }
@@ -3094,10 +2859,9 @@ function initializeCardUi() {
       };
 
       if (cardModalMode === "add") {
-        const id = generateCardId();
-
+        // no id: the database numbers cards itself and rejects one sent from
+        // here. the row it returns carries the id it chose
         const row = await remoteInsertCard({
-          id,
           ...payload,
           vlad_score: 0,
           vika_score: 0,
@@ -3163,12 +2927,6 @@ function initializeCardUi() {
   });
 }
 
-// apply both default sorts
-function applyDefaultSorting() {
-  sortUnwatchedStartedToBottom();
-  sortWatchedByStartDateDesc();
-}
-
 /* =========================
    WISHLISTS (REMOTE + UI)
    ========================= */
@@ -3230,8 +2988,8 @@ async function remoteInsertWish(owner, title, link) {
   const sb = getSupabase();
   if (!sb) return;
 
-  const id = Date.now() * 1000 + Math.floor(Math.random() * 1000);
-  const payload = { id, owner, title, link: link || null };
+  // the database numbers wishes itself, the same way it numbers cards
+  const payload = { owner, title, link: link || null };
 
   const { error } = await sb.from("wishes").insert(payload);
   if (error) console.error("[supabase] wish insert failed", error);
@@ -3342,12 +3100,6 @@ function initializeWishlists() {
    ========================= */
 
 (async function boot() {
-  cacheInitialOrder();
-
-  transformRatings();
-  renderWatchDates();
-  syncAllStatusBadges();
-
   initializeAuth(); // --------------------------- ui first ----------------------------\
   initializeCardUi();
   initializeFiltersToggle();
