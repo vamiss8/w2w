@@ -49,9 +49,22 @@ async function initializeRealtime() {
     .on("postgres_changes", { event: "*", schema: "public", table: "wishes" }, payload => {
       remotePullWishes();
     })
-    .subscribe((status) => {
+    .subscribe(status => {
       console.log("[realtime]", status);
+
+      // events sent while the socket is down are lost for good, so every join
+      // starts from a full pull. that covers a reconnect after a sleeping
+      // laptop, and on the first join the gap between the boot pull and the
+      // moment the channel was actually listening
+      if (status === "SUBSCRIBED") resyncFromRemote();
     });
+}
+
+async function resyncFromRemote() {
+  await remotePullAll();
+  await remotePullWishes();
+  refreshLogsUI();
+  scheduleActiveTabView({ animate: false });
 }
 
 function prependRemoteLog(row) {
@@ -109,7 +122,6 @@ const REMOTE = {
   enabled: true,
   url: "https://esdhstxcxxgcexddkxqi.supabase.co",
   anonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVzZGhzdHhjeHhnY2V4ZGRreHFpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY2Nzg1ODcsImV4cCI6MjA4MjI1NDU4N30.Tnes90BskmTxvxNaOSJkI1ah6MuQz7rmnKAeG_mtbiA",
-  pollMs: 10_000,
 };
 
 function getSupabase() {
@@ -483,22 +495,6 @@ function applyRemoteCardToDom(row) {
   updateRatingEditability();
 }
 
-let remoteLastSyncIso = null;
-
-/* =========================
-   REMOTE CURSOR HELPERS
-   ========================= */
-
-function maxUpdatedAt(rows) {
-  let max = null;
-  rows.forEach(r => {
-    const v = r.updated_at;
-    if (!v) return;
-    if (!max || String(v) > String(max)) max = v; // iso strings compare ok
-  });
-  return max;
-}
-
 async function remotePullAll() {
   const sb = getSupabase();
   if (!sb) return;
@@ -515,35 +511,14 @@ async function remotePullAll() {
 
   data.forEach(row => applyRemoteCardToDom(row));
 
-  // cursor: use server updated_at, not client time
-  remoteLastSyncIso = maxUpdatedAt(data) || remoteLastSyncIso;
-}
-
-async function remotePullChanges() {
-  const sb = getSupabase();
-  if (!sb) return;
-
-  const cursor = remoteLastSyncIso || "1970-01-01T00:00:00.000Z";
-
-  const { data, error } = await sb
-    .from("cards")
-    .select("*")
-    .gt("updated_at", cursor)
-    .order("updated_at", { ascending: true });
-
-  if (error || !data) {
-    console.error("[supabase] remotePullChanges failed", error);
-    return;
-  }
-
-  if (data.length > 0) {
-    data.forEach(row => applyRemoteCardToDom(row));
-
-    // re-apply sorting/filters, but do not restart animations
-    scheduleActiveTabView({ animate: false });
-
-    remoteLastSyncIso = maxUpdatedAt(data) || remoteLastSyncIso;
-  }
+  // the database is the whole truth, so a card it did not return is gone.
+  // realtime alone never says so for certain: an event sent while the socket
+  // was down does not arrive, and an id edited by hand comes in as an update
+  // for a card nobody has seen, with nothing that would ever remove the old one
+  const live = new Set(data.map(row => String(row.id)));
+  document.querySelectorAll(".lists li[data-id]").forEach(li => {
+    if (!live.has(li.dataset.id)) li.remove();
+  });
 }
 
 async function remoteUpdateRating(cardId, owner, score) {
@@ -576,16 +551,6 @@ async function remoteInsertLog(action, details, cardIdOrNull) {
   });
 
   if (error) console.error("[supabase] insert log failed", error);
-}
-
-async function initializeRemoteSync() {
-  if (!REMOTE.enabled) return;
-
-  await remotePullAll();
-
-  window.setInterval(() => {
-    remotePullChanges();
-  }, REMOTE.pollMs);
 }
 
 /* ---------------------------
