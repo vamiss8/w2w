@@ -289,9 +289,6 @@ function createCardLiFromRow(row) {
   const title = li.querySelector(".filmTitle");
   if (title) title.textContent = row.title || "unknown title";
 
-  // set initial order index so stable sorting works
-  li.dataset.initialIndex = String(Number.MAX_SAFE_INTEGER - 1);
-
   setCardDatasetFromRow(li, row);
 
   // tooltip + color class + date label
@@ -1985,16 +1982,17 @@ function sortWatchedByMode() {
     const aDate = parseISODate(a.dataset.start);
     const bDate = parseISODate(b.dataset.start);
 
-    // helper: date desc (newest first)
+    // helper: date desc (newest first), and on the same date the card added
+    // last, so the title you just logged lands on top of that day
     function dateDesc() {
-      if (!aDate && !bDate) return getInitialIndex(a) - getInitialIndex(b);
+      if (!aDate && !bDate) return compareAddedDesc(a, b);
       if (!aDate) return 1;
       if (!bDate) return -1;
 
       const diff = bDate.getTime() - aDate.getTime();
       if (diff !== 0) return diff;
 
-      return getInitialIndex(a) - getInitialIndex(b);
+      return compareAddedDesc(a, b);
     }
 
     if (mode === "recent") return dateDesc();
@@ -2407,22 +2405,16 @@ function upsertWatchDateLabel(li) {
    DEFAULT SORTING
 ---------------------------- */
 
-// cache initial DOM order to keep sorting stable (ties keep HTML order)
-function cacheInitialOrder() {
-  document.querySelectorAll(".lists ul").forEach(ul => {
-    Array.from(ul.children).forEach((li, index) => {
-      // set only once
-      if (!li.dataset.initialIndex) {
-        li.dataset.initialIndex = String(index);
-      }
-    });
-  });
+// the order cards were added in. ids only ever grow, so comparing two of them
+// compares when the cards were added, and every device agrees on the answer.
+// ties used to fall back on the order cards happened to be drawn in, which
+// put the card added last at the bottom of its day, under older ones
+function compareAdded(a, b) {
+  return Number(getCardId(a)) - Number(getCardId(b));
 }
 
-// get initial order index
-function getInitialIndex(li) {
-  const num = parseInt(li.dataset.initialIndex, 10);
-  return Number.isNaN(num) ? Number.POSITIVE_INFINITY : num;
+function compareAddedDesc(a, b) {
+  return compareAdded(b, a);
 }
 
 // helper: re-append sorted items back to UL
@@ -2447,9 +2439,9 @@ function sortUnwatchedStartedToBottom() {
     // started goes to the bottom
     if (aIsStarted !== bIsStarted) return aIsStarted ? 1 : -1;
 
-    // planned group: keep original HTML order
+    // planned group: in the order it was added
     if (!aIsStarted && !bIsStarted) {
-      return getInitialIndex(a) - getInitialIndex(b);
+      return compareAdded(a, b);
     }
 
     // started group: sort by start date DESC (newest first)
@@ -2457,37 +2449,15 @@ function sortUnwatchedStartedToBottom() {
     const bDate = parseISODate(b.dataset.start);
 
     // missing/invalid dates go to the bottom of the started group
-    if (!aDate && !bDate) return getInitialIndex(a) - getInitialIndex(b);
+    if (!aDate && !bDate) return compareAddedDesc(a, b);
     if (!aDate) return 1;
     if (!bDate) return -1;
 
     const diff = bDate.getTime() - aDate.getTime(); // DESC
     if (diff !== 0) return diff;
 
-    // tie-breaker: keep original order stable
-    return getInitialIndex(a) - getInitialIndex(b);
-  });
-}
-
-// tab 2: watched sorted by data-start DESC (newest first)
-// note: if there is start+end, we still sort by start
-function sortWatchedByStartDateDesc() {
-  const ul = document.querySelector(WATCHED_LIST_SELECTOR);
-  if (!ul) return;
-
-  sortUlItems(ul, (a, b) => {
-    const aDate = parseISODate(a.dataset.start);
-    const bDate = parseISODate(b.dataset.start);
-
-    // put missing/invalid dates to the bottom
-    if (!aDate && !bDate) return getInitialIndex(a) - getInitialIndex(b);
-    if (!aDate) return 1;
-    if (!bDate) return -1;
-
-    const diff = bDate.getTime() - aDate.getTime(); // DESC
-    if (diff !== 0) return diff;
-
-    return getInitialIndex(a) - getInitialIndex(b);
+    // same day: the card added last first, the same way the dates run
+    return compareAddedDesc(a, b);
   });
 }
 
@@ -2963,12 +2933,6 @@ function initializeCardUi() {
   });
 }
 
-// apply both default sorts
-function applyDefaultSorting() {
-  sortUnwatchedStartedToBottom();
-  sortWatchedByStartDateDesc();
-}
-
 /* =========================
    WISHLISTS (REMOTE + UI)
    ========================= */
@@ -3142,8 +3106,6 @@ function initializeWishlists() {
    ========================= */
 
 (async function boot() {
-  cacheInitialOrder();
-
   initializeAuth(); // --------------------------- ui first ----------------------------\
   initializeCardUi();
   initializeFiltersToggle();
