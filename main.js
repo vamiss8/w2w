@@ -1836,17 +1836,24 @@ function autoFlipTooltip(anchorEl) {
   }
 }
 
-function initializeTooltipAutoFlip() {
-  const anchors = document.querySelectorAll(".chip, .info-badge, .status");
+const TOOLTIP_ANCHOR_SELECTOR = ".chip, .info-badge, .status";
 
-  anchors.forEach(anchor => {
-    anchor.addEventListener("mouseenter", () => autoFlipTooltip(anchor));
-    anchor.addEventListener("focusin", () => autoFlipTooltip(anchor));
+// listens on the document instead of on every anchor: cards are drawn from the
+// database after this runs, so listeners attached one by one at boot never
+// reached the status badge of a single card
+function initializeTooltipAutoFlip() {
+  document.addEventListener("mouseover", e => {
+    const anchor = e.target.closest(TOOLTIP_ANCHOR_SELECTOR);
+    if (!anchor) return;
+    // mouseover also fires between an anchor's own children, and only the
+    // way in needs a fresh measurement, the same moment mouseenter used to catch
+    if (anchor.contains(e.relatedTarget)) return;
+    autoFlipTooltip(anchor);
   });
 
-  // keep it robust on resize
-  window.addEventListener("resize", () => {
-    // nothing to do until next hover/focus
+  document.addEventListener("focusin", e => {
+    const anchor = e.target.closest(TOOLTIP_ANCHOR_SELECTOR);
+    if (anchor) autoFlipTooltip(anchor);
   });
 }
 
