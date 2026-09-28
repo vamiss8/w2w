@@ -2300,31 +2300,13 @@ li.menu-open {
   background: rgba(0,0,0,0.3);
 }
 
-.gift-art {
-  width: 100%;
-  height: auto;
-  object-fit: cover;
+/* the link around the art opens the original. as a flex item it would shrink
+   to its content, and the image inside sizes itself from the link, so without
+   a width of its own the picture has nothing to be 100% of */
+.gift-art-link {
   display: block;
-}
-
-.gift-modal-card {
-  border-color: rgba(255, 122, 191, 0.25);
-  box-shadow: 
-    0 30px 80px rgba(0, 0, 0, 0.85),
-    0 0 40px rgba(255, 122, 191, 0.15);
-}
-
-.gift-art-wrapper {
   width: 100%;
-  max-height: 400px;
-  border-radius: 14px;
-  overflow: hidden;
-  margin-bottom: 20px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  background: rgba(0,0,0,0.3);
+  cursor: zoom-in;
 }
 
 .gift-art {

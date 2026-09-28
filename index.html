@@ -378,8 +378,13 @@
   <div class="modal-overlay" id="giftModal" aria-hidden="true">
     <div class="modal-card gift-modal-card" role="dialog" aria-modal="true">
       
+      <!-- the modal never draws the art wider than about 1170 pixels, so it
+           shows a 1200 pixel webp of 184 KB. the original png is 14 MB and
+           stays one click away, for anyone who wants every stroke -->
       <div class="gift-art-wrapper">
-        <img src="april25_fixed.PNG" alt="Our Art" class="gift-art" />
+        <a class="gift-art-link" href="april25_fixed.PNG" target="_blank" rel="noopener" aria-label="Open the full-size original">
+          <img src="april25.webp" alt="Our Art" class="gift-art" width="1200" height="896" decoding="async" />
+        </a>
       </div>
 
       <div class="modal-actions">
