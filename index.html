@@ -380,10 +380,15 @@
       
       <!-- the modal never draws the art wider than about 1170 pixels, so it
            shows a 1200 pixel webp of 184 KB. the original png is 14 MB and
-           stays one click away, for anyone who wants every stroke -->
+           stays one click away, for anyone who wants every stroke.
+
+           data-src and not src: the overlay is hidden with opacity rather
+           than display, so the browser counts the picture as on screen and
+           fetches it on every visit, loading="lazy" or not. main.js sets src
+           when someone reaches for the gift -->
       <div class="gift-art-wrapper">
         <a class="gift-art-link" href="april25_fixed.PNG" target="_blank" rel="noopener" aria-label="Open the full-size original">
-          <img src="april25.webp" alt="Our Art" class="gift-art" width="1200" height="896" decoding="async" />
+          <img data-src="april25.webp" alt="Our Art" class="gift-art" width="1200" height="896" decoding="async" />
         </a>
       </div>
 

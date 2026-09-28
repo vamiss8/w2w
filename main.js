@@ -2731,6 +2731,7 @@ function initializeCardUi() {
 
     // --------------------------- secret gift actions ----------------------------
     if (e.target.closest("#secretGiftToggle")) {
+      loadGiftArt();
       openModal("giftModal");
       return;
     }
@@ -2928,6 +2929,39 @@ function initializeCardUi() {
 }
 
 /* =========================
+   SECRET GIFT
+   ========================= */
+
+// the art waits in index.html under data-src, see the comment there. it is
+// fetched on the way to the button rather than with the page: a pointer
+// arriving, whether a mouse or a finger touching down, or keyboard focus, all
+// a moment before the click that opens the modal. the click loads it too, for
+// whatever reaches the button some other way
+function loadGiftArt() {
+  const img = document.querySelector("#giftModal .gift-art[data-src]");
+  if (!img) return;
+
+  img.src = img.dataset.src;
+  img.removeAttribute("data-src");
+}
+
+// listens on the document, like the click that opens the modal: main.js is
+// included above the button in index.html and runs before the parser gets
+// there, so looking the button up from here finds nothing
+function initializeGift() {
+  const prefetch = e => {
+    if (!e.target.closest("#secretGiftToggle")) return;
+
+    loadGiftArt();
+    document.removeEventListener("pointerover", prefetch);
+    document.removeEventListener("focusin", prefetch);
+  };
+
+  document.addEventListener("pointerover", prefetch);
+  document.addEventListener("focusin", prefetch);
+}
+
+/* =========================
    WISHLISTS (REMOTE + UI)
    ========================= */
 
@@ -3109,6 +3143,7 @@ function initializeWishlists() {
   initializeControls();
   initializeTabs();
   initializeWishlists();
+  initializeGift();
 
   try {
     await remotePullWishes();
