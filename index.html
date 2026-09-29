@@ -12,6 +12,13 @@
   <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700;900&family=Sora:wght@300;400;600&family=Space+Mono:wght@400;700&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;600&display=swap" rel="stylesheet" />
 
   <link rel="stylesheet" href="style.css" />
+
+  <!-- deferred: both run once the whole page is parsed, in this order.
+       main.js used to sit in the middle of the body and ran before the gift
+       button and every modal under it existed. supabase-js is pinned to the
+       version the site already ran, since @2 takes whatever 2.x is newest -->
+  <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js"></script>
+  <script defer src="main.js"></script>
 </head>
 <body>
   <div class="stars"></div>
@@ -354,10 +361,6 @@
       </form>
     </div>
   </div>  
-
-
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="main.js"></script>
 
   <div class="modal-overlay" id="deleteModal" aria-hidden="true">
     <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="deleteModalTitle">

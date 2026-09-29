@@ -2713,20 +2713,12 @@ function loadGiftArt() {
   img.removeAttribute("data-src");
 }
 
-// listens on the document, like the click that opens the modal: main.js is
-// included above the button in index.html and runs before the parser gets
-// there, so looking the button up from here finds nothing
 function initializeGift() {
-  const prefetch = e => {
-    if (!e.target.closest("#secretGiftToggle")) return;
+  const toggle = document.getElementById("secretGiftToggle");
+  if (!toggle) return;
 
-    loadGiftArt();
-    document.removeEventListener("pointerover", prefetch);
-    document.removeEventListener("focusin", prefetch);
-  };
-
-  document.addEventListener("pointerover", prefetch);
-  document.addEventListener("focusin", prefetch);
+  toggle.addEventListener("pointerenter", loadGiftArt, { once: true });
+  toggle.addEventListener("focus", loadGiftArt, { once: true });
 }
 
 /* =========================
