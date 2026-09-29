@@ -18,9 +18,6 @@ const STATE_WATCHED = "watched";
    REALTIME (SUPABASE)
    ========================= */
 
-let realtimeChannel = null; // --------------------------- declare explicitly ----------------------------
-
-
 async function initializeRealtime() {
   const sb = getSupabase();
   if (!sb) return;
@@ -28,7 +25,7 @@ async function initializeRealtime() {
   // --------------------------- initial pull ----------------------------
   await remotePullAll();
 
-  realtimeChannel = sb
+  sb
     .channel("w2w-db")
     .on("postgres_changes", { event: "*", schema: "public", table: "cards" }, payload => {
       if (payload.eventType === "DELETE") {
@@ -119,13 +116,11 @@ function refreshLogTimesOnly() {
    ========================= */
 
 const REMOTE = {
-  enabled: true,
   url: "https://esdhstxcxxgcexddkxqi.supabase.co",
   anonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVzZGhzdHhjeHhnY2V4ZGRreHFpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY2Nzg1ODcsImV4cCI6MjA4MjI1NDU4N30.Tnes90BskmTxvxNaOSJkI1ah6MuQz7rmnKAeG_mtbiA",
 };
 
 function getSupabase() {
-  if (!REMOTE.enabled) return null;
   if (!window.supabase) return null;
 
   if (!getSupabase.client) {
@@ -147,14 +142,6 @@ function getSupabase() {
 
 const TAB_UNWATCHED = "unwatched";
 const TAB_WATCHED = "watched";
-
-function todayIsoDate() {
-  const d = new Date();
-  const yyyy = d.getFullYear();
-  const mm = String(d.getMonth() + 1).padStart(2, "0");
-  const dd = String(d.getDate()).padStart(2, "0");
-  return `${yyyy}-${mm}-${dd}`;
-}
 
 function getListsUlByTab(tab) {
   return tab === TAB_WATCHED
@@ -572,31 +559,10 @@ let logsHasMore = true;
 let logsIsLoading = false;
 
 const LS_ACTIVE_USER = "activeUser";
-const LS_EVENT_LOG = "eventLog";
 
 function getActiveUser() {
   const v = (localStorage.getItem(LS_ACTIVE_USER) || "").trim().toLowerCase();
   return v === "vlad" || v === "vika" ? v : null;
-}
-
-function writeLog(action, details = {}) {
-  const list = JSON.parse(localStorage.getItem(LS_EVENT_LOG) || "[]");
-
-  list.push({
-    ts: new Date().toISOString(),
-    user: getActiveUser() || "unknown",
-    action,
-    details,
-  });
-
-  // keep log size sane
-  const MAX_LOG_ITEMS = 250;
-  while (list.length > MAX_LOG_ITEMS) list.shift();
-
-  localStorage.setItem(LS_EVENT_LOG, JSON.stringify(list));
-
-  // refresh logs ui if present
-  refreshLogsUI();
 }
 
 async function setActiveUser(user) {
@@ -1129,22 +1095,6 @@ function showFooterWithDelay(totalDelaySeconds) {
   }, totalDelaySeconds * 1000);
 }
 
-// restart CSS animation for visible cards (so sorting/filtering feels responsive)
-function restartListAnimations(listSelector) {
-  const cards = document.querySelectorAll(`${listSelector} li:not(.is-hidden)`);
-
-  cards.forEach(card => {
-    card.style.animation = "none";
-  });
-
-  // force reflow once
-  void document.body.offsetHeight;
-
-  cards.forEach(card => {
-    card.style.animation = "";
-  });
-}
-
 function showFooterInstantly() {
   if (!footer) return;
 
@@ -1405,10 +1355,8 @@ function renderLogLine(entry, textEl) {
   ---------------------------- */
 
   if (entry.action === "login") {
-    const asLower = String(entry.details?.as || "").trim().toLowerCase();
     textEl.appendChild(createUserSpan(userRaw));
     appendText(textEl, " signed in.");
-    // textEl.appendChild(createUserSpan(asLower, asLower ? asLower.toUpperCase() : "—"));
     return;
   }
 
@@ -1432,7 +1380,6 @@ function renderLogLine(entry, textEl) {
     textEl.appendChild(createUserSpan(userRaw));
     appendText(textEl, " left a comment on ");
     textEl.appendChild(titleEm(title));
-    // appendText(textEl, ".");
     return;
   }
 
@@ -1440,7 +1387,6 @@ function renderLogLine(entry, textEl) {
     textEl.appendChild(createUserSpan(userRaw));
     appendText(textEl, " added ");
     textEl.appendChild(titleEm(title));
-    // appendText(textEl, ".");
     return;
   }
 
@@ -1488,7 +1434,6 @@ function renderLogLine(entry, textEl) {
     appendText(textEl, describeWatchDates(state, toStart, toEnd));
     appendText(textEl, " of ");
     textEl.appendChild(titleEm(title));
-    // appendText(textEl, ".");
     return;
   }
 
@@ -1513,60 +1458,6 @@ function renderLogLine(entry, textEl) {
 
   textEl.appendChild(createUserSpan(userRaw));
   appendText(textEl, ` did ${entry.action}.`);
-}
-
-function logEntryToText(entry) {
-  const user = capUser(entry.user);
-
-  if (entry.action === "login") {
-    const as = (entry.details?.as || "").toString().toUpperCase();
-    return `${user} signed in as ${as}.`;
-  }
-
-  if (entry.action === "rate") {
-    const title = entry.details?.title || "unknown title";
-    const score = entry.details?.score ?? "—";
-    return `${user} rated ${title} ${score}/10 hearts!`;
-  }
-
-  if (entry.action === "comment") {
-    const title = entry.details?.title || "unknown title";
-    const c = entry.details?.text || "";
-    return `${user} left a comment to ${title}: "${c}"`;
-  }
-
-  if (entry.action === "add_card") {
-    const title = entry.details?.title || "unknown title";
-    return `${user} added ${title}.`;
-  }
-
-  if (entry.action === "edit_title") {
-    const from = entry.details?.from || "unknown";
-    const to = entry.details?.to || "unknown";
-    return `${user} renamed ${from} to ${to}.`;
-  }
-
-  if (entry.action === "edit_card") {
-    const title = entry.details?.title || "unknown title";
-    return `${user} edited ${title}.`;
-  }
-
-  if (entry.action === "set_state") {
-    const title = entry.details?.title || "unknown title";
-    const from = entry.details?.from || "—";
-    const to = entry.details?.to || "—";
-    return `${user} changed state of ${title} from ${from} to ${to}.`;
-  }
-
-  // if (entry.action === "set_status") {
-  //   const title = entry.details?.title || "unknown title";
-  //   const from = entry.details?.from || "—";
-  //   const to = entry.details?.to || "—";
-  //   return `${user} changed status of ${title} from ${from} to ${to}.`;
-  // }
-
-  // fallback
-  return `${user} did ${entry.action}.`;
 }
 
 /* =========================
@@ -1611,71 +1502,23 @@ async function loadMoreLogsPage({ reset = false } = {}) {
   }
 
   const sb = getSupabase();
+  let data = null;
+  let error = null;
 
-  if (!sb) {
-    // fallback: local only (keep old behavior but still "paged")
-    const list = JSON.parse(localStorage.getItem(LS_EVENT_LOG) || "[]").slice().reverse();
+  if (sb) {
+    // remote paging by cursor ts
+    let q = sb
+      .from("logs")
+      .select("*")
+      .order("ts", { ascending: false })
+      .limit(LOGS_PAGE_SIZE);
 
-    const start = reset ? 0 : listEl.children.length;
-    const page = list.slice(start, start + LOGS_PAGE_SIZE);
-
-    if (page.length === 0 && listEl.children.length === 0) {
-      const li = document.createElement("li");
-      li.className = "log-item";
-      li.innerHTML = `
-        <div class="log-time">no activity yet</div>
-        <div class="log-text">pick a user, rate something, move cards, leave comments — it will appear here.</div>
-      `;
-      listEl.appendChild(li);
-      logsHasMore = false;
-      logsIsLoading = false;
-      if (moreBtn) {
-        moreBtn.disabled = true;
-        moreBtn.textContent = "no more";
-      }
-      return;
+    if (logsCursorTs) {
+      q = q.lt("ts", logsCursorTs);
     }
 
-    page.forEach(entry => {
-      const li = document.createElement("li");
-      li.className = "log-item";
-      li.dataset.ts = entry.ts;
-
-      const time = document.createElement("div");
-      time.className = "log-time";
-      time.textContent = formatTimeAgo(entry.ts);
-
-      const text = document.createElement("div");
-      text.className = "log-text";
-      renderLogLine(entry, text);
-
-      li.appendChild(time);
-      li.appendChild(text);
-      listEl.appendChild(li);
-    });
-
-    logsHasMore = (start + page.length) < list.length;
-
-    logsIsLoading = false;
-    if (moreBtn) {
-      moreBtn.disabled = !logsHasMore;
-      moreBtn.textContent = logsHasMore ? "load more" : "no more";
-    }
-    return;
+    ({ data, error } = await q);
   }
-
-  // remote paging by cursor ts
-  let q = sb
-    .from("logs")
-    .select("*")
-    .order("ts", { ascending: false })
-    .limit(LOGS_PAGE_SIZE);
-
-  if (logsCursorTs) {
-    q = q.lt("ts", logsCursorTs);
-  }
-
-  const { data, error } = await q;
 
   if (error || !data) {
     const li = document.createElement("li");
@@ -2187,19 +2030,6 @@ function updateHeartsFill(wrapper, score) {
 }
 
 /* =========================
-   AUTH (SUPABASE EMAIL OTP) — THROTTLED + CORRECT USER
-   ========================= */
-
-const LS_OTP_LAST_AT = "otpLastAtMs";
-const OTP_COOLDOWN_MS = 65_000;
-
-async function getSessionEmailLower(sb) {
-  const { data } = await sb.auth.getSession();
-  const email = data?.session?.user?.email || "";
-  return email.trim().toLowerCase() || null;
-}
-
-/* =========================
    RATING CLICK HANDLER (NO AUTH)
    ========================= */
 
@@ -2223,8 +2053,6 @@ async function handleRatingClick(target) {
   if (sb && cardId) {
     await remoteUpdateRating(cardId, owner, score);
     await remoteInsertLog("rate", { title: getTitleFromCard(li), score }, cardId);
-  } else {
-    writeLog("rate", { title: getTitleFromCard(li), score });
   }
 
   // update card dataset for sorting
@@ -2579,64 +2407,6 @@ function toggleCardMenu(li) {
   li.classList.toggle("menu-open", next === "true");
 }
 
-async function setCardStatus(li, nextStatus) {
-  const id = getCardId(li);
-  if (!id) return;
-
-  const from = normalizeStatusCode(li.dataset.status || "00");
-  const to = normalizeStatusCode(nextStatus);
-
-  if (from === to) return;
-
-  const row = await remoteUpdateCard(id, { status: to });
-  if (row) {
-    await remoteInsertLog("set_status", { title: getTitleFromCard(li), from, to }, id);
-  }
-}
-
-async function setCardState(li, nextState) {
-  const id = getCardId(li);
-  if (!id) return;
-
-  const from = getState(li);
-  const to = nextState;
-
-  if (from === to) return;
-
-  const patch = { state: to };
-
-  // state implies tab and dates
-  if (to === STATE_PLANNED) {
-    patch.tab = TAB_UNWATCHED;
-    patch.start_date = null;
-    patch.end_date = null;
-  }
-
-  if (to === STATE_STARTED) {
-    patch.tab = TAB_UNWATCHED;
-    patch.start_date = li.dataset.start || todayIsoDate();
-    patch.end_date = null;
-  }
-
-  if (to === STATE_WATCHED) {
-    patch.tab = TAB_WATCHED;
-
-    const start = (li.dataset.start || "").trim();
-    if (start) {
-      patch.start_date = start;
-      patch.end_date = todayIsoDate();
-    } else {
-      patch.start_date = todayIsoDate();
-      patch.end_date = null;
-    }
-  }
-
-  const row = await remoteUpdateCard(id, patch);
-  if (row) {
-    await remoteInsertLog("set_state", { title: getTitleFromCard(li), from, to }, id);
-  }
-}
-
 async function saveCommentForActiveUser(li, text) {
   const active = getActiveUser();
   if (!active) return;
@@ -2650,7 +2420,6 @@ async function saveCommentForActiveUser(li, text) {
 
   const row = await remoteUpdateCard(id, patch);
   if (row) {
-    // await remoteInsertLog("comment", { title: getTitleFromCard(li), text: String(text || "") }, id);
     await remoteInsertLog("comment", { title: getTitleFromCard(li) }, id);
   }
 }
@@ -2838,7 +2607,6 @@ function initializeCardUi() {
       const title = (document.getElementById("cardTitle").value || "").trim();
       if (!title) return;
 
-      const tab = document.getElementById("cardTab").value;
       const state = document.getElementById("cardState").value;
       const status = document.getElementById("cardStatus").value;
 
