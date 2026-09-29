@@ -21,7 +21,7 @@ async function setActiveUser(user) {
   updateUserUI();
   closeAuthOverlay();
 
-  // --------------------------- log login to remote ----------------------------
+  // logged, so the activity panel shows who has been around
   await remoteInsertLog("login", { as: normalized }, null);
 }
 
@@ -60,14 +60,12 @@ export function initializeAuth() {
   const overlay = document.getElementById("authOverlay");
   if (!overlay) return;
 
-  // choices
   overlay.querySelectorAll(".auth-choice").forEach(btn => {
     btn.addEventListener("click", () => {
       setActiveUser(btn.dataset.user);
     });
   });
 
-  // switch user button
   const userBtn = document.getElementById("userToggle");
   if (userBtn) {
     userBtn.addEventListener("click", () => {
@@ -75,7 +73,6 @@ export function initializeAuth() {
     });
   }
 
-  // initial state
   updateUserUI();
 
   if (!getActiveUser()) {

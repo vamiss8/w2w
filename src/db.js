@@ -11,6 +11,7 @@ const REMOTE = {
   anonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVzZGhzdHhjeHhnY2V4ZGRreHFpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY2Nzg1ODcsImV4cCI6MjA4MjI1NDU4N30.Tnes90BskmTxvxNaOSJkI1ah6MuQz7rmnKAeG_mtbiA",
 };
 
+// null when supabase-js did not load, which every caller takes as nothing to do
 export function getSupabase() {
   if (!window.supabase) return null;
 
@@ -137,6 +138,8 @@ export async function remoteUpdateRating(cardId, owner, score) {
   if (error) console.error("[supabase] update rating failed", error);
 }
 
+// a line in the activity log, signed with whoever is using the site. with
+// nobody chosen yet nothing is logged
 export async function remoteInsertLog(action, details, cardIdOrNull) {
   const sb = getSupabase();
   if (!sb) return;

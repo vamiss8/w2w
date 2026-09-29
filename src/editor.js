@@ -14,7 +14,9 @@ const CARD_MODAL_ID = "cardModal";
 const CARD_FORM_ID = "cardForm";
 const COMMENT_MODAL_ID = "commentModal";
 const COMMENT_FORM_ID = "commentForm";
-let cardModalMode = "add"; // --------------------------- add | edit ----------------------------
+
+// what the open modals are about
+let cardModalMode = "add"; // "add" or "edit"
 let cardModalCardId = null;
 let commentModalCardId = null;
 let deleteModalTargetLi = null;
@@ -109,6 +111,8 @@ function toggleCardMenu(li) {
   li.classList.toggle("menu-open", next === "true");
 }
 
+// opens the confirmation. the delete itself happens on confirm, in the click
+// handler below
 function deleteCard(li) {
   const title = getTitleFromCard(li);
   if (!title) return;
@@ -140,6 +144,8 @@ async function saveCommentForActiveUser(li, text) {
   }
 }
 
+// the same fields from a card on the page and from a saved row, so the two can
+// be compared field by field
 function snapshotCardForLogs(li) {
   return {
     title: getTitleFromCard(li),
@@ -162,6 +168,8 @@ function normalizeRowForLogs(row) {
   };
 }
 
+// one log line per kind of change, so the activity panel can say what changed
+// rather than only that something did
 async function logEditDiffs(before, after, cardId) {
   // title rename
   if (before.title !== after.title) {
@@ -207,10 +215,10 @@ export function initializeCardUi() {
     });
   }
 
-  // card menu toggle + menu actions (event delegation)
+  // one listener for every card, the ones drawn later included
   document.addEventListener("click", async e => {
 
-    // --------------------------- delete modal actions ----------------------------
+    // the delete modal
     const deleteCancelBtn = e.target.closest("#deleteCancel");
     if (deleteCancelBtn) {
       deleteModalTargetLi = null;
@@ -245,7 +253,7 @@ export function initializeCardUi() {
       return;
     }
     
-    // --------------------------- comment toggle ----------------------------
+    // a comment toggle under a card
     const cToggle = e.target.closest(".comment-toggle");
     if (cToggle) {
       const li = cToggle.closest("li");
@@ -284,7 +292,7 @@ export function initializeCardUi() {
 
       if (action === "edit") openEditCardModal(li);
       if (action === "comment") openCommentModal(li);
-      if (action === "delete") deleteCard(li); // handle card delete
+      if (action === "delete") deleteCard(li);
 
       return;
     }
@@ -313,7 +321,8 @@ export function initializeCardUi() {
       const start = (document.getElementById("cardStart").value || "").trim();
       const end = (document.getElementById("cardEnd").value || "").trim();
 
-      // normalize state->tab (guard)
+      // the tab follows from the state, and the tab select in the form is
+      // not read at all
       const safeTab =
         state === STATE_WATCHED ? TAB_WATCHED :
         TAB_UNWATCHED;

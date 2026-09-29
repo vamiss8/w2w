@@ -15,7 +15,7 @@ function createHearts(score, owner) {
     heart.className = `rating-heart ${owner}`;
     heart.textContent = "❤";
 
-    // data for click handling
+    // read back by the click handler
     heart.dataset.owner = owner;
     heart.dataset.score = String(currentScore);
 
@@ -71,6 +71,8 @@ export function updateHeartsFill(wrapper, score) {
   });
 }
 
+// a click in your own row sets your score. the hearts fill at once, and the
+// realtime echo of the saved row lands on the same value a moment later
 async function handleRatingClick(target) {
   const heart = target.closest(".rating-heart");
   if (!heart) return;
@@ -93,11 +95,11 @@ async function handleRatingClick(target) {
     await remoteInsertLog("rate", { title: getTitleFromCard(li), score }, cardId);
   }
 
-  // update card dataset for sorting
+  // the favourites sort reads scores off the card, so it has to see this one
+  // before the echo does
   if (owner === "vlad") li.dataset.vladScore = String(score);
   if (owner === "vika") li.dataset.vikaScore = String(score);
 
-  // update ui
   const row = heart.closest(".rating-row");
   if (!row) return;
 

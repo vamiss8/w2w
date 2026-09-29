@@ -1,9 +1,10 @@
-// the order of each list. comparators only: which one applies is decided in
-// view.js, from the controls.
+// the order of each list. how the watched list is ordered comes from the
+// controls, which view.js reads and passes in.
 
 import { STATE_STARTED, UNWATCHED_LIST_SELECTOR, WATCHED_LIST_SELECTOR, getCardId, getState } from "./cards.js";
 import { parseISODate } from "./dates.js";
 
+// a score as a number. one that cannot be read sorts below every real score
 function safeInt(value, fallback = Number.NEGATIVE_INFINITY) {
   const n = parseInt(value, 10);
   return Number.isNaN(n) ? fallback : n;
@@ -21,14 +22,16 @@ function compareAddedDesc(a, b) {
   return compareAdded(b, a);
 }
 
-// helper: re-append sorted items back to UL
+// appending a node that is already in the list moves it, so appending in
+// sorted order is the whole sort
 function sortUlItems(ul, comparator) {
   const items = Array.from(ul.querySelectorAll("li"));
   items.sort(comparator);
   items.forEach(li => ul.appendChild(li));
 }
 
-// watched sorting: recent OR favorites
+// the watched list: most recent first, or by one of our scores or their
+// average, with the date breaking ties
 export function sortWatchedByMode(mode) {
   const ul = document.querySelector(WATCHED_LIST_SELECTOR);
   if (!ul) return;
@@ -69,7 +72,8 @@ export function sortWatchedByMode(mode) {
   });
 }
 
-// tab 1: planned first (stable), started last (sorted by start date DESC)
+// the unwatched list: planned cards in the order they were added, then the
+// started ones, the most recently started first
 export function sortUnwatchedStartedToBottom() {
   const ul = document.querySelector(UNWATCHED_LIST_SELECTOR);
   if (!ul) return;

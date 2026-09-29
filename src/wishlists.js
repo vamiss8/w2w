@@ -32,7 +32,7 @@ function renderWishes() {
       linkHtml = `<a href="${w.link}" target="_blank" class="wish-link">link ↗</a>`;
     }
 
-    // inject custom tooltip inside the button and remove native title
+    // the × carries the site's own tooltip rather than a title attribute
     li.innerHTML = `
       <div class="wish-info">
         <span class="wish-title">${escapeHtml(w.title)}</span>
@@ -49,7 +49,7 @@ function renderWishes() {
   });
 }
 
-// global variable to store target wish id
+// which wish the delete modal is about
 let wishDeleteTargetId = null;
 
 export function initializeWishlists() {
@@ -57,7 +57,8 @@ export function initializeWishlists() {
   const toggle = document.getElementById("wishlistToggle");
   if (toggle) toggle.addEventListener("click", () => openModal("wishlistModal"));
 
-  // global click handler for wishlist buttons
+  // one listener for the modals and for the wish buttons, which are redrawn on
+  // every change
   document.addEventListener("click", async e => {
     
     // close main wishlist modal

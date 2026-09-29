@@ -2,7 +2,8 @@
 // and now and then a comet. one canvas redrawn every frame, paused while the
 // tab is hidden, and drawn once and left still for reduced motion.
 
-// create a real random starfield + two comet types (no tiling patterns)
+// stars are placed at random rather than tiled from an image, so nothing
+// repeats across a wide screen
 export function startStarfield() {
   const container = document.querySelector(".stars");
   if (!container) return;
@@ -188,9 +189,7 @@ export function startStarfield() {
     }
   }
 
-  /* ---------------------------
-     COMETS (TWO TYPES)
-  ---------------------------- */
+  // comets come in two kinds: a big one now and then, and small quick meteors
 
   function spawnComet(kind) {
     if (w <= 0 || h <= 0) return;
@@ -332,9 +331,7 @@ export function startStarfield() {
     ctx.restore();
   }
 
-  /* ---------------------------
-     TICK
-  ---------------------------- */
+  // one frame: move and draw every star, and spawn a comet when one is due
 
   function tick(ts) {
     if (!lastTs) lastTs = ts;

@@ -11,6 +11,9 @@ const LOGS_LIST_ID = "logsList";
 const LOGS_MORE_ID = "logsMore";
 const LOGS_PAGE_SIZE = 20;
 const LS_LOGS_OPEN = "logsOpen";
+
+// paging: where the next page starts, whether there is one, and whether a
+// request is already out
 let logsCursorTs = null;
 let logsHasMore = true;
 let logsIsLoading = false;
@@ -86,12 +89,10 @@ function appendText(el, s) {
 function renderLogLine(entry, textEl) {
   const userRaw = String(entry.user || "").trim().toLowerCase();
 
-  // clear
   textEl.innerHTML = "";
 
   const title = entry.details?.title || "unknown title";
 
-  // reusable title node
   function titleEm(text) {
     const em = document.createElement("em");
     em.className = "log-title";
@@ -99,7 +100,7 @@ function renderLogLine(entry, textEl) {
     return em;
   }
 
-  // helper: format watch dates without leaking raw comment etc
+  // a change of watch dates in words
   function describeWatchDates(state, startIso, endIso) {
     const s = (startIso || "").toString().trim();
     const e = (endIso || "").toString().trim();
@@ -120,9 +121,7 @@ function renderLogLine(entry, textEl) {
     return `set date to ${formatISOForUI(single)}`;
   }
 
-  /* ---------------------------
-     ACTIONS
-  ---------------------------- */
+  // one branch per action the site writes
 
   if (entry.action === "login") {
     textEl.appendChild(createUserSpan(userRaw));
@@ -207,7 +206,6 @@ function renderLogLine(entry, textEl) {
     return;
   }
 
-  // log format for card deletion
   if (entry.action === "delete_card") {
     textEl.appendChild(createUserSpan(userRaw));
     appendText(textEl, " deleted ");
@@ -215,9 +213,7 @@ function renderLogLine(entry, textEl) {
     return;
   }
 
-  /* ---------------------------
-     LEGACY / FALLBACK
-  ---------------------------- */
+  // edit_card is no longer written, but the earliest logs still hold it
 
   if (entry.action === "edit_card") {
     textEl.appendChild(createUserSpan(userRaw));
@@ -226,6 +222,7 @@ function renderLogLine(entry, textEl) {
     return;
   }
 
+  // anything else still says who did it
   textEl.appendChild(createUserSpan(userRaw));
   appendText(textEl, ` did ${entry.action}.`);
 }
@@ -330,7 +327,7 @@ async function loadMoreLogsPage({ reset = false } = {}) {
     listEl.appendChild(li);
   });
 
-  // update cursor
+  // the next page starts below the oldest entry of this one
   const last = data[data.length - 1];
   logsCursorTs = last ? last.ts : logsCursorTs;
 
@@ -379,7 +376,6 @@ export function prependRemoteLog(row) {
   li.appendChild(time);
   li.appendChild(text);
 
-  // prepend
   listEl.insertBefore(li, listEl.firstChild);
 
   // keep list capped

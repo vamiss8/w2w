@@ -9,6 +9,9 @@ export const TAB_UNWATCHED = "unwatched";
 export const TAB_WATCHED = "watched";
 export const UNWATCHED_LIST_SELECTOR = ".unwatched";
 export const WATCHED_LIST_SELECTOR = ".watched";
+
+// a card's progress, the state column. only watched cards sit in the watched
+// list, so the tab column always follows from it
 export const STATE_PLANNED = "planned";
 export const STATE_STARTED = "started";
 export const STATE_WATCHED = "watched";
@@ -19,6 +22,9 @@ function getListsUlByTab(tab) {
     : document.querySelector(UNWATCHED_LIST_SELECTOR);
 }
 
+// the right-hand side of a card: the status badge, and the ⋯ button with its
+// menu next to it. running it twice is harmless, the second time finds the
+// badge already wrapped
 function ensureRightControls(li) {
   if (!li) return;
 
@@ -31,11 +37,9 @@ function ensureRightControls(li) {
   const right = document.createElement("div");
   right.className = "right";
 
-  // move status into right
   li.insertBefore(right, status);
   right.appendChild(status);
 
-  // add menu button
   if (!li.querySelector(".card-actions")) {
     const btn = document.createElement("button");
     btn.className = "card-actions";
@@ -45,7 +49,6 @@ function ensureRightControls(li) {
     right.appendChild(btn);
   }
 
-    // --------------------------- menu container (upgrade-safe) ----------------------------
   let menu = li.querySelector(".card-menu");
   if (!menu) {
     menu = document.createElement("div");
@@ -54,7 +57,6 @@ function ensureRightControls(li) {
     li.appendChild(menu);
   }
 
-  // always rewrite menu so legacy buttons disappear
   menu.innerHTML = `
     <button type="button" data-action="edit">edit</button>
     <button type="button" data-action="comment">comment</button>
@@ -63,6 +65,9 @@ function ensureRightControls(li) {
   `;
 }
 
+// a toggle per comment under the card. whether each one is open survives a
+// redraw: it is kept in data-* on the card, and every realtime update of the
+// row rebuilds this box
 function ensureCommentsUi(li) {
   const meta = li.querySelector(".meta");
   if (!meta) return;
@@ -102,6 +107,8 @@ function ensureCommentsUi(li) {
   if (kText) addToggle("vika", kText, kOpen);
 }
 
+// everything the rest of the page reads about a card is copied onto its li
+// here, so sorting and filtering never go back to the row
 function setCardDatasetFromRow(li, row) {
   li.dataset.id = String(row.id);
   li.dataset.status = String(row.status || "00");
@@ -134,13 +141,12 @@ function createCardLiFromRow(row) {
 
   setCardDatasetFromRow(li, row);
 
-  // tooltip + color class + date label
   syncStatusBadge(li);
   upsertWatchDateLabel(li);
 
   ensureRightControls(li);
 
-  // if this is watched -> render rating widget in meta
+  // hearts on a watched card, the dash from the markup on any other
   if (row.tab === TAB_WATCHED) {
     const meta = li.querySelector(".meta");
     if (meta) {
@@ -171,7 +177,6 @@ function ensureCardExistsFromRow(row) {
     const ul = getListsUlByTab(row.tab);
     if (ul) ul.appendChild(li);
 
-    // make sure layout is upgraded
     ensureRightControls(li);
     return li;
   }
@@ -179,20 +184,21 @@ function ensureCardExistsFromRow(row) {
   return li;
 }
 
+// draws a row from the database onto its card, creating the card when the
+// page has not seen it yet. every realtime insert and update comes through
+// here, so it has to be safe on a card that is already up to date
 export function applyRemoteCardToDom(row) {
   const li = ensureCardExistsFromRow(row);
   if (!li) return;
 
-  // update all datasets
   setCardDatasetFromRow(li, row);
 
-  // move between tabs if needed
   moveCardToTab(li, row.tab);
 
-  // update title
   const titleEl = li.querySelector(".filmTitle");
   if (titleEl) {
-    // keep only title text node clean (watch-date appended later)
+    // the title element also holds the date label, so only its text node is
+    // replaced
     titleEl.childNodes.forEach(n => {
       if (n.nodeType === Node.TEXT_NODE) n.nodeValue = row.title || "unknown title";
     });
@@ -201,7 +207,7 @@ export function applyRemoteCardToDom(row) {
     if (!titleEl.childNodes.length) titleEl.textContent = row.title || "unknown title";
   }
 
-  // watched tab: ensure rating widget exists and matches db
+  // a watched card gets its hearts drawn once and refilled after that
   if (row.tab === TAB_WATCHED) {
     const meta = li.querySelector(".meta");
     if (meta) {
@@ -216,26 +222,24 @@ export function applyRemoteCardToDom(row) {
       }
     }
   } else {
-    // unwatched: keep meta as dash if it has no rating container
+    // moved back out of watched: the hearts go and the dash returns
     const meta = li.querySelector(".meta");
     if (meta && meta.querySelector(".rating")) {
       meta.innerHTML = "—";
     }
   }
 
-  // status + tooltips
   syncStatusBadge(li);
 
-  // dates label
   upsertWatchDateLabel(li);
 
-  // comments
   ensureCommentsUi(li);
 
-  // editability (ratings) depends on active user
+  // new hearts answer clicks only in the signed-in person's row
   updateRatingEditability();
 }
 
+// the id as a string, or null for anything that is not a positive number
 export function getCardId(li) {
   const raw = (li?.dataset?.id || "").trim();
   const n = parseInt(raw, 10);
@@ -253,7 +257,7 @@ export function getTabFromLi(li) {
 export function readTitleFromLi(li) {
   const el = li?.querySelector(".filmTitle");
   if (!el) return "unknown title";
-  // take only the title node (watch-date label is appended later)
+  // the first child is the title text, the date label comes after it
   return (el.childNodes[0]?.textContent || el.textContent || "").trim();
 }
 
@@ -262,14 +266,12 @@ export function getTitleFromCard(li) {
   return t ? t.childNodes[0].textContent.trim() : "unknown title";
 }
 
-// read explicit state from data-state
+// the card's state, planned when data-state is missing or not one of the three
 export function getState(li) {
   const state = (li.dataset.state || "").trim().toLowerCase();
 
-  // fallback if someone forgot to set data-state
   if (!state) return STATE_PLANNED;
 
-  // guard against typos in HTML
   if (state !== STATE_PLANNED && state !== STATE_STARTED && state !== STATE_WATCHED) {
     return STATE_PLANNED;
   }
@@ -277,6 +279,8 @@ export function getState(li) {
   return state;
 }
 
+// the status is two digits, vika's and then vlad's, and a 1 means that person
+// had seen it before: 01 is a first time for vika, 11 a rewatch for both
 const STATUS_TOOLTIP_TEXT = {
   "00": "no one watched.",
   "01": "vika's first time.",
@@ -300,11 +304,11 @@ function syncStatusBadge(li) {
   // keep li data-status normalized
   li.dataset.status = code;
 
-  // update badge color class (s-00/s-01/...)
+  // the colour comes from an s-XX class
   STATUS_CODES.forEach(c => badge.classList.remove(`s-${c}`));
   badge.classList.add(`s-${code}`);
 
-  // update badge text without destroying tooltip node
+  // the tooltip is a child of the badge, so only the text node is replaced
   const tip = badge.querySelector(".tooltip");
   let textNode = null;
 
@@ -319,7 +323,6 @@ function syncStatusBadge(li) {
     textNode.nodeValue = code;
   }
 
-  // ensure tooltip exists + matches current code
   const text = STATUS_TOOLTIP_TEXT[code];
   if (!text) return;
 
@@ -337,10 +340,10 @@ function syncStatusBadge(li) {
   }
 }
 
-// date label config
 const WATCH_DATE_CLASS = "watch-date";
 
-// build label text from state + dates (ISO -> UI)
+// the line next to the title: nothing for a planned card, the start for a
+// started one, the day or the span for a watched one
 function buildWatchDateText(state, start, end) {
   if (state === STATE_STARTED) {
     if (!start) return null;

@@ -12,14 +12,13 @@ export async function initializeRealtime() {
   const sb = getSupabase();
   if (!sb) return;
 
-  // --------------------------- initial pull ----------------------------
   await remotePullAll();
 
   sb
     .channel("w2w-db")
     .on("postgres_changes", { event: "*", schema: "public", table: "cards" }, payload => {
       if (payload.eventType === "DELETE") {
-        // handle remote delete
+        // a delete carries nothing but the old id
         const li = document.querySelector(`.lists li[data-id="${CSS.escape(String(payload.old.id))}"]`);
         if (li) li.remove();
         scheduleActiveTabView({ animate: false });

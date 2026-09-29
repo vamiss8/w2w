@@ -1,5 +1,6 @@
 // every modal is an overlay switched by a class and hidden with opacity, so
-// it can fade. the body gets a class as well while one is open.
+// it can fade. while one is open the body gets auth-open, the class the
+// sign-in overlay uses, which stops the page scrolling underneath.
 
 export function openModal(id) {
   const overlay = document.getElementById(id);
@@ -7,7 +8,7 @@ export function openModal(id) {
 
   overlay.classList.add("is-open");
   overlay.setAttribute("aria-hidden", "false");
-  document.body.classList.add("auth-open"); // reuse body lock
+  document.body.classList.add("auth-open");
 }
 
 export function closeModal(id) {

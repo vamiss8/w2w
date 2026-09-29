@@ -5,8 +5,12 @@ import { STATE_PLANNED, STATE_STARTED, UNWATCHED_LIST_SELECTOR, WATCHED_LIST_SEL
 import { sortUnwatchedStartedToBottom, sortWatchedByMode } from "./sort.js";
 
 const footer = document.querySelector("footer");
+
 export const TAB_INPUT_SELECTOR = 'input[name="tabs"]';
 export const UNWATCHED_TAB_ID = "tab-unwatched";
+
+// seconds between one card fading in and the next, and how long the footer
+// waits after the last one
 const ANIMATION_STEP_DELAY = 0.08;
 const FOOTER_EXTRA_DELAY = 0.4;
 
@@ -18,7 +22,9 @@ function hideFooterInstantly() {
   footer.classList.add("instant-hide");
 }
 
-// show footer after total animation delay
+// show footer after total animation delay. nothing cancels an earlier timeout,
+// so a second sort soon after the first can let the footer in while the cards
+// of the second are still fading
 function showFooterWithDelay(totalDelaySeconds) {
   if (!footer) return;
 
@@ -47,7 +53,8 @@ function animateList(listSelector) {
     card.style.removeProperty("--anim-delay");
   });
 
-  // force reflow once
+  // reading offsetHeight forces a reflow, so the removed class takes effect
+  // before it comes back and the animation starts over
   void document.body.offsetHeight;
 
   cards.forEach((card, index) => {
@@ -62,6 +69,8 @@ function animateList(listSelector) {
 let viewRefreshRaf = 0;
 let viewRefreshAnimate = false;
 
+// realtime can bring a burst of rows at once, and each one asks for a
+// re-sort. they are batched into one per frame instead of one per row
 export function scheduleActiveTabView({ animate = false } = {}) {
   // if any caller wants animation, keep it
   viewRefreshAnimate = viewRefreshAnimate || !!animate;
@@ -102,13 +111,12 @@ export function initializeTabs() {
     tab.addEventListener("change", () => handleTabChange(tab));
   });
 
-  restoreActiveTab();   // just sets the checked tab if saved
+  restoreActiveTab(); // only checks the saved tab, the view is drawn later
 }
 
 const FILTERS_MENU_ID = "filtersMenu";
 const FILTERS_TOGGLE_SELECTOR = ".filters-toggle";
 
-// localStorage key for menu open state
 const LS_FILTERS_OPEN = "filtersOpen";
 
 function persistFiltersOpen(isOpen) {
@@ -130,7 +138,6 @@ function setFiltersOpen(isOpen) {
   button.setAttribute("aria-expanded", isOpen ? "true" : "false");
   button.classList.toggle("is-open", isOpen);
 
-  // persist state
   persistFiltersOpen(isOpen);
 }
 
@@ -148,6 +155,7 @@ export function initializeFiltersToggle() {
   });
 }
 
+// localStorage keys for the chosen filters and sort
 const LS_UW_PROGRESS = "uwProgress";
 const LS_UW_STATUS = "uwStatus";
 const LS_W_SORT = "wSort";
@@ -240,7 +248,7 @@ export function applyActiveTabView({ animate = true } = {}) {
   applyWatchedView({ animate });
 }
 
-// persist + restore controls
+// every control remembers its choice in localStorage
 function persistControl(key, inputId) {
   localStorage.setItem(key, inputId);
 }
