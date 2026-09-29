@@ -13,12 +13,13 @@
 
   <link rel="stylesheet" href="style.css" />
 
-  <!-- deferred: both run once the whole page is parsed, in this order.
-       main.js used to sit in the middle of the body and ran before the gift
-       button and every modal under it existed. supabase-js is pinned to the
-       version the site already ran, since @2 takes whatever 2.x is newest -->
+  <!-- both run once the whole page is parsed, in this order: defer on the
+       first, and a module is deferred without asking. the old main.js sat in
+       the middle of the body and ran before the gift button and every modal
+       under it existed. supabase-js is pinned to the version the site
+       already ran, since @2 takes whatever 2.x is newest -->
   <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js"></script>
-  <script defer src="main.js"></script>
+  <script type="module" src="src/main.js"></script>
 </head>
 <body>
   <div class="stars"></div>
@@ -387,8 +388,8 @@
 
            data-src and not src: the overlay is hidden with opacity rather
            than display, so the browser counts the picture as on screen and
-           fetches it on every visit, loading="lazy" or not. main.js sets src
-           when someone reaches for the gift -->
+           fetches it on every visit, loading="lazy" or not. src/gift.js sets
+           src when someone reaches for the gift -->
       <div class="gift-art-wrapper">
         <a class="gift-art-link" href="april25_fixed.PNG" target="_blank" rel="noopener" aria-label="Open the full-size original">
           <img data-src="april25.webp" alt="Our Art" class="gift-art" width="1200" height="896" decoding="async" />
