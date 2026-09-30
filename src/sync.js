@@ -2,9 +2,10 @@
 // happens, and a full pull on every join covers whatever it missed while the
 // socket was down.
 
-import { applyRemoteCardToDom } from "./cards.js";
-import { getSupabase, remoteFetchCards } from "./db.js";
+import { applyCommentToDom, applyCommentsToDom, applyRemoteCardToDom } from "./cards.js";
+import { getSupabase, remoteFetchCards, remoteFetchComments } from "./db.js";
 import { LOGS_PANEL_ID, prependRemoteLog, refreshLogsUI } from "./logs.js";
+import { getActiveUser } from "./user.js";
 import { scheduleActiveTabView } from "./view.js";
 import { remotePullWishes } from "./wishlists.js";
 
@@ -35,6 +36,15 @@ export async function initializeRealtime() {
     .on("postgres_changes", { event: "*", schema: "public", table: "wishes" }, payload => {
       remotePullWishes();
     })
+    // row level security decides who hears these: a guest's socket gets no
+    // inserts or updates from this table at all
+    .on("postgres_changes", { event: "*", schema: "public", table: "comments" }, payload => {
+      if (payload.eventType === "DELETE") {
+        applyCommentToDom({ ...payload.old, body: "" });
+        return;
+      }
+      if (payload.new) applyCommentToDom(payload.new);
+    })
     .subscribe(status => {
       console.log("[realtime]", status);
 
@@ -50,6 +60,7 @@ export async function initializeRealtime() {
 // guest may not changes with it
 export async function resyncFromRemote() {
   await remotePullAll();
+  await remotePullComments();
   await remotePullWishes();
   refreshLogsUI();
   scheduleActiveTabView({ animate: false });
@@ -69,4 +80,14 @@ async function remotePullAll() {
   document.querySelectorAll(".lists li[data-id]").forEach(li => {
     if (!live.has(li.dataset.id)) li.remove();
   });
+}
+
+// a guest would get an empty answer anyway, so a guest is not asked for. an
+// empty list still goes through, which is what clears the comments off the
+// page when someone signs out
+async function remotePullComments() {
+  const rows = getActiveUser() ? await remoteFetchComments() : [];
+  if (!rows) return;
+
+  applyCommentsToDom(rows);
 }

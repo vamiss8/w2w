@@ -4,7 +4,7 @@
 // brings the saved row back, so what you see is what was saved.
 
 import { STATE_PLANNED, STATE_WATCHED, TAB_UNWATCHED, TAB_WATCHED, getCardId, getState, getTabFromLi, getTitleFromCard, normalizeStatusCode, readTitleFromLi } from "./cards.js";
-import { remoteDeleteCard, remoteInsertCard, remoteInsertLog, remoteUpdateCard } from "./db.js";
+import { remoteDeleteCard, remoteInsertCard, remoteInsertLog, remoteSaveComment, remoteUpdateCard } from "./db.js";
 import { escapeHtml } from "./html.js";
 import { closeModal, openModal } from "./modals.js";
 import { getActiveUser, openAuthOverlay } from "./user.js";
@@ -134,12 +134,9 @@ async function saveCommentForActiveUser(li, text) {
   const id = getCardId(li);
   if (!id) return;
 
-  const key = active === "vlad" ? "vlad_comment" : "vika_comment";
-  const patch = {};
-  patch[key] = String(text || "");
-
-  const row = await remoteUpdateCard(id, patch);
-  if (row) {
+  // the card on the page updates when realtime brings the saved comment back
+  const saved = await remoteSaveComment(id, active, String(text || ""));
+  if (saved) {
     await remoteInsertLog("comment", { title: getTitleFromCard(li) }, id);
   }
 }
@@ -343,8 +340,6 @@ export function initializeCardUi() {
           ...payload,
           vlad_score: 0,
           vika_score: 0,
-          vlad_comment: "",
-          vika_comment: "",
         });
 
         if (row) {

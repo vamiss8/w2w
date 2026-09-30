@@ -212,6 +212,39 @@ export async function remoteDeleteWish(id) {
   if (error) console.error("[supabase] wish delete failed", error);
 }
 
+// every comment, for one of us. row level security gives anyone else none
+export async function remoteFetchComments() {
+  const sb = getSupabase();
+  if (!sb) return null;
+
+  const { data, error } = await sb.from("comments").select("card_id, author, body");
+
+  if (error) {
+    console.error("[supabase] comments pull failed", error);
+    return null;
+  }
+
+  return data || [];
+}
+
+// one row per card and author, so saving again overwrites the last one. the
+// database refuses a comment under the other name
+export async function remoteSaveComment(cardId, author, body) {
+  const sb = getSupabase();
+  if (!sb) return false;
+
+  const { error } = await sb
+    .from("comments")
+    .upsert({ card_id: parseInt(cardId, 10), author, body }, { onConflict: "card_id,author" });
+
+  if (error) {
+    console.error("[supabase] save comment failed", error);
+    return false;
+  }
+
+  return true;
+}
+
 // the magic link. only an account that already exists gets one: the two of us
 // were created by hand, and sign-ups are switched off, so this form cannot
 // make a new one either
