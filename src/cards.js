@@ -66,8 +66,8 @@ function ensureRightControls(li) {
 }
 
 // a toggle per comment under the card. whether each one is open survives a
-// redraw: it is kept in data-* on the card, and every realtime update of the
-// row rebuilds this box
+// redraw: it is kept in data-* on the card, and every change to a comment or
+// to the card rebuilds this box
 function ensureCommentsUi(li) {
   const meta = li.querySelector(".meta");
   if (!meta) return;
@@ -119,9 +119,41 @@ function setCardDatasetFromRow(li, row) {
 
   li.dataset.vladScore = String(row.vlad_score ?? 0);
   li.dataset.vikaScore = String(row.vika_score ?? 0);
+}
 
-  li.dataset.vladComment = String(row.vlad_comment ?? "");
-  li.dataset.vikaComment = String(row.vika_comment ?? "");
+const COMMENT_DATASET = { vlad: "vladComment", vika: "vikaComment" };
+
+// comments come from a table of their own, which only the two of us can read,
+// so they arrive separately from the cards they belong to. every card is reset
+// first: a comment that is gone, or a sign-out that hides them all, leaves
+// nothing behind on the page
+export function applyCommentsToDom(rows) {
+  const byCard = new Map();
+  rows.forEach(r => {
+    const id = String(r.card_id);
+    if (!byCard.has(id)) byCard.set(id, {});
+    byCard.get(id)[r.author] = r.body;
+  });
+
+  document.querySelectorAll(".lists li[data-id]").forEach(li => {
+    const own = byCard.get(li.dataset.id) || {};
+    li.dataset.vladComment = own.vlad || "";
+    li.dataset.vikaComment = own.vika || "";
+    ensureCommentsUi(li);
+  });
+}
+
+// one comment from realtime. a delete carries only the key, card and author,
+// and lands here with an empty body
+export function applyCommentToDom(row) {
+  const key = COMMENT_DATASET[row.author];
+  if (!key) return;
+
+  const li = document.querySelector(`.lists li[data-id="${CSS.escape(String(row.card_id))}"]`);
+  if (!li) return;
+
+  li.dataset[key] = row.body || "";
+  ensureCommentsUi(li);
 }
 
 function createCardLiFromRow(row) {

@@ -2,7 +2,6 @@
 // of us, simply fetches them again.
 
 import { remoteDeleteWish, remoteFetchWishes, remoteInsertWish } from "./db.js";
-import { escapeHtml } from "./html.js";
 import { closeModal, openModal } from "./modals.js";
 
 let wishesData = [];
@@ -23,30 +22,63 @@ function renderWishes() {
   vladContainer.innerHTML = "";
   vikaContainer.innerHTML = "";
 
+  // built node by node rather than from a string of html: the title and the
+  // link are typed by one of us and shown to the other, and nothing typed
+  // should ever be read as markup
   wishesData.forEach(w => {
     const li = document.createElement("li");
     li.className = "wish-item";
-    
-    let linkHtml = "";
-    if (w.link) {
-      linkHtml = `<a href="${w.link}" target="_blank" class="wish-link">link ↗</a>`;
+
+    const info = document.createElement("div");
+    info.className = "wish-info";
+
+    const title = document.createElement("span");
+    title.className = "wish-title";
+    title.textContent = w.title;
+    info.appendChild(title);
+
+    const href = safeLink(w.link);
+    if (href) {
+      const a = document.createElement("a");
+      a.className = "wish-link";
+      a.href = href;
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
+      a.textContent = "link ↗";
+      info.appendChild(a);
     }
 
     // the × carries the site's own tooltip rather than a title attribute
-    li.innerHTML = `
-      <div class="wish-info">
-        <span class="wish-title">${escapeHtml(w.title)}</span>
-        ${linkHtml}
-      </div>
-      <button class="wish-delete" data-id="${w.id}" type="button">
-        ×
-        <span class="tooltip">delete wish</span>
-      </button>
-    `;
+    const del = document.createElement("button");
+    del.className = "wish-delete";
+    del.type = "button";
+    del.dataset.id = String(w.id);
+    del.append("×");
+
+    const tip = document.createElement("span");
+    tip.className = "tooltip";
+    tip.textContent = "delete wish";
+    del.appendChild(tip);
+
+    li.append(info, del);
 
     if (w.owner === "vlad") vladContainer.appendChild(li);
     else vikaContainer.appendChild(li);
   });
+}
+
+// a link is only ever an http or https address. anything else, javascript:
+// included, is dropped instead of being put on the page: it used to go into
+// the markup as typed, so a link could run code in the other person's browser
+function safeLink(raw) {
+  if (!raw) return null;
+
+  try {
+    const url = new URL(raw);
+    return url.protocol === "https:" || url.protocol === "http:" ? url.href : null;
+  } catch {
+    return null;
+  }
 }
 
 // which wish the delete modal is about

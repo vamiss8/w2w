@@ -1153,13 +1153,19 @@ body.auth-open {
   visibility: hidden;
   pointer-events: none;
 
-  transition: opacity 0.22s ease, visibility 0.22s ease;
+  /* closing: fade first, then hide */
+  transition: opacity 0.22s ease, visibility 0s linear 0.22s;
 }
 
 .auth-overlay.is-open {
   opacity: 1;
   visibility: visible;
   pointer-events: auto;
+
+  /* opening: visible at once. a transition on visibility keeps it hidden for
+     the first frame, and a hidden field cannot take focus, so the email field
+     missed the focus it was given the moment the overlay opened */
+  transition: opacity 0.22s ease, visibility 0s;
 }
 
 .auth-card {
@@ -1295,6 +1301,48 @@ body.auth-open {
   box-shadow:
     0 0 0 3px rgba(255, 211, 106, 0.12),
     0 18px 46px rgba(0, 0, 0, 0.60);
+}
+
+.auth-choice:disabled {
+  opacity: 0.5;
+  cursor: default;
+  transform: none;
+}
+
+/* the form and the signed-in buttons take turns through the hidden
+   attribute. .auth-actions sets display: flex, which would win over the
+   browser's own [hidden] rule and show both at once */
+.auth-card [hidden] {
+  display: none;
+}
+
+.auth-form .field-input {
+  margin-bottom: 14px;
+  text-align: center;
+}
+
+/* what happened to the link: sent, refused, expired. empty most of the time,
+   so it takes no room until there is something to say */
+.auth-status {
+  font-family: var(--font-body);
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  line-height: 1.4;
+  color: rgba(154, 160, 214, 0.92);
+  margin: 0;
+}
+
+.auth-status:empty {
+  display: none;
+}
+
+/* a guest reads, and the controls that would only be refused are not drawn.
+   hiding them is for the eye: the database turns the writes down either way */
+body.is-guest #addToggle,
+body.is-guest #wishlistToggle,
+body.is-guest .card-actions,
+body.is-guest .card-menu {
+  display: none;
 }
 
 /* =========================
