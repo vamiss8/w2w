@@ -2,7 +2,8 @@
 //
 // the anon key below ships to every visitor, the way supabase intends: what it
 // can do is decided by the row level security policies on the tables, not by
-// keeping the key out of sight.
+// keeping the key out of sight. with db/migrations/002 those let a guest read
+// the cards and the log, and nothing more.
 
 import { getActiveUser } from "./user.js";
 
@@ -15,14 +16,12 @@ const REMOTE = {
 export function getSupabase() {
   if (!window.supabase) return null;
 
+  // supabase's defaults are what a magic link needs: the session is kept in
+  // localStorage and refreshed in the background, so one link signs a browser
+  // in for good, and the tokens the link lands with are read from the address
+  // bar and taken out of it
   if (!getSupabase.client) {
-    getSupabase.client = window.supabase.createClient(REMOTE.url, REMOTE.anonKey, {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-        detectSessionInUrl: false,
-      },
-    });
+    getSupabase.client = window.supabase.createClient(REMOTE.url, REMOTE.anonKey);
   }
 
   return getSupabase.client;
@@ -138,19 +137,18 @@ export async function remoteUpdateRating(cardId, owner, score) {
   if (error) console.error("[supabase] update rating failed", error);
 }
 
-// a line in the activity log, signed with whoever is using the site. with
-// nobody chosen yet nothing is logged
+// a line in the activity log. only one of us writes them, and the database
+// signs each with the account that wrote it: user_name defaults to
+// app_user(), and a line under the other name is refused
 export async function remoteInsertLog(action, details, cardIdOrNull) {
   const sb = getSupabase();
   if (!sb) return;
 
-  const user = getActiveUser();
-  if (!user) return;
+  if (!getActiveUser()) return;
 
   const cardId = cardIdOrNull ? parseInt(cardIdOrNull, 10) : null;
 
   const { error } = await sb.from("logs").insert({
-    user_name: user,
     action,
     card_id: Number.isNaN(cardId) ? null : cardId,
     details: details || {},
@@ -212,4 +210,52 @@ export async function remoteDeleteWish(id) {
 
   const { error } = await sb.from("wishes").delete().eq("id", parseInt(id, 10));
   if (error) console.error("[supabase] wish delete failed", error);
+}
+
+// the magic link. only an account that already exists gets one: the two of us
+// were created by hand, and sign-ups are switched off, so this form cannot
+// make a new one either
+export async function remoteSendMagicLink(email) {
+  const sb = getSupabase();
+  if (!sb) return { error: new Error("supabase-js did not load") };
+
+  return sb.auth.signInWithOtp({
+    email,
+    options: {
+      shouldCreateUser: false,
+      emailRedirectTo: location.origin + location.pathname,
+    },
+  });
+}
+
+export async function remoteSignOut() {
+  const sb = getSupabase();
+  if (!sb) return;
+
+  const { error } = await sb.auth.signOut();
+  if (error) console.error("[supabase] sign out failed", error);
+}
+
+// vlad, vika, or null for anyone the database does not know. the name comes
+// from public.members through app_user(), so the page never holds our emails
+export async function remoteWhoAmI() {
+  const sb = getSupabase();
+  if (!sb) return null;
+
+  const { data, error } = await sb.rpc("app_user");
+  if (error) {
+    console.error("[supabase] app_user failed", error);
+    return null;
+  }
+
+  return data || null;
+}
+
+// every change of session: the one restored on load, a sign-in through a
+// link, a refresh, a sign-out
+export function onAuthChange(callback) {
+  const sb = getSupabase();
+  if (!sb) return;
+
+  sb.auth.onAuthStateChange(callback);
 }

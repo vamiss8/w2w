@@ -24,19 +24,31 @@
 <body>
   <div class="stars"></div>
 
-  <button class="user-pill" id="userToggle" type="button" aria-label="Change user">USER: —</button>
+  <button class="user-pill" id="userToggle" type="button" aria-label="Sign in or out">SIGN IN</button>
   <button class="wishlist-toggle" id="wishlistToggle" type="button" aria-label="Open Wishlists">WISHLISTS</button>
 
-  <!-- auth overlay -->
+  <!-- sign-in overlay. a guest can read everything but the comments and the
+       wishlists, so it opens only when asked for. src/user.js switches it
+       between the form and the signed-in view, and fills in the title -->
   <div class="auth-overlay" id="authOverlay" aria-hidden="true">
     <div class="auth-card" role="dialog" aria-modal="true" aria-labelledby="authTitle" aria-describedby="authDesc">
       <div class="auth-title" id="authTitle">sign in</div>
-      <div class="auth-desc" id="authDesc">choose who is using the watchlist</div>
+      <div class="auth-desc" id="authDesc">we send a link to your email, no password</div>
 
-      <div class="auth-actions">
-        <button class="auth-choice" type="button" data-user="vlad">vlad</button>
-        <button class="auth-choice" type="button" data-user="vika">vika</button>
+      <form class="auth-form" id="authForm">
+        <input class="field-input" id="authEmail" type="email" autocomplete="email" placeholder="your email" required />
+        <div class="auth-actions">
+          <button class="auth-choice" id="authSend" type="submit">send link</button>
+          <button class="auth-choice" type="button" data-auth-close>just looking</button>
+        </div>
+      </form>
+
+      <div class="auth-actions" id="authSignedIn" hidden>
+        <button class="auth-choice" id="authSignOut" type="button">sign out</button>
+        <button class="auth-choice" type="button" data-auth-close>close</button>
       </div>
+
+      <p class="auth-status" id="authStatus" aria-live="polite"></p>
     </div>
   </div>
 

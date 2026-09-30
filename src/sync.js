@@ -46,7 +46,9 @@ export async function initializeRealtime() {
     });
 }
 
-async function resyncFromRemote() {
+// also run when someone signs in or out, since what a member may read and a
+// guest may not changes with it
+export async function resyncFromRemote() {
   await remotePullAll();
   await remotePullWishes();
   refreshLogsUI();

@@ -290,7 +290,7 @@ async function loadMoreLogsPage({ reset = false } = {}) {
     li.className = "log-item";
     li.innerHTML = `
       <div class="log-time">no activity yet</div>
-      <div class="log-text">pick a user, rate something, move cards, leave comments — it will appear here.</div>
+      <div class="log-text">sign in, rate something, move cards, leave comments — it will appear here.</div>
     `;
     listEl.appendChild(li);
 
