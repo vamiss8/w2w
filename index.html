@@ -21,7 +21,10 @@
   <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js"></script>
   <script type="module" src="src/main.js"></script>
 </head>
-<body>
+<!-- every visit starts as a guest. src/user.js takes the class away once the
+     database says the session is one of ours, so the controls appear then
+     rather than flashing up for a stranger and disappearing -->
+<body class="is-guest">
   <div class="stars"></div>
 
   <button class="user-pill" id="userToggle" type="button" aria-label="Sign in or out">SIGN IN</button>

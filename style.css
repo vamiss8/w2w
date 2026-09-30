@@ -1336,6 +1336,15 @@ body.auth-open {
   display: none;
 }
 
+/* a guest reads, and the controls that would only be refused are not drawn.
+   hiding them is for the eye: the database turns the writes down either way */
+body.is-guest #addToggle,
+body.is-guest #wishlistToggle,
+body.is-guest .card-actions,
+body.is-guest .card-menu {
+  display: none;
+}
+
 /* =========================
    LOGS WIDGET (BOTTOM LEFT)
    ========================= */
