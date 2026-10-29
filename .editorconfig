@@ -1,0 +1,23 @@
+# how the files here are written, for any editor that reads this. line endings
+# are left to git: core.autocrlf hands a windows checkout crlf and commits lf
+
+root = true
+
+[*]
+charset = utf-8
+indent_style = space
+indent_size = 2
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+# two spaces at the end of a markdown line are a line break
+[*.md]
+trim_trailing_whitespace = false
+
+# vendored files stay exactly as they came
+[vendor/**]
+charset = unset
+indent_style = unset
+indent_size = unset
+insert_final_newline = unset
+trim_trailing_whitespace = unset
