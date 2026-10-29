@@ -9,7 +9,8 @@
 
 import { formatTimestampForUI } from "./dates.js";
 import { remoteDeleteWish, remoteFetchWishes, remoteInsertWish, remoteUpdateWish } from "./db.js";
-import { closeDialog, confirmDialog, openDialog } from "./dialogs.js";
+import { closeDialog, confirmDialog, openDialog, whileSaving } from "./dialogs.js";
+import { toast } from "./toast.js";
 import { getActiveUser } from "./user.js";
 
 const OWNERS = { vlad: "Vlad", vika: "Vika" };
@@ -158,7 +159,10 @@ async function toggleDone(id) {
   renderWishes();
 
   const saved = await remoteUpdateWish(id, { done_at: doneAt });
-  if (!saved) await remotePullWishes();
+  if (!saved) {
+    await remotePullWishes();
+    toast(doneAt ? "could not tick it off, try again" : "could not untick it, try again");
+  }
 }
 
 function restoreDoneOpen() {
@@ -295,7 +299,7 @@ function initializeWishForm() {
 
   form.addEventListener("submit", e => {
     e.preventDefault();
-    saveWishForm();
+    whileSaving(document.getElementById("wishSave"), saveWishForm);
   });
 
   document.getElementById("wishAddLink").addEventListener("click", () => {
@@ -325,7 +329,7 @@ async function deleteWish(id) {
   const sure = await confirmDialog({ title: "delete wish", question: "are you sure you want to delete ", name: wish.title });
   if (!sure) return;
 
-  await remoteDeleteWish(id);
+  if (!await remoteDeleteWish(id)) toast(`could not delete ${wish.title}`);
   await remotePullWishes();
 }
 

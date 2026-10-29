@@ -120,7 +120,7 @@ export async function remoteDeleteCard(cardId) {
 
   if (!checkError && !row) return "gone";
 
-  alert("could not delete from db! please check supabase rls policies for delete.");
+  console.error("[supabase] delete refused", id);
   return "failed";
 }
 
@@ -225,12 +225,14 @@ export async function remoteUpdateWish(id, patch) {
   return true;
 }
 
+// returns whether the database took the delete
 export async function remoteDeleteWish(id) {
   const sb = getSupabase();
-  if (!sb) return;
+  if (!sb) return false;
 
   const { error } = await sb.from("wishes").delete().eq("id", parseInt(id, 10));
   if (error) console.error("[supabase] wish delete failed", error);
+  return !error;
 }
 
 // every comment, for one of us. row level security gives anyone else none

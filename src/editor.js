@@ -6,8 +6,9 @@
 
 import { LIST_WATCHED, STATE_PLANNED, STATE_STARTED, STATE_WATCHED, normalizeStatusCode, setCommentOpen, stateOf, titleOf } from "./cards.js";
 import { remoteDeleteCard, remoteInsertCard, remoteInsertLog, remoteSaveComment, remoteUpdateCard } from "./db.js";
-import { closeDialog, confirmDialog, openDialog } from "./dialogs.js";
+import { closeDialog, confirmDialog, openDialog, whileSaving } from "./dialogs.js";
 import { dropCard, getCard, getComment, putCard, putComment } from "./store.js";
+import { toast } from "./toast.js";
 import { getActiveUser, openAuthDialog } from "./user.js";
 
 // what the open forms are about: null while adding a card, the id otherwise
@@ -29,6 +30,7 @@ function openAddCard(list) {
   field("cardStatus").value = "00";
   field("cardStart").value = "";
   field("cardEnd").value = "";
+  field("cardError").textContent = "";
 
   openDialog("cardDialog", "cardTitle");
 }
@@ -46,6 +48,7 @@ function openEditCard(id) {
   field("cardStatus").value = normalizeStatusCode(row.status);
   field("cardStart").value = row.start_date || "";
   field("cardEnd").value = row.end_date || "";
+  field("cardError").textContent = "";
 
   openDialog("cardDialog", "cardTitle");
 }
@@ -59,6 +62,7 @@ function openComment(id) {
 
   commentCardId = String(id);
   field("commentText").value = getComment(id, active);
+  field("commentError").textContent = "";
   openDialog("commentDialog", "commentText");
 }
 
@@ -134,24 +138,24 @@ async function saveCardForm() {
     end_date: field("cardEnd").value.trim() || null,
   };
 
-  if (!editingId) {
-    // no id: the database numbers cards itself and rejects one sent from
-    // here. the row it returns carries the id it chose
-    const row = await remoteInsertCard({ ...payload, vlad_score: 0, vika_score: 0 });
-    if (row) {
-      putCard(row);
-      await remoteInsertLog("add_card", { title: row.title }, row.id);
-    }
-  } else {
-    const before = getCard(editingId);
-    const row = await remoteUpdateCard(editingId, payload);
-    if (row) {
-      putCard(row);
-      if (before) await logEditDiffs(snapshot(before), snapshot(row), row.id);
-    }
+  // no id when adding: the database numbers cards itself and rejects one sent
+  // from here. the row it returns carries the id it chose
+  const before = editingId ? getCard(editingId) : null;
+  const row = editingId
+    ? await remoteUpdateCard(editingId, payload)
+    : await remoteInsertCard({ ...payload, vlad_score: 0, vika_score: 0 });
+
+  // the form stays open with what was typed, and says so
+  if (!row) {
+    field("cardError").textContent = "could not save the card, try again";
+    return;
   }
 
+  putCard(row);
   closeDialog("cardDialog");
+
+  if (before) await logEditDiffs(snapshot(before), snapshot(row), row.id);
+  else await remoteInsertLog("add_card", { title: row.title }, row.id);
 }
 
 async function saveCommentForm() {
@@ -160,13 +164,14 @@ async function saveCommentForm() {
   if (!active || !id) return;
 
   const text = field("commentText").value.trim();
-  const saved = await remoteSaveComment(id, active, text);
-  if (saved) {
-    putComment(id, active, text);
-    await remoteInsertLog("comment", { title: titleOf(getCard(id)) }, id);
+  if (!await remoteSaveComment(id, active, text)) {
+    field("commentError").textContent = "could not save the comment, try again";
+    return;
   }
 
+  putComment(id, active, text);
   closeDialog("commentDialog");
+  await remoteInsertLog("comment", { title: titleOf(getCard(id)) }, id);
 }
 
 async function deleteCard(id) {
@@ -178,7 +183,10 @@ async function deleteCard(id) {
   if (!sure) return;
 
   const result = await remoteDeleteCard(id);
-  if (result === "failed") return;
+  if (result === "failed") {
+    toast(`could not delete ${title}`);
+    return;
+  }
 
   dropCard(id);
 
@@ -237,11 +245,11 @@ export function initializeCardUi() {
 
   field("cardForm")?.addEventListener("submit", e => {
     e.preventDefault();
-    saveCardForm();
+    whileSaving(field("cardSave"), saveCardForm);
   });
 
   field("commentForm")?.addEventListener("submit", e => {
     e.preventDefault();
-    saveCommentForm();
+    whileSaving(field("commentSave"), saveCommentForm);
   });
 }

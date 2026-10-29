@@ -10,12 +10,24 @@
 const cards = new Map();
 const comments = new Map();
 
-// false until the first pull has answered, so an empty list can tell "not
-// here yet" from "none at all"
-let loaded = false;
+// "loading" until the first pull answers, then "loaded", or "failed" when
+// it could not be had at all, so an empty list can tell "not here yet" and
+// "could not ask" from "none at all"
+let loadState = "loading";
+
+export function cardsLoadState() {
+  return loadState;
+}
 
 export function cardsLoaded() {
-  return loaded;
+  return loadState === "loaded";
+}
+
+// a later pull that fails changes nothing: the cards already here stay
+export function cardsFailed() {
+  if (loadState === "loaded") return;
+  loadState = "failed";
+  changed();
 }
 
 // every change ends here, so the lists know to redraw
@@ -44,7 +56,7 @@ export function allCards() {
 export function replaceCards(rows) {
   cards.clear();
   rows.forEach(row => cards.set(key(row.id), row));
-  loaded = true;
+  loadState = "loaded";
   changed();
 }
 

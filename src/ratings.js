@@ -3,6 +3,7 @@
 
 import { remoteInsertLog, remoteUpdateRating } from "./db.js";
 import { getCard, patchCard } from "./store.js";
+import { toast } from "./toast.js";
 import { getActiveUser } from "./user.js";
 
 const OWNERS = ["vlad", "vika"];
@@ -61,6 +62,7 @@ async function handleRatingClick(target) {
 
   if (!saved) {
     patchCard(id, { [`${owner}_score`]: before[`${owner}_score`] });
+    toast("could not save your score, try again");
     return;
   }
 

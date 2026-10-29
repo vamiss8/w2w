@@ -18,6 +18,18 @@ export function closeDialog(id) {
   if (dialog?.open) dialog.close();
 }
 
+// a form's save button is off while its request is out. a second click on a
+// slow connection could otherwise send the same card twice
+export async function whileSaving(button, work) {
+  if (!button || button.disabled) return;
+  button.disabled = true;
+  try {
+    await work();
+  } finally {
+    button.disabled = false;
+  }
+}
+
 // deleting a card and deleting a wish ask the same question. it resolves true
 // for yes, and false however else the dialog was closed: cancel, escape, or a
 // click beside it

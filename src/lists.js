@@ -6,7 +6,7 @@
 import { LIST_TO_WATCH, LIST_WATCHED, STATE_PLANNED, STATE_STARTED, drawCard, listOf, normalizeStatusCode, stateOf } from "./cards.js";
 import { parseISODate } from "./dates.js";
 import { currentSection, onSectionChange } from "./router.js";
-import { allCards, cardsLoaded, getComment, onStoreChange } from "./store.js";
+import { allCards, cardsLoadState, getComment, onStoreChange } from "./store.js";
 import { getActiveUser, onUserChange } from "./user.js";
 
 const VIEW_OF = { [LIST_TO_WATCH]: "#view-to-watch", [LIST_WATCHED]: "#view-watched" };
@@ -166,20 +166,23 @@ function drawLists() {
 function describeList(view, list, rows, shown) {
   const count = view.querySelector("[data-count]");
   const empty = view.querySelector("[data-empty]");
-  if (!cardsLoaded()) return;
-
-  if (count) {
-    if (list === LIST_WATCHED) {
-      count.textContent = `${rows.length} watched together`;
-    } else {
-      const planned = rows.filter(r => stateOf(r) === STATE_PLANNED).length;
-      count.textContent = `${planned} planned · ${rows.length - planned} started`;
-    }
-  }
+  const state = cardsLoadState();
 
   if (empty) {
-    empty.hidden = shown > 0;
-    empty.textContent = rows.length ? "nothing here with these filters" : "nothing here yet";
+    empty.hidden = state === "loaded" && shown > 0;
+    empty.textContent =
+      state === "loading" ? "the cards are on their way..." :
+      state === "failed" ? "could not reach the database. reload to try again" :
+      rows.length ? "nothing here with these filters" : "nothing here yet";
+  }
+
+  if (!count || state !== "loaded") return;
+
+  if (list === LIST_WATCHED) {
+    count.textContent = `${rows.length} watched together`;
+  } else {
+    const planned = rows.filter(r => stateOf(r) === STATE_PLANNED).length;
+    count.textContent = `${planned} planned · ${rows.length - planned} started`;
   }
 }
 

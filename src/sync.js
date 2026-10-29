@@ -4,13 +4,17 @@
 
 import { getSupabase, remoteFetchCards, remoteFetchComments } from "./db.js";
 import { addLiveLogEntry, reloadActivity } from "./activity.js";
-import { dropCard, putCard, putComment, replaceCards, replaceComments } from "./store.js";
+import { cardsFailed, dropCard, putCard, putComment, replaceCards, replaceComments } from "./store.js";
 import { getActiveUser } from "./user.js";
 import { remotePullWishes } from "./wishlists.js";
 
 export async function initializeRealtime() {
+  // supabase-js did not load: a blocked cdn, or no network at all
   const sb = getSupabase();
-  if (!sb) return;
+  if (!sb) {
+    cardsFailed();
+    return;
+  }
 
   await remotePullCards();
 
@@ -61,6 +65,7 @@ export async function resyncFromRemote() {
 async function remotePullCards() {
   const data = await remoteFetchCards();
   if (data) replaceCards(data);
+  else cardsFailed();
 }
 
 // a guest would get an empty answer anyway, so a guest is not asked for. an
