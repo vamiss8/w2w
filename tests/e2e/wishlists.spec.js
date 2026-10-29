@@ -2,7 +2,7 @@
 // its column's done list, folded until it is asked for; a wish can be edited,
 // moved to the other list, and carry as many links as it needs.
 
-import { db, expect, requests, signIn, test } from "./site.js";
+import { db, expect, goTo, requests, signIn, test } from "./site.js";
 
 const column = (page, owner) => page.locator(`#wishes${owner === "vlad" ? "Vlad" : "Vika"}`);
 const done = (page, owner) => page.locator(`.wishes-done[data-owner="${owner}"]`);
@@ -11,8 +11,7 @@ const saved = async (page, title) => (await db(page, "wishes")).find(w => w.titl
 
 test.beforeEach(async ({ page }) => {
   await signIn(page, "vlad");
-  await page.locator("#wishlistToggle").click();
-  await expect(page.locator("#wishlistModal")).toHaveClass(/is-open/);
+  await goTo(page, "wishlists");
 });
 
 test("open wishes sit under their owner, the one that came true folded below", async ({ page }) => {
@@ -78,8 +77,8 @@ test("a done list stays open or folded across visits", async ({ page }) => {
   await expect.poll(() => page.evaluate(() => localStorage.getItem("wishesDoneOpen"))).toContain('"vika":true');
 
   await page.reload();
-  await expect(page.locator("#userToggle")).toHaveText("USER: VLAD");
-  await page.locator("#wishlistToggle").click();
+  await expect(page.locator("#userToggle")).toHaveText("vlad");
+  await expect(page.locator("#view-wishlists")).toBeVisible();
   await expect(done(page, "vika")).toHaveAttribute("open", "");
   await expect(done(page, "vlad")).not.toHaveAttribute("open", "");
 });
@@ -89,7 +88,7 @@ test.describe("the wish form", () => {
 
   test("adds a wish with several links, a paste of many split into rows", async ({ page }) => {
     await page.locator('.add-wish-btn[data-owner="vika"]').click();
-    await expect(page.locator("#wishModalTitle")).toHaveText("add wish");
+    await expect(page.locator("#wishDialogTitle")).toHaveText("add wish");
     await expect(page.locator("#wishOwnerVika")).toBeChecked();
     await expect(rows(page)).toHaveCount(1);
 
@@ -103,7 +102,7 @@ test.describe("the wish form", () => {
     ]);
 
     await page.locator("#wishSave").click();
-    await expect(page.locator("#wishModal")).not.toHaveClass(/is-open/);
+    await expect(page.locator("#wishDialog")).toBeHidden();
     const added = wish(column(page, "vika"), "a film camera");
     await expect(added.locator("a.wish-link")).toHaveText(["example.com ↗", "shop.example.org ↗", "example.net ↗", "example.net ↗"]);
     expect((await saved(page, "a film camera")).links).toEqual([
@@ -138,7 +137,7 @@ test.describe("the wish form", () => {
 
   test("edits the words, the links and whose list a wish is on", async ({ page }) => {
     await wish(column(page, "vlad"), "smart watch").locator(".wish-edit").click();
-    await expect(page.locator("#wishModalTitle")).toHaveText("edit wish");
+    await expect(page.locator("#wishDialogTitle")).toHaveText("edit wish");
     await expect(page.locator("#wishOwnerVlad")).toBeChecked();
     await expect(page.locator("#wishTitle")).toHaveValue("a stylish smart watch");
     expect(await rows(page).evaluateAll(is => is.map(i => i.value))).toEqual(["https://example.com/watch"]);
@@ -173,15 +172,16 @@ test.describe("the wish form", () => {
     await page.locator('.add-wish-btn[data-owner="vlad"]').click();
     await page.locator("#wishTitle").fill("never mind");
     await page.locator("#wishCancel").click();
-    await expect(page.locator("#wishlistModal")).toHaveClass(/is-open/);
+    await expect(page.locator("#wishDialog")).toBeHidden();
+    await expect(page.locator("#view-wishlists")).toBeVisible();
     await expect(wish(column(page, "vlad"), "never mind")).toHaveCount(0);
   });
 });
 
 test("a wish can be deleted, after a confirmation that names it", async ({ page }) => {
   await wish(column(page, "vlad"), "film posters").locator(".wish-delete").click();
-  await expect(page.locator("#wishDeleteDesc")).toHaveText("are you sure you want to delete a book of film posters?");
-  await page.locator("#wishDeleteConfirm").click();
+  await expect(page.locator("#confirmDesc")).toHaveText("are you sure you want to delete a book of film posters?");
+  await page.locator("#confirmOk").click();
   await expect(wish(column(page, "vlad"), "film posters")).toHaveCount(0);
   expect(await saved(page, "film posters")).toBeUndefined();
 });

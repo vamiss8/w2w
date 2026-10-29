@@ -2,48 +2,41 @@
 // happens, and a full pull on every join covers whatever it missed while the
 // socket was down.
 
-import { applyCommentToDom, applyCommentsToDom, applyRemoteCardToDom } from "./cards.js";
 import { getSupabase, remoteFetchCards, remoteFetchComments } from "./db.js";
-import { LOGS_PANEL_ID, prependRemoteLog, refreshLogsUI } from "./logs.js";
+import { addLiveLogEntry, reloadActivity } from "./activity.js";
+import { cardsFailed, dropCard, putCard, putComment, replaceCards, replaceComments } from "./store.js";
 import { getActiveUser } from "./user.js";
-import { scheduleActiveTabView } from "./view.js";
 import { remotePullWishes } from "./wishlists.js";
 
 export async function initializeRealtime() {
+  // supabase-js did not load: a blocked cdn, or no network at all
   const sb = getSupabase();
-  if (!sb) return;
+  if (!sb) {
+    cardsFailed();
+    return;
+  }
 
-  await remotePullAll();
+  await remotePullCards();
 
   sb
     .channel("w2w-db")
     .on("postgres_changes", { event: "*", schema: "public", table: "cards" }, payload => {
-      if (payload.eventType === "DELETE") {
-        // a delete carries nothing but the old id
-        const li = document.querySelector(`.lists li[data-id="${CSS.escape(String(payload.old.id))}"]`);
-        if (li) li.remove();
-        scheduleActiveTabView({ animate: false });
-        return;
-      }
-      if (payload.new) applyRemoteCardToDom(payload.new);
-      scheduleActiveTabView({ animate: false });
+      // a delete carries nothing but the old id
+      if (payload.eventType === "DELETE") dropCard(payload.old.id);
+      else if (payload.new) putCard(payload.new);
     })
     .on("postgres_changes", { event: "INSERT", schema: "public", table: "logs" }, payload => {
-      if (!payload.new) return;
-      const panel = document.getElementById(LOGS_PANEL_ID);
-      if (panel && panel.dataset.open === "true") prependRemoteLog(payload.new);
+      if (payload.new) addLiveLogEntry(payload.new);
     })
-    .on("postgres_changes", { event: "*", schema: "public", table: "wishes" }, payload => {
+    .on("postgres_changes", { event: "*", schema: "public", table: "wishes" }, () => {
       remotePullWishes();
     })
     // row level security decides who hears these: a guest's socket gets no
-    // inserts or updates from this table at all
+    // inserts or updates from this table at all. a delete carries only the
+    // key, card and author
     .on("postgres_changes", { event: "*", schema: "public", table: "comments" }, payload => {
-      if (payload.eventType === "DELETE") {
-        applyCommentToDom({ ...payload.old, body: "" });
-        return;
-      }
-      if (payload.new) applyCommentToDom(payload.new);
+      if (payload.eventType === "DELETE") putComment(payload.old.card_id, payload.old.author, "");
+      else if (payload.new) putComment(payload.new.card_id, payload.new.author, payload.new.body);
     })
     .subscribe(status => {
       console.log("[realtime]", status);
@@ -59,27 +52,20 @@ export async function initializeRealtime() {
 // also run when someone signs in or out, since what a member may read and a
 // guest may not changes with it
 export async function resyncFromRemote() {
-  await remotePullAll();
+  await remotePullCards();
   await remotePullComments();
   await remotePullWishes();
-  refreshLogsUI();
-  scheduleActiveTabView({ animate: false });
+  reloadActivity();
 }
 
-async function remotePullAll() {
+// the database is the whole truth, so a card it did not return is gone.
+// realtime alone never says so for certain: an event sent while the socket was
+// down does not arrive, and an id edited by hand comes in as an update for a
+// card nobody has seen, with nothing that would ever remove the old one
+async function remotePullCards() {
   const data = await remoteFetchCards();
-  if (!data) return;
-
-  data.forEach(row => applyRemoteCardToDom(row));
-
-  // the database is the whole truth, so a card it did not return is gone.
-  // realtime alone never says so for certain: an event sent while the socket
-  // was down does not arrive, and an id edited by hand comes in as an update
-  // for a card nobody has seen, with nothing that would ever remove the old one
-  const live = new Set(data.map(row => String(row.id)));
-  document.querySelectorAll(".lists li[data-id]").forEach(li => {
-    if (!live.has(li.dataset.id)) li.remove();
-  });
+  if (data) replaceCards(data);
+  else cardsFailed();
 }
 
 // a guest would get an empty answer anyway, so a guest is not asked for. an
@@ -87,7 +73,5 @@ async function remotePullAll() {
 // page when someone signs out
 async function remotePullComments() {
   const rows = getActiveUser() ? await remoteFetchComments() : [];
-  if (!rows) return;
-
-  applyCommentsToDom(rows);
+  if (rows) replaceComments(rows);
 }

@@ -120,21 +120,23 @@ export async function remoteDeleteCard(cardId) {
 
   if (!checkError && !row) return "gone";
 
-  alert("could not delete from db! please check supabase rls policies for delete.");
+  console.error("[supabase] delete refused", id);
   return "failed";
 }
 
+// returns whether the database took the score
 export async function remoteUpdateRating(cardId, owner, score) {
   const sb = getSupabase();
-  if (!sb) return;
+  if (!sb) return false;
 
   const id = parseInt(cardId, 10);
-  if (Number.isNaN(id)) return;
+  if (Number.isNaN(id)) return false;
 
   const patch = owner === "vlad" ? { vlad_score: score } : { vika_score: score };
 
   const { error } = await sb.from("cards").update(patch).eq("id", id);
   if (error) console.error("[supabase] update rating failed", error);
+  return !error;
 }
 
 // a line in the activity log. only one of us writes them, and the database
@@ -157,9 +159,9 @@ export async function remoteInsertLog(action, details, cardIdOrNull) {
   if (error) console.error("[supabase] insert log failed", error);
 }
 
-// one page of the activity log, newest first, and only entries older than
-// beforeTs when it is given
-export async function remoteFetchLogs(limit, beforeTs) {
+// one page of the activity log, newest first: only lines older than beforeTs
+// when it is given, and only one person's when user is
+export async function remoteFetchLogs(limit, beforeTs, user = null) {
   const sb = getSupabase();
   if (!sb) return { data: null, error: null };
 
@@ -169,9 +171,8 @@ export async function remoteFetchLogs(limit, beforeTs) {
     .order("ts", { ascending: false })
     .limit(limit);
 
-  if (beforeTs) {
-    q = q.lt("ts", beforeTs);
-  }
+  if (beforeTs) q = q.lt("ts", beforeTs);
+  if (user) q = q.eq("user_name", user);
 
   return await q;
 }
@@ -224,12 +225,14 @@ export async function remoteUpdateWish(id, patch) {
   return true;
 }
 
+// returns whether the database took the delete
 export async function remoteDeleteWish(id) {
   const sb = getSupabase();
-  if (!sb) return;
+  if (!sb) return false;
 
   const { error } = await sb.from("wishes").delete().eq("id", parseInt(id, 10));
   if (error) console.error("[supabase] wish delete failed", error);
+  return !error;
 }
 
 // every comment, for one of us. row level security gives anyone else none

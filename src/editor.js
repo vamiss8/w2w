@@ -1,100 +1,75 @@
 // changing cards by hand: the add and edit form, comments, deleting, and the
 // menu on every card that leads to them. every change is written to the
-// database and logged, and an added or edited card is drawn when realtime
-// brings the saved row back, so what you see is what was saved.
+// database and logged, and a card is drawn from the row the database saved,
+// so what you see is what was saved. realtime brings the same row back a
+// moment later, which changes nothing.
 
-import { STATE_PLANNED, STATE_STARTED, STATE_WATCHED, TAB_UNWATCHED, TAB_WATCHED, getCardId, getState, getTitleFromCard, normalizeStatusCode, readTitleFromLi } from "./cards.js";
+import { LIST_WATCHED, STATE_PLANNED, STATE_STARTED, STATE_WATCHED, normalizeStatusCode, setCommentOpen, stateOf, titleOf } from "./cards.js";
 import { remoteDeleteCard, remoteInsertCard, remoteInsertLog, remoteSaveComment, remoteUpdateCard } from "./db.js";
-import { escapeHtml } from "./html.js";
-import { closeModal, openModal } from "./modals.js";
-import { getActiveUser, openAuthOverlay } from "./user.js";
-import { TAB_INPUT_SELECTOR, UNWATCHED_TAB_ID, scheduleActiveTabView } from "./view.js";
+import { closeDialog, confirmDialog, openDialog, whileSaving } from "./dialogs.js";
+import { dropCard, getCard, getComment, putCard, putComment } from "./store.js";
+import { toast } from "./toast.js";
+import { getActiveUser, openAuthDialog } from "./user.js";
 
-const CARD_MODAL_ID = "cardModal";
-const CARD_FORM_ID = "cardForm";
-const COMMENT_MODAL_ID = "commentModal";
-const COMMENT_FORM_ID = "commentForm";
+// what the open forms are about: null while adding a card, the id otherwise
+let editingId = null;
+let commentCardId = null;
 
-// what the open modals are about
-let cardModalMode = "add"; // "add" or "edit"
-let cardModalCardId = null;
-let commentModalCardId = null;
-let deleteModalTargetLi = null;
-
-function fillCardModalFromLi(li) {
-  const title = readTitleFromLi(li);
-
-  document.getElementById("cardTitle").value = title;
-  document.getElementById("cardState").value = getState(li);
-  document.getElementById("cardStatus").value = normalizeStatusCode(li.dataset.status || "00");
-
-  document.getElementById("cardStart").value = (li.dataset.start || "").trim();
-  document.getElementById("cardEnd").value = (li.dataset.end || "").trim();
-}
+const field = id => document.getElementById(id);
 
 // a card added from the watched list starts out watched, and one added from
 // the other list planned
-function openAddCardModal(prefTab) {
-  cardModalMode = "add";
-  cardModalCardId = null;
+function openAddCard(list) {
+  editingId = null;
 
-  document.getElementById("cardModalTitle").textContent = "add card";
-  document.getElementById("cardModalDesc").textContent = "create a new entry in the list";
+  field("cardDialogTitle").textContent = "add card";
+  field("cardDialogDesc").textContent = "create a new entry in the list";
 
-  document.getElementById("cardTitle").value = "";
-  document.getElementById("cardState").value = prefTab === TAB_WATCHED ? STATE_WATCHED : STATE_PLANNED;
-  document.getElementById("cardStatus").value = "00";
-  document.getElementById("cardStart").value = "";
-  document.getElementById("cardEnd").value = "";
+  field("cardTitle").value = "";
+  field("cardState").value = list === LIST_WATCHED ? STATE_WATCHED : STATE_PLANNED;
+  field("cardStatus").value = "00";
+  field("cardStart").value = "";
+  field("cardEnd").value = "";
+  field("cardError").textContent = "";
 
-  openModal(CARD_MODAL_ID);
-
-  const input = document.getElementById("cardTitle");
-  if (input) input.focus();
+  openDialog("cardDialog", "cardTitle");
 }
 
-function openEditCardModal(li) {
-  cardModalMode = "edit";
-  cardModalCardId = getCardId(li);
+function openEditCard(id) {
+  const row = getCard(id);
+  if (!row) return;
+  editingId = String(row.id);
 
-  document.getElementById("cardModalTitle").textContent = "edit card";
-  document.getElementById("cardModalDesc").textContent = "update fields and sync to the server";
+  field("cardDialogTitle").textContent = "edit card";
+  field("cardDialogDesc").textContent = "update fields and sync to the server";
 
-  fillCardModalFromLi(li);
+  field("cardTitle").value = titleOf(row);
+  field("cardState").value = stateOf(row);
+  field("cardStatus").value = normalizeStatusCode(row.status);
+  field("cardStart").value = row.start_date || "";
+  field("cardEnd").value = row.end_date || "";
+  field("cardError").textContent = "";
 
-  openModal(CARD_MODAL_ID);
-
-  const input = document.getElementById("cardTitle");
-  if (input) input.focus();
+  openDialog("cardDialog", "cardTitle");
 }
 
-function openCommentModal(li) {
+function openComment(id) {
   const active = getActiveUser();
   if (!active) {
-    openAuthOverlay();
+    openAuthDialog();
     return;
   }
 
-  commentModalCardId = getCardId(li);
-
-  const current =
-    active === "vlad"
-      ? (li.dataset.vladComment || "")
-      : (li.dataset.vikaComment || "");
-
-  document.getElementById("commentText").value = current;
-
-  openModal(COMMENT_MODAL_ID);
-
-  const area = document.getElementById("commentText");
-  if (area) area.focus();
+  commentCardId = String(id);
+  field("commentText").value = getComment(id, active);
+  field("commentError").textContent = "";
+  openDialog("commentDialog", "commentText");
 }
 
 function closeAllCardMenus() {
   document.querySelectorAll(".card-menu[data-open='true']").forEach(m => {
     m.dataset.open = "false";
-    const li = m.closest("li");
-    if (li) li.classList.remove("menu-open");
+    m.closest("li")?.classList.remove("menu-open");
   });
 }
 
@@ -105,89 +80,38 @@ function toggleCardMenu(li) {
   const open = menu.dataset.open === "true";
   closeAllCardMenus();
 
-  const next = open ? "false" : "true";
-  menu.dataset.open = next;
-
-  li.classList.toggle("menu-open", next === "true");
+  menu.dataset.open = open ? "false" : "true";
+  li.classList.toggle("menu-open", !open);
 }
 
-// opens the confirmation. the delete itself happens on confirm, in the click
-// handler below
-function deleteCard(li) {
-  const title = getTitleFromCard(li);
-  if (!title) return;
-
-  deleteModalTargetLi = li;
-  
-  const desc = document.getElementById("deleteModalDesc");
-  if (desc) {
-    desc.innerHTML = `are you sure you want to delete <br><span style="color: rgba(230, 232, 255, 0.94); font-weight: 600; font-family: var(--font-content); margin-top: 6px; display: inline-block;">${escapeHtml(title)}</span>?`;
-  }
-
-  openModal("deleteModal");
-}
-
-async function saveCommentForActiveUser(li, text) {
-  const active = getActiveUser();
-  if (!active) return;
-
-  const id = getCardId(li);
-  if (!id) return;
-
-  // the card on the page updates when realtime brings the saved comment back
-  const saved = await remoteSaveComment(id, active, String(text || ""));
-  if (saved) {
-    await remoteInsertLog("comment", { title: getTitleFromCard(li) }, id);
-  }
-}
-
-// the same fields from a card on the page and from a saved row, so the two can
-// be compared field by field
-function snapshotCardForLogs(li) {
+// the fields that a change is logged for, the same way from a row on the
+// page and from the row the database saved
+function snapshot(row) {
   return {
-    title: getTitleFromCard(li),
-    state: getState(li),
-    status: normalizeStatusCode(li.dataset.status || "00"),
-    start_date: (li.dataset.start || "").trim() || null,
-    end_date: (li.dataset.end || "").trim() || null,
+    title: titleOf(row),
+    state: stateOf(row),
+    status: normalizeStatusCode(row.status),
+    start_date: row.start_date || null,
+    end_date: row.end_date || null,
   };
 }
 
-function normalizeRowForLogs(row) {
-  return {
-    title: row.title || "unknown title",
-    state: row.state || STATE_PLANNED,
-    status: normalizeStatusCode(row.status || "00"),
-    start_date: row.start_date ? String(row.start_date) : null,
-    end_date: row.end_date ? String(row.end_date) : null,
-  };
-}
-
-// one log line per kind of change, so the activity panel can say what changed
+// one log line per kind of change, so the activity can say what changed
 // rather than only that something did
 async function logEditDiffs(before, after, cardId) {
-  // title rename
   if (before.title !== after.title) {
     await remoteInsertLog("edit_title", { from: before.title, to: after.title }, cardId);
   }
 
-  // state change
   if (before.state !== after.state) {
     await remoteInsertLog("set_state", { title: after.title, from: before.state, to: after.state }, cardId);
   }
 
-  // status change
   if (before.status !== after.status) {
     await remoteInsertLog("set_status", { title: after.title, from: before.status, to: after.status }, cardId);
   }
 
-  // watch dates change (start/end)
-  const bs = before.start_date || "";
-  const be = before.end_date || "";
-  const as = after.start_date || "";
-  const ae = after.end_date || "";
-
-  if (bs !== as || be !== ae) {
+  if (before.start_date !== after.start_date || before.end_date !== after.end_date) {
     await remoteInsertLog("set_watch_dates", {
       title: after.title,
       state: after.state,
@@ -199,196 +123,133 @@ async function logEditDiffs(before, after, cardId) {
   }
 }
 
-export function initializeCardUi() {
-  // add button
-  const addBtn = document.getElementById("addToggle");
-  if (addBtn) {
-    addBtn.addEventListener("click", () => {
-      const activeTab = document.querySelector(`${TAB_INPUT_SELECTOR}:checked`);
-      const pref = activeTab && activeTab.id === UNWATCHED_TAB_ID ? TAB_UNWATCHED : TAB_WATCHED;
-      openAddCardModal(pref);
-    });
+async function saveCardForm() {
+  const title = field("cardTitle").value.trim();
+  if (!title) return;
+
+  const picked = field("cardState").value;
+
+  // which list the card lands on follows from the state alone
+  const payload = {
+    title,
+    state: [STATE_PLANNED, STATE_STARTED, STATE_WATCHED].includes(picked) ? picked : STATE_PLANNED,
+    status: normalizeStatusCode(field("cardStatus").value),
+    start_date: field("cardStart").value.trim() || null,
+    end_date: field("cardEnd").value.trim() || null,
+  };
+
+  // no id when adding: the database numbers cards itself and rejects one sent
+  // from here. the row it returns carries the id it chose
+  const before = editingId ? getCard(editingId) : null;
+  const row = editingId
+    ? await remoteUpdateCard(editingId, payload)
+    : await remoteInsertCard({ ...payload, vlad_score: 0, vika_score: 0 });
+
+  // the form stays open with what was typed, and says so
+  if (!row) {
+    field("cardError").textContent = "could not save the card, try again";
+    return;
   }
 
-  // one listener for every card, the ones drawn later included
-  document.addEventListener("click", async e => {
+  putCard(row);
+  closeDialog("cardDialog");
 
-    // the delete modal
-    const deleteCancelBtn = e.target.closest("#deleteCancel");
-    if (deleteCancelBtn) {
-      deleteModalTargetLi = null;
-      closeModal("deleteModal");
+  if (before) await logEditDiffs(snapshot(before), snapshot(row), row.id);
+  else await remoteInsertLog("add_card", { title: row.title }, row.id);
+}
+
+async function saveCommentForm() {
+  const active = getActiveUser();
+  const id = commentCardId;
+  if (!active || !id) return;
+
+  const text = field("commentText").value.trim();
+  if (!await remoteSaveComment(id, active, text)) {
+    field("commentError").textContent = "could not save the comment, try again";
+    return;
+  }
+
+  putComment(id, active, text);
+  closeDialog("commentDialog");
+  await remoteInsertLog("comment", { title: titleOf(getCard(id)) }, id);
+}
+
+async function deleteCard(id) {
+  const row = getCard(id);
+  if (!row) return;
+
+  const title = titleOf(row);
+  const sure = await confirmDialog({ title: "delete card", question: "are you sure you want to delete ", name: title });
+  if (!sure) return;
+
+  const result = await remoteDeleteCard(id);
+  if (result === "failed") {
+    toast(`could not delete ${title}`);
+    return;
+  }
+
+  dropCard(id);
+
+  // only a delete that actually happened goes into the activity log
+  if (result === "deleted") await remoteInsertLog("delete_card", { title }, null);
+}
+
+export function initializeCardUi() {
+  // one listener for every card, the ones drawn later included
+  document.addEventListener("click", e => {
+    const add = e.target.closest("[data-add]");
+    if (add) {
+      openAddCard(add.closest(".view")?.dataset.list);
       return;
     }
 
-    const deleteConfirmBtn = e.target.closest("#deleteConfirm");
-    if (deleteConfirmBtn) {
-      if (!deleteModalTargetLi) return;
+    // a comment under a card, unfolded or folded again
+    const toggle = e.target.closest(".comment-toggle");
+    if (toggle) {
+      const body = toggle.nextElementSibling;
+      const li = toggle.closest("li");
+      if (!body || !li) return;
 
-      const li = deleteModalTargetLi;
-      const id = getCardId(li);
-      const title = getTitleFromCard(li);
+      const open = body.dataset.open !== "true";
+      body.dataset.open = open ? "true" : "false";
+      toggle.setAttribute("aria-expanded", open ? "true" : "false");
+      setCommentOpen(li.dataset.id, toggle.dataset.who, open);
+      return;
+    }
 
-      // close immediately for responsive feel
-      closeModal("deleteModal");
-      deleteModalTargetLi = null;
+    const actions = e.target.closest(".card-actions");
+    if (actions) {
+      toggleCardMenu(actions.closest("li"));
+      return;
+    }
 
+    const item = e.target.closest(".card-menu button[data-action]");
+    if (item) {
+      const id = item.closest("li")?.dataset.id;
+      closeAllCardMenus();
       if (!id) return;
 
-      const result = await remoteDeleteCard(id);
-      if (result === "failed") return;
-
-      li.remove();
-      scheduleActiveTabView({ animate: false });
-
-      // only a delete that actually happened goes into the activity log
-      if (result === "deleted") {
-        await remoteInsertLog("delete_card", { title }, null);
-      }
-      return;
-    }
-    
-    // a comment toggle under a card
-    const cToggle = e.target.closest(".comment-toggle");
-    if (cToggle) {
-      const li = cToggle.closest("li");
-      if (!li) return;
-
-      const who = (cToggle.dataset.who || "").trim().toLowerCase();
-      const body = cToggle.nextElementSibling;
-      if (!body || !body.classList.contains("comment-body")) return;
-
-      const open = body.dataset.open === "true";
-      body.dataset.open = open ? "false" : "true";
-
-      if (who === "vlad") li.dataset.commentOpenVlad = open ? "false" : "true";
-      if (who === "vika") li.dataset.commentOpenVika = open ? "false" : "true";
-
+      if (item.dataset.action === "edit") openEditCard(id);
+      if (item.dataset.action === "comment") openComment(id);
+      if (item.dataset.action === "delete") deleteCard(id);
       return;
     }
 
-    const actionsBtn = e.target.closest(".card-actions");
-    if (actionsBtn) {
-      const li = actionsBtn.closest("li");
-      if (!li) return;
-      toggleCardMenu(li);
-      return;
-    }
-
-    const menuBtn = e.target.closest(".card-menu button[data-action]");
-    if (menuBtn) {
-      const li = menuBtn.closest("li");
-      if (!li) return;
-
-      const action = menuBtn.dataset.action;
-
-      // close menu immediately
-      closeAllCardMenus();
-
-      if (action === "edit") openEditCardModal(li);
-      if (action === "comment") openCommentModal(li);
-      if (action === "delete") deleteCard(li);
-
-      return;
-    }
-
-    // click outside closes menus
-    if (!e.target.closest(".card-menu") && !e.target.closest(".card-actions")) {
-      closeAllCardMenus();
-    }
+    // a click anywhere else closes an open menu
+    if (!e.target.closest(".card-menu")) closeAllCardMenus();
   });
 
-  // card modal wiring
-  const cardCancel = document.getElementById("cardCancel");
-  if (cardCancel) cardCancel.addEventListener("click", () => closeModal(CARD_MODAL_ID));
-
-  const cardForm = document.getElementById(CARD_FORM_ID);
-  if (cardForm) {
-    cardForm.addEventListener("submit", async e => {
-      e.preventDefault();
-
-      const title = (document.getElementById("cardTitle").value || "").trim();
-      if (!title) return;
-
-      const picked = document.getElementById("cardState").value;
-      const state = [STATE_PLANNED, STATE_STARTED, STATE_WATCHED].includes(picked) ? picked : STATE_PLANNED;
-      const status = document.getElementById("cardStatus").value;
-
-      const start = (document.getElementById("cardStart").value || "").trim();
-      const end = (document.getElementById("cardEnd").value || "").trim();
-
-      // which list the card lands on follows from the state alone
-      const payload = {
-        title,
-        state,
-        status: normalizeStatusCode(status),
-        start_date: start || null,
-        end_date: end || null,
-      };
-
-      if (cardModalMode === "add") {
-        // no id: the database numbers cards itself and rejects one sent from
-        // here. the row it returns carries the id it chose
-        const row = await remoteInsertCard({
-          ...payload,
-          vlad_score: 0,
-          vika_score: 0,
-        });
-
-        if (row) {
-          await remoteInsertLog("add_card", { title: row.title }, row.id);
-        }
-      }
-
-      if (cardModalMode === "edit" && cardModalCardId) {
-        const li = document.querySelector(`.lists li[data-id="${CSS.escape(String(cardModalCardId))}"]`);
-        const before = li ? snapshotCardForLogs(li) : null;
-
-        const row = await remoteUpdateCard(cardModalCardId, payload);
-
-        if (row && before) {
-          const after = normalizeRowForLogs(row);
-          await logEditDiffs(before, after, row.id);
-        }
-      }
-
-
-      closeModal(CARD_MODAL_ID);
-    });
-  }
-
-  // comment modal wiring
-  const commentCancel = document.getElementById("commentCancel");
-  if (commentCancel) commentCancel.addEventListener("click", () => closeModal(COMMENT_MODAL_ID));
-
-  const commentForm = document.getElementById(COMMENT_FORM_ID);
-  if (commentForm) {
-    commentForm.addEventListener("submit", async e => {
-      e.preventDefault();
-
-      const id = commentModalCardId;
-      if (!id) return;
-
-      const li = document.querySelector(`.lists li[data-id="${CSS.escape(String(id))}"]`);
-      if (!li) return;
-
-      const text = (document.getElementById("commentText").value || "").trim();
-      await saveCommentForActiveUser(li, text);
-
-      closeModal(COMMENT_MODAL_ID);
-    });
-  }
-
-  // esc closes modals
   document.addEventListener("keydown", e => {
-    if (e.key !== "Escape") return;
-    closeAllCardMenus();
-    closeModal(CARD_MODAL_ID);
-    closeModal(COMMENT_MODAL_ID);
-    closeModal("deleteModal");
-    closeModal("giftModal");
-    closeModal("wishlistModal");
-    closeModal("wishModal");
-    closeModal("wishDeleteModal")
+    if (e.key === "Escape") closeAllCardMenus();
+  });
+
+  field("cardForm")?.addEventListener("submit", e => {
+    e.preventDefault();
+    whileSaving(field("cardSave"), saveCardForm);
+  });
+
+  field("commentForm")?.addEventListener("submit", e => {
+    e.preventDefault();
+    whileSaving(field("commentSave"), saveCommentForm);
   });
 }

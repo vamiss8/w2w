@@ -17,9 +17,9 @@ test("the art is not downloaded until someone reaches for the heart", async ({ p
   expect(art[0]).toContain("april25.webp");
 
   await page.locator("#secretGiftToggle").click({ force: true });
-  await expect(page.locator("#giftModal")).toHaveClass(/is-open/);
-  await expect(page.locator("#giftModal .gift-art")).toHaveJSProperty("naturalWidth", 1200);
+  await expect(page.locator("#giftDialog")).toBeVisible();
+  await expect(page.locator("#giftDialog .gift-art")).toHaveJSProperty("naturalWidth", 1200);
   await page.locator("#giftClose").click();
-  await expect(page.locator("#giftModal")).not.toHaveClass(/is-open/);
+  await expect(page.locator("#giftDialog")).toBeHidden();
   expect((await requests(page)).filter(r => r.method !== "GET")).toHaveLength(0);
 });

@@ -4,7 +4,7 @@
 // and nothing else: the database refuses everything more.
 
 import { onAuthChange, remoteInsertLog, remoteSendMagicLink, remoteSignOut, remoteWhoAmI } from "./db.js";
-import { updateRatingEditability } from "./ratings.js";
+import { closeDialog, openDialog } from "./dialogs.js";
 
 // the old sign-in stored a name picked from two buttons here. it means
 // nothing now, so it goes
@@ -51,9 +51,14 @@ async function refreshIdentity(session) {
 function updateUserUI() {
   document.body.classList.toggle("is-guest", !activeUser);
 
+  // the pill says who is signed in, in that person's colour
   const btn = document.getElementById("userToggle");
   if (btn) {
-    btn.textContent = activeUser ? `USER: ${activeUser.toUpperCase()}` : hasSession ? "USER: ?" : "SIGN IN";
+    btn.textContent = activeUser || (hasSession ? "?" : "sign in");
+    btn.dataset.user = activeUser || "";
+    btn.setAttribute("aria-label", activeUser
+      ? `signed in as ${activeUser}`
+      : hasSession ? "signed in with an account that is not one of ours" : "sign in");
   }
 
   const title = document.getElementById("authTitle");
@@ -71,8 +76,6 @@ function updateUserUI() {
   }
   if (form) form.hidden = hasSession;
   if (signedIn) signedIn.hidden = !hasSession;
-
-  updateRatingEditability();
 }
 
 function setAuthStatus(text) {
@@ -80,26 +83,8 @@ function setAuthStatus(text) {
   if (status) status.textContent = text || "";
 }
 
-export function openAuthOverlay() {
-  const overlay = document.getElementById("authOverlay");
-  if (!overlay) return;
-
-  overlay.classList.add("is-open");
-  overlay.setAttribute("aria-hidden", "false");
-  document.body.classList.add("auth-open");
-
-  const first = overlay.querySelector(hasSession ? "#authSignOut" : "#authEmail");
-  if (first) first.focus();
-}
-
-function closeAuthOverlay() {
-  const overlay = document.getElementById("authOverlay");
-  if (!overlay) return;
-
-  overlay.classList.remove("is-open");
-  overlay.setAttribute("aria-hidden", "true");
-  document.body.classList.remove("auth-open");
-  setAuthStatus("");
+export function openAuthDialog() {
+  openDialog("authDialog", hasSession ? "authSignOut" : "authEmail");
 }
 
 // supabase answers a refused address and a rate limit with different errors.
@@ -114,8 +99,11 @@ function describeSendError(error) {
 }
 
 export function initializeAuth() {
-  const overlay = document.getElementById("authOverlay");
-  if (!overlay) return;
+  const dialog = document.getElementById("authDialog");
+  if (!dialog) return;
+
+  // whatever it last said about a link goes with it when it closes
+  dialog.addEventListener("close", () => setAuthStatus(""));
 
   const form = document.getElementById("authForm");
   const input = document.getElementById("authEmail");
@@ -141,20 +129,16 @@ export function initializeAuth() {
   if (signOut) {
     signOut.addEventListener("click", async () => {
       await remoteSignOut();
-      closeAuthOverlay();
+      closeDialog("authDialog");
     });
   }
 
-  overlay.querySelectorAll("[data-auth-close]").forEach(btn => {
-    btn.addEventListener("click", closeAuthOverlay);
-  });
+  document.getElementById("userToggle")?.addEventListener("click", openAuthDialog);
 
-  document.addEventListener("keydown", e => {
-    if (e.key === "Escape") closeAuthOverlay();
+  // the other ways in: the note a guest finds where the wishlists would be
+  document.addEventListener("click", e => {
+    if (e.target.closest("[data-sign-in]")) openAuthDialog();
   });
-
-  const userBtn = document.getElementById("userToggle");
-  if (userBtn) userBtn.addEventListener("click", openAuthOverlay);
 
   onAuthChange((event, session) => {
     // supabase-js holds a lock while it runs this callback, and a query
@@ -167,7 +151,7 @@ export function initializeAuth() {
   // of a session. it is said once, and taken out of the address bar
   if (LINK_ERROR) {
     history.replaceState(null, "", location.pathname + location.search);
-    openAuthOverlay();
+    openAuthDialog();
     setAuthStatus(`${LINK_ERROR.toLowerCase()}. send a new one`);
   }
 

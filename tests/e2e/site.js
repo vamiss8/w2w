@@ -65,14 +65,20 @@ export function linkHash(email) {
 
 export async function openAsGuest(page) {
   await page.goto("/");
-  await expect(page.locator(".lists li")).toHaveCount(FIXTURES.cards.length);
+  await expect(page.locator(".cards > li")).toHaveCount(FIXTURES.cards.length);
 }
 
 // signs in the way we do: through the link in the email
 export async function signIn(page, who = "vlad") {
   await page.goto("/" + linkHash(`${who}@test.dev`));
-  await expect(page.locator("#userToggle")).toHaveText(`USER: ${who.toUpperCase()}`);
-  await expect(page.locator(".lists li")).toHaveCount(FIXTURES.cards.length);
+  await expect(page.locator("#userToggle")).toHaveText(who);
+  await expect(page.locator(".cards > li")).toHaveCount(FIXTURES.cards.length);
+}
+
+// opens a section the way a click in the navigation does
+export async function goTo(page, section) {
+  await page.locator(`.nav-item[data-section="${section}"]`).click();
+  await expect(page.locator(`#view-${section}`)).toBeVisible();
 }
 
 export const requests = page => page.evaluate(() => window.__fake.requests);
@@ -80,10 +86,10 @@ export const db = (page, table) => page.evaluate(t => window.__fake.db[t], table
 
 // the ids of a list's cards in the order they are drawn, hidden ones left out
 export function order(page, list) {
-  return page.locator(`.lists ul.${list} > li:not(.is-hidden)`).evaluateAll(lis => lis.map(li => Number(li.dataset.id)));
+  return page.locator(`ul.cards.${list} > li:not(.is-hidden)`).evaluateAll(lis => lis.map(li => Number(li.dataset.id)));
 }
 
-export const card = (page, id) => page.locator(`.lists li[data-id="${id}"]`);
+export const card = (page, id) => page.locator(`.cards > li[data-id="${id}"]`);
 
 export async function openMenu(page, id, action) {
   await card(page, id).locator(".card-actions").click();

@@ -2,7 +2,7 @@
 // other person's browser arrive over realtime, and a socket that dropped is
 // made good by a full pull the moment it rejoins.
 
-import { card, expect, signIn, test } from "./site.js";
+import { FIXTURES, card, expect, goTo, signIn, test } from "./site.js";
 
 test.beforeEach(async ({ page }) => {
   await signIn(page, "vlad");
@@ -24,9 +24,10 @@ test("the other person's comment arrives as they save it", async ({ page }) => {
   await expect(card(page, 12).locator(".comment-toggle.vika")).toHaveText("vika's comment");
 });
 
-test("a log line written elsewhere is prepended while the panel is open", async ({ page }) => {
-  await page.locator("#logsToggle").click();
-  await expect(page.locator("#logsList .log-item")).toHaveCount(20);
+test("a log line written elsewhere is prepended once the activity is open", async ({ page }) => {
+  await goTo(page, "activity");
+  // every line there is, and the sign-in that opened this page
+  await expect(page.locator("#logsList .log-item")).toHaveCount(FIXTURES.logs.length + 1);
   await page.evaluate(() => window.__fake.insert("logs", { ts: "2026-10-28T12:30:00Z", user_name: "vika", action: "rate", card_id: 24, details: { title: "Little Women", score: 9 } }));
   await expect(page.locator("#logsList .log-item").first()).toContainText("rated");
   await expect(page.locator("#logsList .log-item").first()).toContainText("Little Women");
