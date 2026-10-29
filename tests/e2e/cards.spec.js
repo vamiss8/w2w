@@ -13,26 +13,26 @@ test.beforeEach(async ({ page }) => {
 test.describe("order", () => {
   test("not watched yet: planned in the order added, then started, latest first", async ({ page }) => {
     // 17 and 11 were both started on 10/02: the one added last goes first
-    expect(await order(page, "unwatched")).toEqual([3, 7, 12, 15, 19, 22, 17, 11, 5, 21]);
+    await expect.poll(() => order(page, "unwatched")).toEqual([3, 7, 12, 15, 19, 22, 17, 11, 5, 21]);
   });
 
   test("watched: most recent first, and the card added last on top of its day", async ({ page }) => {
     await page.locator('label[for="tab-watched"]').click();
-    expect(await order(page, "watched")).toEqual([24, 20, 23, 18, 16, 14, 13, 10, 9, 6, 8, 4, 2, 1]);
+    await expect.poll(() => order(page, "watched")).toEqual([24, 20, 23, 18, 16, 14, 13, 10, 9, 6, 8, 4, 2, 1]);
   });
 
   test("favourites: by score, then by date", async ({ page }) => {
     await page.locator('label[for="tab-watched"]').click();
     await page.locator(".filters-toggle").click();
     await page.locator('label[for="w-sort-vlad"]').click();
-    expect(await order(page, "watched")).toEqual([9, 4, 1, 18, 16, 13, 10, 8, 2, 24, 23, 14, 6, 20]);
+    await expect.poll(() => order(page, "watched")).toEqual([9, 4, 1, 18, 16, 13, 10, 8, 2, 24, 23, 14, 6, 20]);
   });
 
   test("filters and the open tab survive a reload", async ({ page }) => {
     await page.locator('label[for="tab-watched"]').click();
     await page.locator(".filters-toggle").click();
     await page.locator('label[for="w-status-11"]').click();
-    expect(await order(page, "watched")).toEqual([18, 8, 2]);
+    await expect.poll(() => order(page, "watched")).toEqual([18, 8, 2]);
 
     await page.reload();
     await expect(page.locator("#tab-watched")).toBeChecked();
@@ -147,4 +147,24 @@ test("a card is on the list its state puts it on, with no list to pick", async (
   const patch = (await writes(page)).find(r => r.method === "PATCH" && r.table === "cards");
   expect(patch.body).not.toHaveProperty("tab");
   expect(patch.body.state).toBe("watched");
+});
+
+test("a score the database refuses is taken back", async ({ page }) => {
+  await page.locator('label[for="tab-watched"]').click();
+  const vlad = card(page, 20).locator('.rating-row[data-owner="vlad"]');
+  const before = await vlad.locator(".rating-heart.filled").count();
+
+  await page.evaluate(() => window.__fake.failNext("PATCH", "cards"));
+  await vlad.locator('.rating-heart[data-score="10"]').click();
+  await expect(vlad.locator(".rating-heart.filled")).toHaveCount(before);
+  expect((await writes(page)).filter(r => r.body?.action === "rate")).toHaveLength(0);
+});
+
+test("an unfolded comment stays open when the card changes underneath it", async ({ page }) => {
+  await card(page, 5).locator(".comment-toggle.vlad").click();
+  await expect(card(page, 5).locator(".comment-body")).toBeVisible();
+
+  await page.evaluate(() => window.__fake.update("cards", 5, { title: "Twin Peaks (1990)" }));
+  await expect(card(page, 5).locator(".filmTitle")).toContainText("Twin Peaks (1990)");
+  await expect(card(page, 5).locator(".comment-body")).toBeVisible();
 });

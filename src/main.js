@@ -6,6 +6,7 @@
 
 import { initializeCardUi } from "./editor.js";
 import { initializeGift } from "./gift.js";
+import { initializeLists, scheduleRender } from "./lists.js";
 import { initializeLogsWidget } from "./logs.js";
 import { initializeRatingEditing } from "./ratings.js";
 import { startStarfield } from "./starfield.js";
@@ -13,7 +14,6 @@ import { initializeRealtime, resyncFromRemote } from "./sync.js";
 import { initializeTooltipAutoFlip } from "./tooltips.js";
 import { initializeAuth, onUserChange } from "./user.js";
 import { initializeVersionCheck } from "./version.js";
-import { applyActiveTabView, initializeControls, initializeFiltersToggle, initializeTabs } from "./view.js";
 import { initializeWishlists, remotePullWishes } from "./wishlists.js";
 
 startStarfield();
@@ -21,13 +21,11 @@ startStarfield();
 initializeAuth();
 onUserChange(() => resyncFromRemote());
 initializeVersionCheck();
+initializeLists();
 initializeCardUi();
-initializeFiltersToggle();
 initializeLogsWidget();
 initializeRatingEditing();
 initializeTooltipAutoFlip();
-initializeControls();
-initializeTabs();
 initializeWishlists();
 initializeGift();
 
@@ -38,4 +36,4 @@ try {
   console.error("[supabase] initializeRealtime crashed", e);
 }
 
-applyActiveTabView({ animate: true });
+scheduleRender({ animate: true });

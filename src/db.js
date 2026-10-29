@@ -124,17 +124,19 @@ export async function remoteDeleteCard(cardId) {
   return "failed";
 }
 
+// returns whether the database took the score
 export async function remoteUpdateRating(cardId, owner, score) {
   const sb = getSupabase();
-  if (!sb) return;
+  if (!sb) return false;
 
   const id = parseInt(cardId, 10);
-  if (Number.isNaN(id)) return;
+  if (Number.isNaN(id)) return false;
 
   const patch = owner === "vlad" ? { vlad_score: score } : { vika_score: score };
 
   const { error } = await sb.from("cards").update(patch).eq("id", id);
   if (error) console.error("[supabase] update rating failed", error);
+  return !error;
 }
 
 // a line in the activity log. only one of us writes them, and the database

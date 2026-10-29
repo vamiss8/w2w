@@ -4,7 +4,6 @@
 // and nothing else: the database refuses everything more.
 
 import { onAuthChange, remoteInsertLog, remoteSendMagicLink, remoteSignOut, remoteWhoAmI } from "./db.js";
-import { updateRatingEditability } from "./ratings.js";
 
 // the old sign-in stored a name picked from two buttons here. it means
 // nothing now, so it goes
@@ -71,8 +70,6 @@ function updateUserUI() {
   }
   if (form) form.hidden = hasSession;
   if (signedIn) signedIn.hidden = !hasSession;
-
-  updateRatingEditability();
 }
 
 function setAuthStatus(text) {

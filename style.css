@@ -1937,6 +1937,10 @@ body {
   border-color: rgba(230, 232, 255, 0.10);
 }
 
+.card-menu button.danger {
+  color: #ff7abf;
+}
+
 .card-menu .menu-sep {
   height: 1px;
   margin: 10px 2px;
