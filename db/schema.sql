@@ -31,6 +31,16 @@ as $$
   where m.email = lower(auth.jwt() ->> 'email')
 $$;
 
+-- which migration this is, so the page can tell a database that is behind it.
+-- every migration ends by raising the number
+create function public.schema_version()
+returns int
+language sql
+immutable
+as $$
+  select 4
+$$;
+
 create function public.touch_updated_at()
 returns trigger language plpgsql as $$
 begin
@@ -204,6 +214,8 @@ grant usage on schema public to anon, authenticated;
 revoke all on all tables in schema public from anon, authenticated;
 revoke all on function public.app_user() from public;
 grant execute on function public.app_user() to anon, authenticated;
+revoke all on function public.schema_version() from public;
+grant execute on function public.schema_version() to anon, authenticated;
 
 grant select on public.cards to anon;
 grant select, insert, update, delete on public.cards to authenticated;

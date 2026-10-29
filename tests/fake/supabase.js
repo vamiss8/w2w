@@ -210,6 +210,12 @@
     });
 
     if (table === "rpc/app_user") return json(200, member);
+    if (table === "rpc/schema_version") {
+      // a test can play a database from before 004, which had no such
+      // function, or one a migration ahead of the page
+      const version = window.__W2W_SCHEMA_VERSION__ ?? 4;
+      return version ? json(200, version) : json(404, { code: "PGRST202", message: "Could not find the function public.schema_version without parameters in the schema cache" });
+    }
 
     const rows = db[table];
     if (!rows) return json(404, { code: "42P01", message: `relation "public.${table}" does not exist` });
