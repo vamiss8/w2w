@@ -130,4 +130,39 @@ describe("the two of us", () => {
     const [{ id }] = rowsOf(await vlad("insert into public.wishes (owner, title) values ('vika', 'from vlad') returning id"));
     assert.equal((await vika("delete from public.wishes where id = $1", [id])).count, 1);
   });
+
+  test("edit a wish, links and all", async () => {
+    const [{ id }] = rowsOf(await vika("insert into public.wishes (owner, title, links) values ('vika', 'a scarf', '{https://example.com/a}') returning id"));
+    assert.equal((await vlad("update public.wishes set title = 'a red scarf', links = '{https://example.com/a,https://example.com/b}' where id = $1", [id])).count, 1);
+    const [row] = (await db.query("select title, links, updated_at > added_at as edited from public.wishes where id = $1", [id])).rows;
+    assert.deepEqual(row, { title: "a red scarf", links: ["https://example.com/a", "https://example.com/b"], edited: true });
+  });
+
+  test("tick a wish off, and the database writes down who did it", async () => {
+    const [{ id }] = rowsOf(await vlad("insert into public.wishes (owner, title) values ('vika', 'a plush manul') returning id"));
+    const doneBy = async () => (await db.query("select done_by from public.wishes where id = $1", [id])).rows[0].done_by;
+
+    // vlad tries to say vika did it; the trigger knows better
+    rowsOf(await vlad("update public.wishes set done_at = now(), done_by = 'vika' where id = $1", [id]));
+    assert.equal(await doneBy(), "vlad");
+
+    // a later edit of a done wish leaves the name alone, even one aimed at it
+    rowsOf(await vika("update public.wishes set title = 'a plush manul from ikea' where id = $1", [id]));
+    assert.equal(await doneBy(), "vlad");
+    rowsOf(await vika("update public.wishes set done_by = 'vika' where id = $1", [id]));
+    assert.equal(await doneBy(), "vlad");
+
+    rowsOf(await vika("update public.wishes set done_at = null where id = $1", [id]));
+    assert.equal(await doneBy(), null);
+  });
+});
+
+describe("wishes, from outside", () => {
+  test("a guest cannot change one", async () => {
+    refused(await guest("update public.wishes set title = 'x' where id = 1"));
+  });
+
+  test("a stranger's update touches nothing", async () => {
+    assert.equal((await stranger("update public.wishes set done_at = now() where id = 1")).count, 0);
+  });
 });

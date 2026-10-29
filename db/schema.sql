@@ -39,6 +39,23 @@ begin
 end;
 $$;
 
+-- ticking a wish stamps who did it; unticking clears the name with the date.
+-- done_by is never taken from the request: a wish already done keeps the name
+-- it was ticked with, through any later edit
+create function public.stamp_wish_done()
+returns trigger language plpgsql as $$
+begin
+  if new.done_at is null then
+    new.done_by := null;
+  elsif tg_op = 'INSERT' or old.done_at is null then
+    new.done_by := public.app_user();
+  else
+    new.done_by := old.done_by;
+  end if;
+  return new;
+end;
+$$;
+
 -- tables ---------------------------------------------------------------------------
 
 -- tab always follows from state: only a watched card is on the watched list
@@ -69,13 +86,25 @@ create table public.logs (
   details jsonb not null default '{}'::jsonb
 );
 
+-- a wish that came true stays, ticked off with the date and who did it
 create table public.wishes (
   id bigint generated always as identity primary key,
   owner text not null check (owner in ('vlad','vika')),
   title text not null,
-  link text,
-  added_at timestamptz not null default now()
+  added_at timestamptz not null default now(),
+  links text[] not null default '{}',
+  done_at timestamptz,
+  done_by text check (done_by in ('vlad', 'vika')),
+  updated_at timestamptz not null default now()
 );
+
+create trigger trg_wishes_stamp_done
+before insert or update on public.wishes
+for each row execute function public.stamp_wish_done();
+
+create trigger trg_wishes_touch_updated_at
+before update on public.wishes
+for each row execute function public.touch_updated_at();
 
 -- comments live apart from cards so that a guest, who may read every card,
 -- cannot read them: row level security hides rows, not columns
@@ -135,6 +164,11 @@ create policy "members add wishes" on public.wishes
   for insert to authenticated
   with check ((select public.app_user()) is not null);
 
+create policy "members change wishes" on public.wishes
+  for update to authenticated
+  using ((select public.app_user()) is not null)
+  with check ((select public.app_user()) is not null);
+
 create policy "members delete wishes" on public.wishes
   for delete to authenticated
   using ((select public.app_user()) is not null);
@@ -174,7 +208,7 @@ grant select on public.logs to anon;
 grant select, insert on public.logs to authenticated;
 
 grant select on public.wishes to anon;
-grant select, insert, delete on public.wishes to authenticated;
+grant select, insert, update, delete on public.wishes to authenticated;
 
 grant select on public.comments to anon;
 grant select, insert, update, delete on public.comments to authenticated;

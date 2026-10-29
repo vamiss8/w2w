@@ -193,15 +193,35 @@ export async function remoteFetchWishes() {
   return data || [];
 }
 
-export async function remoteInsertWish(owner, title, link) {
+// returns whether the database took the wish
+export async function remoteInsertWish(owner, title, links) {
   const sb = getSupabase();
-  if (!sb) return;
+  if (!sb) return false;
 
   // the database numbers wishes itself, the same way it numbers cards
-  const payload = { owner, title, link: link || null };
+  const payload = { owner, title, links };
 
   const { error } = await sb.from("wishes").insert(payload);
-  if (error) console.error("[supabase] wish insert failed", error);
+  if (error) {
+    console.error("[supabase] wish insert failed", error);
+    return false;
+  }
+
+  return true;
+}
+
+// returns whether the database took the change
+export async function remoteUpdateWish(id, patch) {
+  const sb = getSupabase();
+  if (!sb) return false;
+
+  const { error } = await sb.from("wishes").update(patch).eq("id", parseInt(id, 10));
+  if (error) {
+    console.error("[supabase] wish update failed", error);
+    return false;
+  }
+
+  return true;
 }
 
 export async function remoteDeleteWish(id) {

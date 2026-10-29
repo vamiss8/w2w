@@ -395,7 +395,7 @@ export function initializeCardUi() {
     closeModal("deleteModal");
     closeModal("giftModal");
     closeModal("wishlistModal");
-    closeModal("wishAddModal");
+    closeModal("wishModal");
     closeModal("wishDeleteModal")
   });
 }
