@@ -1,7 +1,7 @@
 // what every spec starts from: the site, served straight from the repo, with
 // tests/fake/supabase.js standing in for supabase and tests/fixtures as its
-// data. supabase-js itself is the real one, from node_modules, the same
-// version and the same bytes the page loads from the cdn.
+// data. supabase-js itself is the real one: the copy in vendor/, which
+// vendor.spec.js holds to the one in node_modules.
 
 import { test as base, expect } from "@playwright/test";
 import fs from "node:fs";
@@ -18,7 +18,6 @@ export const FIXTURES = {
   members: fixture("members"),
 };
 
-const SUPABASE_JS = path.join(ROOT, "tests/node_modules/@supabase/supabase-js/dist/umd/supabase.js");
 const TYPES = {
   ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".json": "application/json",
   ".png": "image/png", ".webp": "image/webp", ".svg": "image/svg+xml", ".webmanifest": "application/manifest+json",
@@ -34,10 +33,6 @@ async function serve(route) {
       return route.fulfill({ status: 404, body: "not found" });
     }
     return route.fulfill({ path: file, contentType: TYPES[path.extname(file).toLowerCase()] || "application/octet-stream" });
-  }
-
-  if (url.host === "cdn.jsdelivr.net" && url.pathname.includes("/@supabase/supabase-js@")) {
-    return route.fulfill({ path: SUPABASE_JS, contentType: "text/javascript" });
   }
 
   // fonts and anything else from outside: a run stays offline
