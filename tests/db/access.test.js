@@ -56,6 +56,13 @@ describe("a guest", () => {
   test("cannot read the members", async () => {
     refused(await guest("select * from public.members"));
   });
+
+  test("cannot empty a table, which no policy would have stopped", async () => {
+    for (const table of ["cards", "logs", "wishes", "comments", "members"]) {
+      refused(await guest(`truncate public.${table} cascade`));
+    }
+    assert.equal(rowsOf(await guest("select count(*)::int as n from public.cards"))[0].n, cards.length);
+  });
 });
 
 describe("a stranger with an account", () => {
@@ -104,6 +111,14 @@ describe("the two of us", () => {
     const [line] = rowsOf(await vlad("insert into public.logs (action, details) values ('login', '{}') returning user_name"));
     assert.equal(line.user_name, "vlad");
     refused(await vlad("insert into public.logs (user_name, action) values ('vika', 'login')"));
+  });
+
+  test("a log line stays as it was written, and so does every table", async () => {
+    refused(await vika("update public.logs set action = 'rate' where id = 1"));
+    refused(await vika("delete from public.logs where id = 1"));
+    for (const table of ["cards", "logs", "wishes", "comments"]) {
+      refused(await vlad(`truncate public.${table} cascade`));
+    }
   });
 
   test("comment under our own name only, and saving again overwrites", async () => {

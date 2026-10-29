@@ -192,12 +192,16 @@ create policy "members delete their own comments" on public.comments
 
 -- grants -----------------------------------------------------------------------------
 
+-- supabase gives anon and authenticated every privilege on a new table, and
+-- row level security only ever stops rows: truncate does not ask a policy. so
+-- everything is taken back first, and the grants after it are all there is.
+--
 -- select stays granted to anon on the private tables too, so a guest's read
 -- comes back empty instead of failing, and realtime quietly sends a guest nothing
 
 grant usage on schema public to anon, authenticated;
 
-revoke all on public.members from anon, authenticated;
+revoke all on all tables in schema public from anon, authenticated;
 revoke all on function public.app_user() from public;
 grant execute on function public.app_user() to anon, authenticated;
 

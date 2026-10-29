@@ -1,7 +1,8 @@
 // a fresh postgres (pglite, postgres 17 compiled to wasm) with the parts of
-// supabase the sql in db/ leans on: the anon and authenticated roles,
-// auth.jwt(), and the realtime publication. plus a way to run a statement the
-// way postgrest would, as a role with a session's claims.
+// supabase the sql in db/ leans on: the anon and authenticated roles, the
+// grants supabase hands them by default, auth.jwt(), and the realtime
+// publication. plus a way to run a statement the way postgrest would, as a
+// role with a session's claims.
 
 import { PGlite } from "@electric-sql/pglite";
 import fs from "node:fs";
@@ -34,6 +35,14 @@ export async function freshSupabase() {
     $$;
     grant usage on schema auth to anon, authenticated;
     create publication supabase_realtime;
+
+    -- what a supabase project does for everything created in public: every
+    -- privilege, to both roles. row level security is what stands in the way,
+    -- and it only stops rows, so whatever a grant here allows that a policy
+    -- cannot see, truncate above all, is allowed for real
+    alter default privileges in schema public grant all on tables to anon, authenticated;
+    alter default privileges in schema public grant all on sequences to anon, authenticated;
+    alter default privileges in schema public grant all on functions to anon, authenticated;
   `);
   return db;
 }
