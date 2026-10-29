@@ -193,15 +193,21 @@ export async function remoteFetchWishes() {
   return data || [];
 }
 
+// returns whether the database took the wish
 export async function remoteInsertWish(owner, title, links) {
   const sb = getSupabase();
-  if (!sb) return;
+  if (!sb) return false;
 
   // the database numbers wishes itself, the same way it numbers cards
   const payload = { owner, title, links };
 
   const { error } = await sb.from("wishes").insert(payload);
-  if (error) console.error("[supabase] wish insert failed", error);
+  if (error) {
+    console.error("[supabase] wish insert failed", error);
+    return false;
+  }
+
+  return true;
 }
 
 // returns whether the database took the change

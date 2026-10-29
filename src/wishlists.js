@@ -3,7 +3,8 @@
 //
 // a wish that came true is ticked off rather than deleted: it moves down into
 // its column's done list, with the day and who ticked it, and can be unticked
-// from there if it was ticked by mistake.
+// from there if it was ticked by mistake. a wish can be edited, moved to the
+// other list, and carry as many links as it needs.
 
 import { formatTimestampForUI } from "./dates.js";
 import { remoteDeleteWish, remoteFetchWishes, remoteInsertWish, remoteUpdateWish } from "./db.js";
@@ -53,13 +54,8 @@ function renderWish(w) {
   li.className = w.done_at ? "wish-item is-done" : "wish-item";
   li.dataset.id = String(w.id);
 
-  const check = document.createElement("button");
-  check.className = "wish-check";
-  check.type = "button";
-  check.dataset.id = String(w.id);
+  const check = button("wish-check", w.done_at ? "not done after all" : "mark as done", w.id);
   check.setAttribute("aria-pressed", w.done_at ? "true" : "false");
-  check.setAttribute("aria-label", w.done_at ? "not done after all" : "mark as done");
-  check.appendChild(tooltip(w.done_at ? "not done after all" : "mark as done"));
 
   const info = document.createElement("div");
   info.className = "wish-info";
@@ -69,18 +65,25 @@ function renderWish(w) {
   title.textContent = w.title;
   info.appendChild(title);
 
-  (w.links || []).forEach(link => {
-    const href = safeLink(link);
-    if (!href) return;
+  const links = (w.links || []).map(safeLink).filter(Boolean);
+  if (links.length) {
+    const box = document.createElement("div");
+    box.className = "wish-links";
 
-    const a = document.createElement("a");
-    a.className = "wish-link";
-    a.href = href;
-    a.target = "_blank";
-    a.rel = "noopener noreferrer";
-    a.textContent = "link ↗";
-    info.appendChild(a);
-  });
+    // named by the site they lead to: with several links on one wish, five
+    // identical "link" labels would not tell them apart
+    links.forEach(href => {
+      const a = document.createElement("a");
+      a.className = "wish-link";
+      a.href = href;
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
+      a.textContent = `${new URL(href).hostname.replace(/^www\./, "")} ↗`;
+      box.appendChild(a);
+    });
+
+    info.appendChild(box);
+  }
 
   if (w.done_at) {
     const note = document.createElement("span");
@@ -89,23 +92,33 @@ function renderWish(w) {
     info.appendChild(note);
   }
 
-  // the × carries the site's own tooltip rather than a title attribute
-  const del = document.createElement("button");
-  del.className = "wish-delete";
-  del.type = "button";
-  del.dataset.id = String(w.id);
-  del.setAttribute("aria-label", "delete wish");
-  del.append("×", tooltip("delete wish"));
+  const actions = document.createElement("div");
+  actions.className = "wish-actions";
 
-  li.append(check, info, del);
+  const edit = button("wish-btn wish-edit", "edit wish", w.id);
+  edit.prepend("✎");
+
+  // the × carries the site's own tooltip rather than a title attribute
+  const del = button("wish-btn wish-delete", "delete wish", w.id);
+  del.prepend("×");
+
+  actions.append(edit, del);
+  li.append(check, info, actions);
   return li;
 }
 
-function tooltip(text) {
+function button(className, label, id) {
+  const b = document.createElement("button");
+  b.className = className;
+  b.type = "button";
+  b.dataset.id = String(id);
+  b.setAttribute("aria-label", label);
+
   const tip = document.createElement("span");
   tip.className = "tooltip";
-  tip.textContent = text;
-  return tip;
+  tip.textContent = label;
+  b.appendChild(tip);
+  return b;
 }
 
 // a link is only ever an http or https address. anything else, javascript:
@@ -120,6 +133,16 @@ function safeLink(raw) {
   } catch {
     return null;
   }
+}
+
+// what one of us typed, as a link to keep, or null when it is not one. a bare
+// address gets https in front, and something with no dot in its host, like a
+// stray word, is not taken for an address at all
+function normalizeLink(raw) {
+  const withScheme = /^[a-z][a-z0-9+.-]*:/i.test(raw) ? raw : `https://${raw}`;
+  const href = safeLink(withScheme);
+  if (!href) return null;
+  return new URL(href).hostname.includes(".") ? href : null;
 }
 
 // the list moves the moment the box is ticked, before the database has
@@ -154,21 +177,169 @@ function restoreDoneOpen() {
   });
 }
 
+/* ---------------------------
+   THE WISH FORM
+---------------------------- */
+
+// null while adding, the id of the wish while editing one
+let editingId = null;
+
+const linkRows = () => document.getElementById("wishLinkRows");
+
+function addLinkRow(value = "", after = null) {
+  const row = document.createElement("div");
+  row.className = "wish-link-row";
+
+  const input = document.createElement("input");
+  input.className = "field-input";
+  input.type = "text";
+  input.inputMode = "url";
+  input.autocomplete = "off";
+  input.spellcheck = false;
+  input.placeholder = "e.g. ozon.ru/t/... or https://...";
+  input.value = value;
+  input.setAttribute("aria-label", "link");
+
+  const remove = document.createElement("button");
+  remove.className = "wish-link-remove";
+  remove.type = "button";
+  remove.setAttribute("aria-label", "remove this link");
+  remove.textContent = "×";
+
+  row.append(input, remove);
+  if (after) after.after(row);
+  else linkRows().appendChild(row);
+  return input;
+}
+
+// an address never has a space in it, so a link field holding several
+// address-like pieces means they were pasted at once, from a note or a
+// message: each gets a row. words that are not addresses stay as typed, for
+// the check on save to point at
+function splitPastedLinks(input) {
+  const parts = input.value.split(/\s+/).filter(Boolean);
+  if (parts.length < 2 || !parts.every(part => part.includes(".") || part.includes("://"))) return;
+
+  input.value = parts[0];
+  let row = input.closest(".wish-link-row");
+  let last = input;
+  parts.slice(1).forEach(part => {
+    last = addLinkRow(part, row);
+    row = last.closest(".wish-link-row");
+  });
+  last.focus();
+}
+
+function setWishError(text, field = null) {
+  document.getElementById("wishError").textContent = text || "";
+  if (field) field.focus();
+}
+
+function openWishForm({ owner, wish = null }) {
+  editingId = wish ? String(wish.id) : null;
+
+  document.getElementById("wishModalTitle").textContent = wish ? "edit wish" : "add wish";
+  const who = wish ? wish.owner : owner;
+  document.getElementById("wishOwnerVlad").checked = who === "vlad";
+  document.getElementById("wishOwnerVika").checked = who === "vika";
+  document.getElementById("wishTitle").value = wish ? wish.title : "";
+
+  linkRows().replaceChildren();
+  const links = wish && wish.links && wish.links.length ? wish.links : [""];
+  links.forEach(link => addLinkRow(link));
+  setWishError("");
+
+  closeModal("wishlistModal");
+  openModal("wishModal");
+  document.getElementById("wishTitle").focus();
+}
+
+function closeWishForm() {
+  editingId = null;
+  closeModal("wishModal");
+  openModal("wishlistModal");
+}
+
+async function saveWishForm() {
+  const titleField = document.getElementById("wishTitle");
+  const title = titleField.value.trim();
+  if (!title) {
+    setWishError("a wish needs a few words", titleField);
+    return;
+  }
+
+  const links = [];
+  for (const input of linkRows().querySelectorAll("input")) {
+    const raw = input.value.trim();
+    if (!raw) continue;
+
+    const href = normalizeLink(raw);
+    if (!href) {
+      setWishError(`"${raw}" does not look like a link`, input);
+      return;
+    }
+    if (!links.includes(href)) links.push(href);
+  }
+
+  const owner = document.getElementById("wishOwnerVika").checked ? "vika" : "vlad";
+  const saved = editingId
+    ? await remoteUpdateWish(editingId, { owner, title, links })
+    : await remoteInsertWish(owner, title, links);
+
+  if (!saved) {
+    setWishError("could not save the wish, try again");
+    return;
+  }
+
+  // realtime brings the change back too, but the list should not wait for it
+  await remotePullWishes();
+  closeWishForm();
+}
+
+function initializeWishForm() {
+  const form = document.getElementById("wishForm");
+  if (!form) return;
+
+  form.addEventListener("submit", e => {
+    e.preventDefault();
+    saveWishForm();
+  });
+
+  document.getElementById("wishCancel").addEventListener("click", closeWishForm);
+
+  document.getElementById("wishAddLink").addEventListener("click", () => {
+    addLinkRow().focus();
+  });
+
+  linkRows().addEventListener("input", e => {
+    if (e.target.matches("input")) splitPastedLinks(e.target);
+  });
+
+  // the last row is emptied rather than removed, so there is always one to
+  // type into
+  linkRows().addEventListener("click", e => {
+    const remove = e.target.closest(".wish-link-remove");
+    if (!remove) return;
+
+    const row = remove.closest(".wish-link-row");
+    if (linkRows().children.length > 1) row.remove();
+    else row.querySelector("input").value = "";
+  });
+}
+
 // which wish the delete modal is about
 let wishDeleteTargetId = null;
 
 export function initializeWishlists() {
-  // open wishlist modal
   const toggle = document.getElementById("wishlistToggle");
   if (toggle) toggle.addEventListener("click", () => openModal("wishlistModal"));
 
   restoreDoneOpen();
+  initializeWishForm();
 
   // one listener for the modals and for the wish buttons, which are redrawn on
   // every change
   document.addEventListener("click", async e => {
-
-    // close main wishlist modal
     if (e.target.closest("#wishlistClose")) {
       closeModal("wishlistModal");
       return;
@@ -180,60 +351,34 @@ export function initializeWishlists() {
       return;
     }
 
-    // open add wish modal
     const addBtn = e.target.closest(".add-wish-btn");
     if (addBtn) {
-      const owner = addBtn.dataset.owner;
-      document.getElementById("wishAddOwner").value = owner;
-      document.getElementById("wishInputTitle").value = "";
-      document.getElementById("wishInputLink").value = "";
-      document.getElementById("wishAddTitle").textContent = `add wish for ${owner}`;
-
-      closeModal("wishlistModal");
-      openModal("wishAddModal");
+      openWishForm({ owner: addBtn.dataset.owner });
       return;
     }
 
-    // cancel adding wish
-    if (e.target.closest("#wishAddCancel")) {
-      closeModal("wishAddModal");
-      openModal("wishlistModal");
+    const editBtn = e.target.closest(".wish-edit");
+    if (editBtn) {
+      const wish = wishesData.find(w => String(w.id) === editBtn.dataset.id);
+      if (wish) openWishForm({ wish });
       return;
     }
 
-    // save new wish
-    if (e.target.closest("#wishAddSave")) {
-      const owner = document.getElementById("wishAddOwner").value;
-      const title = (document.getElementById("wishInputTitle").value || "").trim();
-      let link = (document.getElementById("wishInputLink").value || "").trim();
-
-      if (!title) {
-        alert("please enter a title!");
-        return;
-      }
-
-      // auto-prepend https:// if missing
-      if (link && !link.startsWith("http://") && !link.startsWith("https://")) {
-        link = "https://" + link;
-      }
-
-      await remoteInsertWish(owner, title, link ? [link] : []);
-
-      closeModal("wishAddModal");
-      openModal("wishlistModal");
-      return;
-    }
-
-    // trigger delete wish modal
     const delBtn = e.target.closest(".wish-delete");
     if (delBtn) {
       wishDeleteTargetId = delBtn.dataset.id;
+      const wish = wishesData.find(w => String(w.id) === wishDeleteTargetId);
+
+      const name = document.createElement("span");
+      name.className = "modal-desc-name";
+      name.textContent = wish ? wish.title : "this wish";
+      document.getElementById("wishDeleteDesc").replaceChildren("are you sure you want to delete ", name, "?");
+
       closeModal("wishlistModal");
       openModal("wishDeleteModal");
       return;
     }
 
-    // cancel delete wish
     if (e.target.closest("#wishDeleteCancel")) {
       wishDeleteTargetId = null;
       closeModal("wishDeleteModal");
@@ -241,12 +386,12 @@ export function initializeWishlists() {
       return;
     }
 
-    // confirm delete wish
     if (e.target.closest("#wishDeleteConfirm")) {
       if (!wishDeleteTargetId) return;
 
       await remoteDeleteWish(wishDeleteTargetId);
       wishDeleteTargetId = null;
+      await remotePullWishes();
 
       closeModal("wishDeleteModal");
       openModal("wishlistModal");

@@ -2511,14 +2511,10 @@ li.menu-open {
 }
 
 /* =========================
-   WISHLIST DELETE BUTTON
+   WISHLIST EDIT AND DELETE BUTTONS
    ========================= */
 
-/* =========================
-   WISHLIST DELETE BUTTON
-   ========================= */
-
-.wish-delete {
+.wish-btn {
   position: relative; /* required for absolute tooltip positioning */
   width: 32px;
   height: 32px;
@@ -2546,7 +2542,7 @@ li.menu-open {
     box-shadow 0.25s ease;
 }
 
-.wish-delete:hover {
+.wish-btn:hover {
   background: rgba(253, 250, 250, 0.05);
   border-color: rgba(230, 232, 255, 0.10);
   transform: translateY(-1px);
@@ -2556,14 +2552,14 @@ li.menu-open {
 }
 
 /* animate out to the left and make visible */
-.wish-delete:hover .tooltip,
-.wish-delete:focus-visible .tooltip {
+.wish-btn:hover .tooltip,
+.wish-btn:focus-visible .tooltip {
   opacity: 1;
   visibility: visible;
   transform: translateX(0) translateY(-50%);
 }
 /* position tooltip to the left of the button to prevent clipping and scrolling */
-.wish-delete .tooltip {
+.wish-btn .tooltip {
   top: 50%;
   left: auto;
   right: calc(100% + 12px); /* spacing from the button */
@@ -2577,7 +2573,7 @@ li.menu-open {
 }
 
 /* move the little arrow to the right side of the tooltip */
-.wish-delete .tooltip::before {
+.wish-btn .tooltip::before {
   top: 50%;
   left: auto;
   right: -6.5px;
@@ -2592,7 +2588,7 @@ li.menu-open {
 }
 
 /* remove the default question mark */
-.wish-delete .tooltip::after {
+.wish-btn .tooltip::after {
   display: none;
 }
 
@@ -2771,4 +2767,109 @@ li.menu-open {
 
 .wishes-done .wishes-list {
   margin-top: 10px;
+}
+
+/* =========================
+   WISHLIST LINKS AND FORM
+   ========================= */
+
+.wish-actions {
+  display: flex;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+
+/* several links sit on one line, each named by its site */
+.wish-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 12px;
+}
+
+.wish-owner {
+  justify-content: flex-start;
+}
+
+.wish-title-input {
+  min-height: 64px;
+}
+
+.wish-link-rows {
+  display: grid;
+  gap: 8px;
+}
+
+.wish-link-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.wish-link-remove {
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+
+  font-size: 1.05rem;
+  line-height: 1;
+
+  color: rgba(154, 160, 214, 0.92);
+  background: transparent;
+  border: 1px solid rgba(230, 232, 255, 0.08);
+  cursor: pointer;
+  transition: color 0.2s ease, border-color 0.2s ease;
+}
+
+.wish-link-remove:hover {
+  color: #ff7abf;
+  border-color: rgba(255, 122, 191, 0.35);
+}
+
+.add-link-btn {
+  justify-self: start;
+  padding: 7px 12px;
+  border-radius: 999px;
+
+  background: transparent;
+  border: 1px dashed rgba(230, 232, 255, 0.15);
+  color: rgba(154, 160, 214, 0.85);
+
+  font-family: var(--font-badge);
+  font-size: 0.66rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: border-color 0.2s ease, color 0.2s ease;
+}
+
+.add-link-btn:hover {
+  border-color: rgba(230, 232, 255, 0.3);
+  color: rgba(230, 232, 255, 0.9);
+}
+
+/* what is wrong with the form, said under it rather than in an alert. empty
+   most of the time, and then it takes no room */
+.form-error {
+  margin: 0;
+  font-family: var(--font-content);
+  font-size: 0.8rem;
+  line-height: 1.35;
+  color: #ff7abf;
+  text-align: center;
+}
+
+.form-error:empty {
+  display: none;
+}
+
+/* the name of what a confirmation is about, inside its sentence */
+.modal-desc-name {
+  display: inline-block;
+  margin-top: 6px;
+  font-family: var(--font-content);
+  font-weight: 600;
+  letter-spacing: normal;
+  text-transform: none;
+  color: rgba(230, 232, 255, 0.94);
 }
