@@ -1,0 +1,19 @@
+{
+  "name": "w2w-tests",
+  "private": true,
+  "type": "module",
+  "description": "the site and the database under test: playwright against a stand-in for supabase, and the sql replayed on pglite",
+  "scripts": {
+    "test": "npm run lint && npm run db && npm run e2e",
+    "lint": "cd .. && eslint --config tests/eslint.config.js src tests",
+    "db": "node --test \"db/*.test.js\"",
+    "e2e": "playwright test"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "0.3.16",
+    "@playwright/test": "1.64.1",
+    "@supabase/supabase-js": "2.117.2",
+    "eslint": "9.39.5",
+    "globals": "16.5.0"
+  }
+}
