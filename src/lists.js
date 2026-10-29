@@ -127,6 +127,20 @@ function cardFor(row) {
   return li;
 }
 
+function sortedLists() {
+  const rows = allCards();
+  return {
+    [LIST_TO_WATCH]: sortToWatch(rows.filter(r => listOf(r) === LIST_TO_WATCH)),
+    [LIST_WATCHED]: sortWatched(rows.filter(r => listOf(r) === LIST_WATCHED), chosen("w-sort")),
+  };
+}
+
+// the cards a list shows right now, in its order: whatever the filters and
+// the search let through
+export function visibleRows(list) {
+  return sortedLists()[list].filter(passes);
+}
+
 function drawLists() {
   const rows = allCards();
   const live = new Set(rows.map(r => String(r.id)));
@@ -139,10 +153,7 @@ function drawLists() {
     }
   }
 
-  const lists = {
-    [LIST_TO_WATCH]: sortToWatch(rows.filter(r => listOf(r) === LIST_TO_WATCH)),
-    [LIST_WATCHED]: sortWatched(rows.filter(r => listOf(r) === LIST_WATCHED), chosen("w-sort")),
-  };
+  const lists = sortedLists();
 
   for (const [list, sorted] of Object.entries(lists)) {
     const view = document.querySelector(VIEW_OF[list]);

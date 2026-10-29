@@ -84,6 +84,7 @@
         <input class="search-input" type="search" placeholder="find a title" aria-label="find a title" autocomplete="off" spellcheck="false" enterkeyhint="search" data-search />
         <div class="toolbar-buttons">
           <button class="pill add-toggle members-only" type="button" data-add>add card</button>
+          <button class="pill" type="button" data-tonight>tonight?</button>
           <button class="pill filters-toggle" type="button" aria-expanded="false" aria-controls="filtersToWatch">
             filters <span class="caret" aria-hidden="true"></span>
           </button>
@@ -415,6 +416,21 @@
       <div class="dialog-actions">
         <button class="btn ghost" id="confirmCancel" type="button" data-close>cancel</button>
         <button class="btn danger" id="confirmOk" type="button">delete</button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- TONIGHT, one card at random from what the list shows. src/tonight.js -->
+  <dialog class="dialog dialog-narrow" id="tonightDialog" aria-labelledby="tonightTitle" data-light-dismiss>
+    <div class="dialog-body">
+      <h2 class="dialog-title" id="tonightTitle">tonight</h2>
+      <p class="dialog-desc">how about</p>
+      <p class="tonight-pick" id="tonightPick" aria-live="polite"></p>
+      <p class="tonight-meta" id="tonightMeta"></p>
+
+      <div class="dialog-actions">
+        <button class="btn ghost" id="tonightAgain" type="button">another one</button>
+        <button class="btn" id="tonightOk" type="button">this one</button>
       </div>
     </div>
   </dialog>
