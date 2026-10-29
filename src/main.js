@@ -8,6 +8,7 @@
 import { initializeActivity } from "./activity.js";
 import { initializeDialogs } from "./dialogs.js";
 import { initializeCardUi } from "./editor.js";
+import { initializeEpisodes } from "./episodes.js";
 import { initializeGift } from "./gift.js";
 import { initializeLists, scheduleRender } from "./lists.js";
 import { initializeRatingEditing } from "./ratings.js";
@@ -31,6 +32,7 @@ initializeLists();
 initializeSearch();
 initializeTonight();
 initializeCardUi();
+initializeEpisodes();
 initializeActivity();
 initializeRatingEditing();
 initializeTooltipAutoFlip();

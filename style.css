@@ -1382,6 +1382,64 @@ li.is-animating {
 }
 
 /* =========================
+   EPISODES ON A CARD
+   ========================= */
+
+.progress {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.progress + .comment-lines {
+  margin-top: 12px;
+}
+
+.progress-now {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  color: var(--gold);
+  text-shadow: 0 0 12px rgba(255, 211, 106, 0.2);
+}
+
+.progress-when {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+
+.ep-next {
+  min-width: 44px;
+  padding: 6px 12px;
+  border-radius: var(--pill);
+
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: 0.76rem;
+  color: var(--ink);
+
+  background: var(--raised);
+  border: 1px solid rgba(255, 211, 106, 0.3);
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.ep-next:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+@media (hover: hover) {
+  .ep-next:not(:disabled):hover {
+    transform: translateY(-1px);
+    border-color: rgba(255, 211, 106, 0.55);
+    box-shadow: 0 0 16px rgba(255, 211, 106, 0.18);
+  }
+}
+
+/* =========================
    COMMENTS ON A CARD
    ========================= */
 
@@ -1862,6 +1920,12 @@ li.is-animating {
   text-transform: uppercase;
   color: rgba(230, 232, 255, 0.88);
   margin: 0 3px 0 4px;
+}
+
+.log-episode {
+  font-family: var(--font-mono);
+  font-size: 0.86em;
+  color: var(--gold);
 }
 
 .log-score {

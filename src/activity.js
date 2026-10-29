@@ -91,6 +91,9 @@ function describe(entry) {
     case "comment":
       say(" left a comment on ", titleEm(title));
       break;
+    case "episode":
+      say(" watched ", el("span", "log-episode", String(d.episode || "").replace(/^s(\d+)ep/, "s$1 ep")), " of ", titleEm(title));
+      break;
     case "add_card":
       say(" added ", titleEm(title));
       break;
