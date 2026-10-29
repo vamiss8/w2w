@@ -1,47 +1,136 @@
+/* the night sky, the two of us in violet and pink, gold for whatever has the
+   focus. written for a phone first: everything below the media queries is
+   the narrow layout, and the queries widen it.
+
+   colours, radii and shadows come from the tokens below. the stylesheet
+   before this one grew to almost 3000 lines by restating them, and by
+   restating whole rules three times over, each copy a little different */
+
 /* =========================
-   ROOT VARIABLES
+   TOKENS
    ========================= */
 
 :root {
-  --card: rgba(8, 10, 20, 0.92);
-  --text: #e6e8ff;
-  --muted: #9aa0d6;
+  color-scheme: dark;
+
+  --ink: rgba(230, 232, 255, 0.92);
+  --ink-strong: rgba(230, 232, 255, 0.96);
+  --ink-soft: rgba(230, 232, 255, 0.8);
+  --muted: rgba(154, 160, 214, 0.9);
+
+  --line-soft: rgba(230, 232, 255, 0.06);
+  --line: rgba(230, 232, 255, 0.1);
+  --line-strong: rgba(230, 232, 255, 0.16);
+
+  --glass: rgba(255, 255, 255, 0.03);
+  --glass-hover: rgba(255, 255, 255, 0.05);
+  --raised: linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.04));
+  --surface: linear-gradient(180deg, rgba(10, 10, 20, 0.95), rgba(5, 5, 10, 0.95));
+  --popover: rgba(8, 10, 20, 0.96);
+
+  --vlad: #9b6cff;
+  --vlad-glow: 0 0 6px rgba(155, 108, 255, 0.35), 0 0 12px rgba(155, 108, 255, 0.15);
+  --vika: #ff7abf;
+  --vika-glow: 0 0 6px rgba(255, 122, 191, 0.35), 0 0 12px rgba(255, 122, 191, 0.15);
+  --gold: #ffd36a;
+
+  /* a card's status: the colour of its edge, and of its badge */
   --c-00: #3a3f66;
-  --c-01: #5b6cff; 
-  --c-10: #9b6cff; 
+  --c-01: #5b6cff;
+  --c-10: #9b6cff;
   --c-11: #ff9f6e;
 
+  --focus-line: rgba(255, 211, 106, 0.35);
+  --focus-ring: 0 0 0 3px rgba(255, 211, 106, 0.12);
+
+  --radius-sm: 12px;
+  --radius: 18px;
+  --radius-lg: 22px;
+  --pill: 999px;
+
+  --shadow: 0 20px 40px rgba(0, 0, 0, 0.45);
+  --shadow-lift: 0 30px 60px rgba(0, 0, 0, 0.65);
+  --shadow-pop: 0 24px 60px rgba(0, 0, 0, 0.65);
+  --shadow-hover: 0 10px 30px rgba(0, 0, 0, 0.45), 0 0 18px rgba(155, 108, 255, 0.1);
+  --shadow-active: 0 12px 36px rgba(0, 0, 0, 0.55), 0 0 13px rgba(155, 108, 255, 0.16);
+
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+
   --font-title: "Cinzel Decorative", serif;
-  --font-body: "Sora", system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-  --font-mono: "Space Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-  --font-badge: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-  --font-content: "IBM Plex Sans", system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  --font-body: "Sora", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-content: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  /* the bar of sections at the bottom of a phone, which the page leaves room for */
+  --nav-height: 64px;
 }
 
 /* =========================
    BASE
    ========================= */
 
-* {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
 }
 
+/* whatever is hidden stays hidden, whatever display its class asks for */
+[hidden] {
+  display: none !important;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+/* the page behind an open dialog stays where it is */
+html:has(dialog[open]) {
+  overflow: hidden;
+}
+
 body {
-  display: flex;
-  overflow-x: hidden;
-  justify-content: center;
   margin: 0;
   min-height: 100vh;
-  padding: 48px 16px;
-  position: relative;
-  background-color: #000;
-  color: var(--text);
+  min-height: 100dvh;
+  overflow-x: hidden;
 
+  background: #000;
+  color: var(--ink);
   font-family: var(--font-body);
+  -webkit-tap-highlight-color: transparent;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+a {
+  color: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--focus-line);
+  outline-offset: 2px;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin: 0;
 }
 
 /* =========================
-   STAR BACKGROUND
+   THE STARS
    ========================= */
 
 .stars {
@@ -53,28 +142,22 @@ body {
   overflow: hidden;
 }
 
+/* a soft haze, spread out rather than gathered in the middle */
 .stars::before {
   content: "";
   position: absolute;
   inset: 0;
-
-  /* soft nebula haze (spread, not center-biased) */
   background-image:
     radial-gradient(1200px 900px at 22% 38%, rgba(155, 108, 255, 0.055), transparent 62%),
     radial-gradient(1200px 900px at 78% 62%, rgba(91, 108, 255, 0.045), transparent 64%);
 }
 
+/* and a vignette that leaves the edges visible */
 .stars::after {
   content: "";
   position: absolute;
   inset: 0;
-
-  /* soft vignette (keeps edges visible) */
-  background: radial-gradient(
-    1600px 1200px at 50% 50%,
-    rgba(0, 0, 0, 0.00) 52%,
-    rgba(0, 0, 0, 0.62) 100%
-  );
+  background: radial-gradient(1600px 1200px at 50% 50%, rgba(0, 0, 0, 0) 52%, rgba(0, 0, 0, 0.62) 100%);
 }
 
 .stars-canvas {
@@ -84,88 +167,139 @@ body {
   height: 100%;
   display: block;
 
-  /* subtle softening so dots feel less “digital” */
+  /* a little softening, so the dots feel less digital */
   filter: blur(0.15px);
 }
 
 /* =========================
-   LAYOUT
+   THE CROSSED HEARTS
    ========================= */
 
-.container {
-  width: 100%;
-  max-width: 900px;
+/* vlad's heart over vika's, tilted toward each other. the same mark in the
+   header, the navigation and the footer, three sizes of one rule */
+.hearts {
   position: relative;
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  line-height: 1;
+  vertical-align: middle;
+}
+
+.hearts::before,
+.hearts::after {
+  content: "❤";
+  position: absolute;
+  top: 0;
+  left: 50%;
+  font-size: 0.95rem;
+  transform-origin: center;
+}
+
+.hearts::before {
+  z-index: 2;
+  color: var(--vlad);
+  text-shadow: var(--vlad-glow);
+  transform: translateX(-75%) rotate(-22deg);
+}
+
+.hearts::after {
   z-index: 1;
+  color: var(--vika);
+  text-shadow: var(--vika-glow);
+  transform: translateX(-25%) rotate(22deg);
+}
+
+.hearts-lg {
+  width: 24px;
+  height: 24px;
+  margin-top: 5px;
+}
+
+.hearts-lg::before,
+.hearts-lg::after {
+  font-size: 1.3rem;
+}
+
+.icon-star::before {
+  content: "★";
+  font-size: 1.15rem;
+  color: var(--gold);
+  text-shadow: 0 0 6px rgba(255, 211, 106, 0.35), 0 0 12px rgba(255, 211, 106, 0.15);
 }
 
 /* =========================
-   TITLE (CINZEL DECORATIVE)
+   THE HEADER
    ========================= */
+
+/* the heart and the sign-in on one line and the title under them on a phone,
+   all three on one line on a wide screen. they share a grid, so none of them
+   can land on another */
+.top {
+  position: relative;
+  z-index: 2;
+
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  grid-template-areas:
+    "heart . user"
+    "brand brand brand";
+  align-items: center;
+  gap: 14px 12px;
+
+  padding: calc(14px + env(safe-area-inset-top)) calc(16px + env(safe-area-inset-right)) 0 calc(16px + env(safe-area-inset-left));
+}
+
+.brand {
+  grid-area: brand;
+  text-align: center;
+}
 
 .title {
   font-family: var(--font-title);
   font-weight: 700;
-  font-size: clamp(2.2rem, 5vw, 2.9rem);
-  letter-spacing: 0.14em;
+  font-size: clamp(1.45rem, 6.6vw, 2.6rem);
+  line-height: 1.2;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
-  text-align: center;
+  text-wrap: balance;
 
-  margin: 8px 0 12px;
-
-  /* dark, desaturated “space ink” */
+  /* dark, desaturated space ink, with a heavy and gloomy shadow */
   color: rgba(230, 232, 255, 0.88);
-
-  /* a heavier, gloomier shadow stack */
   text-shadow:
     0 2px 0 rgba(0, 0, 0, 0.75),
     0 10px 28px rgba(0, 0, 0, 0.85),
-    0 0 28px rgba(155, 108, 255, 0.10);
+    0 0 28px rgba(155, 108, 255, 0.1);
 }
 
-/* subtle divider “horizon line” under the title */
+/* the horizon line under the title */
 .title::after {
   content: "";
   display: block;
   height: 1px;
   width: min(560px, 78%);
-  margin: 16px auto 0;
-
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(230, 232, 255, 0.88),
-    transparent
-  );
+  margin: 14px auto 0;
+  background: linear-gradient(90deg, transparent, rgba(230, 232, 255, 0.88), transparent);
   opacity: 0.8;
 }
 
-/* =========================
-   SUBTITLE
-   ========================= */
-
 .subtitle {
   width: fit-content;
-  margin: 0 auto 28px;
+  margin: 14px auto 0;
   padding: 6px 14px 8px;
 
   font-family: var(--font-mono);
-  font-size: 0.78rem;
+  font-size: 0.74rem;
   letter-spacing: 0.28em;
   text-transform: uppercase;
-
   color: rgba(230, 232, 255, 0.88);
-  opacity: 0.9;
 
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--glass);
   border: 1px solid rgba(230, 232, 255, 0.08);
   border-left-color: rgba(155, 108, 255, 0.22);
   border-right-color: rgba(155, 108, 255, 0.22);
-  border-radius: 999px;
-
-  text-shadow:
-    0 2px 0 rgba(0, 0, 0, 0.65),
-    0 0 18px rgba(155, 108, 255, 0.12);
+  border-radius: var(--pill);
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.65), 0 0 18px rgba(155, 108, 255, 0.12);
 }
 
 .subtitle::before,
@@ -176,135 +310,473 @@ body {
   height: 4px;
   margin: 0 10px 2px;
   border-radius: 50%;
-
   background: rgba(230, 232, 255, 0.22);
   box-shadow: 0 0 12px rgba(155, 108, 255, 0.18);
-  opacity: 0.9;
+}
+
+/* the heart that opens our art. it floats, gently, for good */
+.love-toggle {
+  grid-area: heart;
+
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+
+  display: grid;
+  place-items: center;
+
+  background: var(--glass);
+  border: 1px solid rgba(255, 122, 191, 0.25);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.55), 0 0 16px rgba(255, 122, 191, 0.15);
+
+  transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+  animation: float-love 4s ease-in-out infinite;
+}
+
+@keyframes float-love {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+.user-pill {
+  grid-area: user;
+
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+
+  padding: 10px 16px;
+  border-radius: var(--pill);
+
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: 0.76rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  line-height: 1;
+  white-space: nowrap;
+
+  color: var(--muted);
+  background: var(--glass);
+  border: 1px solid var(--line);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 18px 46px rgba(0, 0, 0, 0.55), 0 0 16px rgba(155, 108, 255, 0.1);
+
+  transition: transform 0.25s ease, border-color 0.25s ease, background 0.25s ease;
+}
+
+/* signed in, the pill takes the colour of whoever it is, with a dot of it */
+.user-pill[data-user="vlad"],
+.user-pill[data-user="vika"] {
+  color: var(--ink);
+}
+
+.user-pill[data-user="vlad"]::before,
+.user-pill[data-user="vika"]::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+.user-pill[data-user="vlad"]::before {
+  background: var(--vlad);
+  box-shadow: var(--vlad-glow);
+}
+
+.user-pill[data-user="vika"]::before {
+  background: var(--vika);
+  box-shadow: var(--vika-glow);
+}
+
+@media (hover: hover) {
+  .love-toggle:hover {
+    transform: scale(1.1) rotate(5deg);
+    border-color: rgba(255, 122, 191, 0.45);
+    box-shadow: 0 14px 32px rgba(0, 0, 0, 0.65), 0 0 24px rgba(255, 122, 191, 0.35);
+  }
+
+  .user-pill:hover {
+    transform: translateY(-1px);
+    background: var(--glass-hover);
+    border-color: var(--line-strong);
+  }
+}
+
+@media (min-width: 720px) {
+  /* the sides are as wide as each other, so the title stays in the middle,
+     and wide enough for the pill, so it never reaches the title */
+  .top {
+    grid-template-columns: minmax(140px, 1fr) minmax(0, 760px) minmax(140px, 1fr);
+    grid-template-areas: "heart brand user";
+    padding-top: calc(24px + env(safe-area-inset-top));
+  }
+
+  .love-toggle {
+    justify-self: start;
+    width: 56px;
+    height: 56px;
+  }
+
+  .user-pill {
+    justify-self: end;
+  }
 }
 
 /* =========================
-   TABS
+   THE SECTIONS
    ========================= */
 
-.tabs {
-  display: flex;
-  justify-content: center;
-  gap: 18px;
-  margin-bottom: 32px;
+/* on a phone, a bar along the bottom edge, in reach of a thumb */
+.nav {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 40;
 
-  padding: 0;
-  background: transparent;
-  border: 0;
-  border-radius: 0;
-  backdrop-filter: none;
-  box-shadow: none;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+
+  padding: 0 env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  background: rgba(5, 5, 10, 0.86);
+  border-top: 1px solid var(--line);
+  backdrop-filter: blur(14px);
 }
 
-/* tab */
-.tab {
+.nav-item {
   position: relative;
 
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  height: var(--nav-height);
+
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 0.6rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  text-decoration: none;
+  color: rgba(154, 160, 214, 0.78);
+
+  transition: color 0.25s ease;
+}
+
+.nav-icon {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  line-height: 1;
+}
+
+svg.nav-icon {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.nav-item[aria-current="page"] {
+  color: var(--ink-strong);
+}
+
+/* the open section glows from underneath, the way the old tabs did */
+.nav-item[aria-current="page"]::after {
+  content: "";
+  position: absolute;
+  inset: 8px 18%;
+  z-index: -1;
+  border-radius: var(--pill);
+  background: radial-gradient(60% 120% at 50% 50%, rgba(155, 108, 255, 0.18), transparent 70%);
+  filter: blur(6px);
+}
+
+/* on a wide screen, a row of pills under the title that stays in reach
+   while a long list scrolls under it */
+@media (min-width: 720px) {
+  .nav {
+    position: sticky;
+    top: 12px;
+    bottom: auto;
+
+    display: flex;
+    gap: 6px;
+    width: fit-content;
+    margin: 26px auto 0;
+    padding: 6px;
+
+    background: rgba(8, 10, 20, 0.72);
+    border: 1px solid var(--line);
+    border-radius: var(--pill);
+    box-shadow: 0 18px 46px rgba(0, 0, 0, 0.55);
+  }
+
+  .nav-item {
+    flex-direction: row;
+    gap: 10px;
+    height: auto;
+    padding: 10px 18px;
+    border-radius: var(--pill);
+    border: 1px solid transparent;
+
+    font-size: 0.74rem;
+    color: var(--muted);
+    transition: background 0.25s ease, color 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+  }
+
+  .nav-item[aria-current="page"] {
+    background: var(--raised);
+    border-color: rgba(230, 232, 255, 0.12);
+    box-shadow: var(--shadow-active);
+  }
+
+  .nav-item[aria-current="page"]::after {
+    inset: -6px;
+  }
+}
+
+@media (min-width: 720px) and (hover: hover) {
+  .nav-item:hover {
+    color: var(--ink);
+    background: var(--glass-hover);
+    border-color: rgba(230, 232, 255, 0.08);
+  }
+}
+
+/* =========================
+   THE PAGE
+   ========================= */
+
+.container {
+  position: relative;
+  z-index: 1;
+
+  width: 100%;
+  max-width: 900px;
+  margin: 0 auto;
+
+  /* room at the bottom for the bar of sections */
+  padding: 26px calc(16px + env(safe-area-inset-right)) calc(var(--nav-height) + env(safe-area-inset-bottom) + 32px) calc(16px + env(safe-area-inset-left));
+}
+
+@media (min-width: 720px) {
+  .container {
+    padding-top: 30px;
+    padding-bottom: 48px;
+  }
+}
+
+.view-head {
+  text-align: center;
+  margin-bottom: 18px;
+}
+
+.view-title {
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 0.78rem;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.view-count {
+  margin-top: 8px;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted);
+  opacity: 0.85;
+}
+
+.view-count:empty {
+  display: none;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+/* a quiet round button: the toolbar, load more, sign in from a note */
+.pill {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 10px;
 
   padding: 10px 18px;
-  border-radius: 999px;
+  border-radius: var(--pill);
 
   font-family: var(--font-body);
   font-weight: 600;
+  font-size: 0.74rem;
   letter-spacing: 0.12em;
-  font-size: 0.78rem;
   text-transform: uppercase;
   line-height: 1;
 
-  color: rgba(154, 160, 214, 0.92);
+  color: var(--muted);
   background: transparent;
+  border: 1px solid var(--line-soft);
 
-  cursor: pointer;
-  user-select: none;
-
-  border: 1px solid transparent;
-  transition:
-    background 0.25s ease,
-    color 0.25s ease,
-    border-color 0.25s ease,
-    transform 0.25s ease,
-    box-shadow 0.25s ease;
+  transition: background 0.25s ease, color 0.25s ease, border-color 0.25s ease, transform 0.25s ease, box-shadow 0.25s ease;
 }
 
-.tab:hover {
-  background: rgba(253, 250, 250, 0.05);
-  border-color: rgba(230, 232, 255, 0.08);
+.pill:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+@media (hover: hover) {
+  .pill:not(:disabled):hover {
+    color: var(--ink);
+    background: var(--glass-hover);
+    border-color: var(--line);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-hover);
+  }
+}
+
+.caret::before {
+  content: "▾";
+  display: inline-block;
   transform: translateY(-1px);
-  box-shadow:
-    0 10px 30px rgba(0, 0, 0, 0.45),
-    0 0 18px rgba(155, 108, 255, 0.10);
+  transition: transform 0.25s ease;
 }
 
-/* active tab styling */
-input#tab-unwatched:checked ~ .tabs label[for="tab-unwatched"],
-input#tab-watched:checked ~ .tabs label[for="tab-watched"] {
-  color: rgba(230, 232, 255, 0.92);
-
-  background: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.10),
-    rgba(255, 255, 255, 0.04)
-  );
-
-  border-color: rgba(230, 232, 255, 0.12);
-
-  box-shadow:
-    0 12px 36px rgba(0, 0, 0, 0.55),
-    0 0 13px rgba(155, 108, 255, 0.16);
+[aria-expanded="true"] > .caret::before {
+  transform: translateY(-1px) rotate(180deg);
 }
 
-/* active “glow core” */
-input#tab-unwatched:checked ~ .tabs label[for="tab-unwatched"]::after,
-input#tab-watched:checked ~ .tabs label[for="tab-watched"]::after {
-  content: "";
-  position: absolute;
-  inset: -6px;
-  border-radius: 999px;
+/* what an empty list or a closed section says instead of nothing */
+.empty-note,
+.guest-note p {
+  text-align: center;
+  font-family: var(--font-content);
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.empty-note {
+  margin-top: 28px;
+}
+
+.guest-note {
+  display: grid;
+  justify-items: center;
+  gap: 14px;
+  margin-top: 28px;
+}
+
+footer {
+  margin: 48px auto 0;
+  text-align: center;
+
+  font-family: var(--font-body);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  color: rgba(154, 160, 214, 0.85);
+
+  opacity: 0;
+  transform: translateY(12px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+
+footer .hearts {
+  margin: 0 6px;
+  top: -2px;
+}
+
+footer.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+footer.instant-hide {
+  transition: none;
+  opacity: 0;
+  transform: translateY(12px);
+}
+
+/* =========================
+   FILTERS
+   ========================= */
+
+.controls {
+  position: relative;
+  z-index: 3; /* the tooltips open over the list */
+
+  display: grid;
+  gap: 14px;
+
+  max-height: 0;
+  opacity: 0;
+  transform: translateY(-10px);
+  overflow: hidden;
   pointer-events: none;
 
-  background: radial-gradient(
-    60% 120% at 50% 50%,
-    rgba(155, 108, 255, 0.14),
-    transparent 70%
-  );
-  filter: blur(6px);
+  transition:
+    max-height 0.42s var(--ease-out),
+    opacity 0.22s ease,
+    transform 0.42s var(--ease-out),
+    margin-bottom 0.42s var(--ease-out);
+}
+
+.controls[data-open="true"] {
+  max-height: 420px;
   opacity: 1;
+  transform: translateY(0);
+  margin-bottom: 24px;
+  pointer-events: auto;
+
+  /* the tooltips reach out of it */
+  overflow: visible;
 }
 
-/* keyboard focus (input focused -> highlight matching label) */
-input#tab-unwatched:focus-visible ~ .tabs label[for="tab-unwatched"],
-input#tab-watched:focus-visible ~ .tabs label[for="tab-watched"] {
-  outline: none;
-  border-color: rgba(255, 211, 106, 0.35);
-  box-shadow:
-    0 0 0 3px rgba(255, 211, 106, 0.12),
-    0 12px 36px rgba(0, 0, 0, 0.55);
+.control-row {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
 }
 
-.tab-icon-star::before {
-  content: "★";
-  font-size: 1.2rem;
-  color: #ffd36a;
-  text-shadow:
-    0 0 6px rgba(255, 211, 106, 0.35),
-    0 0 12px rgba(255, 211, 106, 0.15);
+.control-caption {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
 
-  display: inline-block;
-  vertical-align: middle;
-
-  position: relative;
-  top: -1px;
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: var(--muted);
 }
 
-/* tabs radios (visually hidden, still accessible) */
+.control-group {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+
+/* a radio is there for the keyboard and the screen reader, and its label is
+   what the eye sees */
 input[type="radio"] {
   position: absolute;
   width: 1px;
@@ -312,487 +784,110 @@ input[type="radio"] {
   margin: -1px;
   padding: 0;
   border: 0;
-
   opacity: 0;
   overflow: hidden;
-  clip: rect(0 0 0 0);
   clip-path: inset(50%);
   white-space: nowrap;
 }
 
-input#tab-unwatched:checked ~ .tabs label[for="tab-unwatched"] .tab-icon-star::before {
-  text-shadow:
-    0 0 6px rgba(255, 211, 106, 0.55),
-    0 0 18px rgba(255, 211, 106, 0.35),
-    0 0 34px rgba(255, 211, 106, 0.18);
-}
-
-input#tab-watched:checked ~ .tabs label[for="tab-watched"] .tab-icon-hearts::before,
-input#tab-watched:checked ~ .tabs label[for="tab-watched"] .tab-icon-hearts::after {
-  text-shadow:
-    0 0 8px rgba(155, 108, 255, 0.32),
-    0 0 20px rgba(155, 108, 255, 0.18);
-}
-
-/* =========================
-   CONTROLS (SORT/FILTER)
-   ========================= */
-
-/* =========================
-   CONTROLS (SORT/FILTER) — animated open/close
-   ========================= */
-
-.controls {
-  width: 100%;
-  margin: 0 auto;
-
-  /* animated collapse */
-  max-height: 0;
-  opacity: 0;
-  transform: translateY(-10px);
-  padding-bottom: 0;
-
-  overflow: hidden;
-  pointer-events: none;
-
-  transition:
-    max-height 0.42s cubic-bezier(0.16, 1, 0.3, 1),
-    opacity 0.22s ease,
-    transform 0.42s cubic-bezier(0.16, 1, 0.3, 1),
-    padding-bottom 0.42s cubic-bezier(0.16, 1, 0.3, 1);
-
-  will-change: max-height, opacity, transform, padding-bottom;
-
-  position: relative;
-  z-index: 3; /* keep tooltips above the list */
-}
-
-.controls[data-open="true"] {
-  max-height: 360px; /* enough for two rows + chips on wrap */
-  opacity: 1;
-  transform: translateY(0);
-  padding-bottom: 26px;
-
-  pointer-events: auto;
-
-  overflow: visible; /* allow tooltips to escape the menu */
-}
-
-/* make sure the list is under controls in stacking order */
-.lists {
-  position: relative;
-  z-index: 1;
-}
-
-/* keep hovered card above neighbors so tooltip isn't overlapped */
-.lists li {
-  position: relative;
-}
-
-.lists li:hover {
-  z-index: 2;
-}
-
-.controls-panel {
-  display: none;
-  width: 100%;
-  flex-direction: column;
-  gap: 14px;
-}
-
-/* show the right panel per active tab */
-input#tab-unwatched:checked ~ .controls .controls-unwatched {
-  display: flex;
-}
-
-input#tab-watched:checked ~ .controls .controls-watched {
-  display: flex;
-}
-
-.control-row {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-}
-
-.control-caption {
-  font-family: var(--font-badge);
-  font-size: 0.66rem;
-  letter-spacing: 0.26em;
-  text-transform: uppercase;
-
-  color: rgba(154, 160, 214, 0.88);
-  opacity: 0.85;
-}
-
-.control-group {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 10px;
-}
-
-/* pill button (matches your tab vibe, but smaller) */
 .chip {
   position: relative;
 
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-
   padding: 8px 14px;
-  border-radius: 999px;
+  border-radius: var(--pill);
 
   font-family: var(--font-body);
   font-weight: 600;
+  font-size: 0.7rem;
   letter-spacing: 0.12em;
-  font-size: 0.72rem;
   text-transform: uppercase;
   line-height: 1;
 
-  color: rgba(154, 160, 214, 0.92);
-  background: transparent;
-
+  color: var(--muted);
+  border: 1px solid var(--line-soft);
   cursor: pointer;
   user-select: none;
 
-  border: 1px solid rgba(230, 232, 255, 0.06);
-
-  transition:
-    background 0.25s ease,
-    color 0.25s ease,
-    border-color 0.25s ease,
-    transform 0.25s ease,
-    box-shadow 0.25s ease;
+  transition: background 0.25s ease, color 0.25s ease, border-color 0.25s ease, transform 0.25s ease, box-shadow 0.25s ease;
 }
 
-.chip:hover {
-  background: rgba(253, 250, 250, 0.05);
-  border-color: rgba(230, 232, 255, 0.10);
-  transform: translateY(-1px);
-  box-shadow:
-    0 10px 30px rgba(0, 0, 0, 0.45),
-    0 0 18px rgba(155, 108, 255, 0.10);
-}
-
-/* show tooltip on hover/focus (chips + info + status) */
-.chip:hover .tooltip,
-.chip:focus-within .tooltip,
-.info-badge:hover .tooltip,
-.info-badge:focus-within .tooltip,
-.status:hover .tooltip,
-.status:focus-within .tooltip {
-  opacity: 1;
-  visibility: visible;
-  transform: translateX(-50%) translateY(0);
-}
-
-/* active chip (radio checked) */
-.control-group input[type="radio"]:checked + .chip {
-  color: rgba(230, 232, 255, 0.92);
-
-  background: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.10),
-    rgba(255, 255, 255, 0.04)
-  );
-
+input[type="radio"]:checked + .chip {
+  color: var(--ink);
+  background: var(--raised);
   border-color: rgba(230, 232, 255, 0.14);
-
-  box-shadow:
-    0 12px 36px rgba(0, 0, 0, 0.55),
-    0 0 13px rgba(155, 108, 255, 0.16);
+  box-shadow: var(--shadow-active);
 }
 
-/* keyboard focus on chips */
-.control-group input[type="radio"]:focus-visible + .chip {
-  outline: none;
-  border-color: rgba(255, 211, 106, 0.35);
-  box-shadow:
-    0 0 0 3px rgba(255, 211, 106, 0.12),
-    0 12px 36px rgba(0, 0, 0, 0.55);
+input[type="radio"]:focus-visible + .chip {
+  border-color: var(--focus-line);
+  box-shadow: var(--focus-ring), var(--shadow-active);
 }
 
-/* filtered-out cards */
-.is-hidden {
-  display: none !important;
-}
-
-/* =========================
-   FILTERS TOGGLE
-   ========================= */
-
-.filters-bar {
-  display: flex;
-  justify-content: center;
-  margin: 0 0 18px;
-}
-
-.filters-toggle {
-  position: relative;
-
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-
-  padding: 10px 18px;
-  border-radius: 999px;
-
-  font-family: var(--font-body);
-  font-weight: 600;
-  letter-spacing: 0.12em;
-  font-size: 0.78rem;
-  text-transform: uppercase;
-  line-height: 1;
-
-  color: rgba(154, 160, 214, 0.92);
-  background: transparent;
-
-  cursor: pointer;
-  user-select: none;
-
-  border: 1px solid rgba(230, 232, 255, 0.06);
-  transition:
-    background 0.25s ease,
-    color 0.25s ease,
-    border-color 0.25s ease,
-    transform 0.25s ease,
-    box-shadow 0.25s ease;
-}
-
-.filters-toggle:hover {
-  background: rgba(253, 250, 250, 0.05);
-  border-color: rgba(230, 232, 255, 0.10);
-  transform: translateY(-1px);
-  box-shadow:
-    0 10px 30px rgba(0, 0, 0, 0.45),
-    0 0 18px rgba(155, 108, 255, 0.10);
-}
-
-.filters-toggle:focus-visible {
-  outline: none;
-  border-color: rgba(255, 211, 106, 0.35);
-  box-shadow:
-    0 0 0 3px rgba(255, 211, 106, 0.12),
-    0 12px 36px rgba(0, 0, 0, 0.55);
-}
-
-.filters-toggle-icon::before {
-  content: "▾";
-  display: inline-block;
-  transform: translateY(-1px);
-  transition: transform 0.25s ease;
-  opacity: 0.9;
-}
-
-.filters-toggle.is-open .filters-toggle-icon::before {
-  transform: translateY(-1px) rotate(180deg);
-}
-
-/* =========================
-   USER PILL (TOP RIGHT)
-   ========================= */
-
-.user-pill {
-  position: fixed;
-  top: calc(16px + env(safe-area-inset-top));
-  right: calc(16px + env(safe-area-inset-right));
-  z-index: 50;
-
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-
-  padding: 10px 16px;
-  border-radius: 999px;
-
-  font-family: var(--font-badge);
-  font-weight: 600;
-  letter-spacing: 0.12em;
-  font-size: 0.78rem;
-  text-transform: uppercase;
-  line-height: 1;
-
-  color: rgba(154, 160, 214, 0.92);
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(230, 232, 255, 0.10);
-
-  cursor: pointer;
-  user-select: none;
-
-  backdrop-filter: blur(8px);
-  box-shadow:
-    0 18px 46px rgba(0, 0, 0, 0.55),
-    0 0 16px rgba(155, 108, 255, 0.10);
-
-  transition:
-    transform 0.25s ease,
-    border-color 0.25s ease,
-    background 0.25s ease,
-    box-shadow 0.25s ease;
-}
-
-.user-pill:hover {
-  transform: translateY(-1px);
-  background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(230, 232, 255, 0.16);
-  box-shadow:
-    0 22px 56px rgba(0, 0, 0, 0.62),
-    0 0 18px rgba(155, 108, 255, 0.14);
-}
-
-.user-pill:focus-visible {
-  outline: none;
-  border-color: rgba(255, 211, 106, 0.35);
-  box-shadow:
-    0 0 0 3px rgba(255, 211, 106, 0.12),
-    0 22px 56px rgba(0, 0, 0, 0.62);
-}
-
-/* =========================
-   TOOLTIP (INFO + CHIP)
-   ========================= */
-
-.control-caption {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
+@media (hover: hover) {
+  .chip:hover {
+    background: var(--glass-hover);
+    border-color: var(--line);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-hover);
+  }
 }
 
 .info-badge {
   position: relative;
-
   width: 18px;
   height: 18px;
   border-radius: 50%;
 
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+  display: inline-grid;
+  place-items: center;
 
-  font-family: var(--font-badge);
+  font-family: var(--font-mono);
   font-size: 0.72rem;
-  letter-spacing: 0.02em;
-
-  color: rgba(230, 232, 255, 0.82);
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(230, 232, 255, 0.10);
-
+  letter-spacing: 0;
+  color: var(--ink-soft);
+  background: var(--glass);
+  border: 1px solid var(--line);
   cursor: help;
-  user-select: none;
 }
 
-.info-badge:hover {
-  border-color: rgba(230, 232, 255, 0.16);
-  box-shadow:
-    0 10px 30px rgba(0, 0, 0, 0.45),
-    0 0 18px rgba(155, 108, 255, 0.10);
-}
+/* =========================
+   TOOLTIPS
+   ========================= */
 
+/* above their anchor, and below it when there is no room: src/tooltips.js */
 .tooltip {
   position: absolute;
   left: 50%;
-
-  /* show above by default */
   bottom: calc(100% + 10px);
-  top: auto;
+  z-index: 50;
 
-  transform: translateX(-50%) translateY(-6px);
-
-  min-width: 220px;
-  max-width: min(380px, 84vw);
-
-  /* smaller text + space for the corner "?" */
+  min-width: 200px;
+  max-width: min(360px, 84vw);
   padding: 10px 34px 12px 12px;
-
   border-radius: 16px;
 
-  background: rgba(8, 10, 20, 0.94);
-  border: 1px solid rgba(230, 232, 255, 0.10);
-
-  color: rgba(230, 232, 255, 0.92);
   font-family: var(--font-content);
-  font-size: 0.72rem;      /* smaller */
+  font-size: 0.72rem;
+  font-weight: 400;
   letter-spacing: 0.02em;
   line-height: 1.35;
+  text-transform: none;
+  text-align: left;
+  white-space: normal;
+  color: var(--ink);
 
+  background: var(--popover);
+  border: 1px solid var(--line);
   backdrop-filter: blur(6px);
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.65);
+  box-shadow: var(--shadow-pop);
 
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
-
+  transform: translateX(-50%) translateY(-6px);
   transition: opacity 0.18s ease, transform 0.18s ease, visibility 0.18s ease;
-  z-index: 999; /* above everything */
-}
-
-/* show tooltip on hover/focus */
-.chip:hover .tooltip,
-.info-badge:hover .tooltip,
-.info-badge:focus-visible .tooltip,
-.control-group input[type="radio"]:focus-visible + .chip .tooltip {
-  opacity: 1;
-  visibility: visible;
-  transform: translateX(-50%) translateY(0);
-}
-
-/* arrow (for upward tooltip) */
-.tooltip::before {
-  content: "";
-  position: absolute;
-  bottom: -6px;
-  left: 50%;
-  transform: translateX(-50%) rotate(45deg);
-
-  width: 12px;
-  height: 12px;
-
-  background: rgba(8, 10, 20, 0.94);
-  border-right: 1px solid rgba(230, 232, 255, 0.10);
-  border-bottom: 1px solid rgba(230, 232, 255, 0.10);
-}
-
-.tooltip::after {
-  content: "?";
-  position: absolute;
-  top: 8px;
-  right: 10px;
-
-  width: 15px;
-  height: 15px;
-  border-radius: 50%;
-
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-
-  font-family: var(--font-badge);
-  font-size: 0.66rem;
-
-  color: rgba(230, 232, 255, 0.70);
-  border: 1px solid rgba(230, 232, 255, 0.12);
-  background: rgba(255, 255, 255, 0.03);
-}
-
-/* flip tooltip to bottom when needed */
-.tooltip.tooltip-down {
-  top: calc(100% + 10px);
-  bottom: auto;
-  transform: translateX(-50%) translateY(6px);
-}
-
-.tooltip.tooltip-down::before {
-  top: -6px;
-  bottom: auto;
-
-  border-right: 0;
-  border-bottom: 0;
-  border-left: 1px solid rgba(230, 232, 255, 0.10);
-  border-top: 1px solid rgba(230, 232, 255, 0.10);
 }
 
 .tooltip-wide {
@@ -800,12 +895,44 @@ input#tab-watched:checked ~ .controls .controls-watched {
 }
 
 .tooltip u {
-  text-decoration-thickness: 2px;
+  text-decoration-color: rgba(255, 211, 106, 0.6);
   text-underline-offset: 2px;
-  text-decoration-color: rgba(240, 239, 238, 0.65);
 }
 
-/* flip tooltip to bottom when needed */
+/* the arrow */
+.tooltip::before {
+  content: "";
+  position: absolute;
+  bottom: -6px;
+  left: 50%;
+  width: 12px;
+  height: 12px;
+  transform: translateX(-50%) rotate(45deg);
+  background: var(--popover);
+  border-right: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+/* the question mark in the corner */
+.tooltip::after {
+  content: "?";
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+
+  display: grid;
+  place-items: center;
+
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  color: rgba(230, 232, 255, 0.7);
+  border: 1px solid rgba(230, 232, 255, 0.12);
+  background: var(--glass);
+}
+
 .tooltip.tooltip-down {
   top: calc(100% + 10px);
   bottom: auto;
@@ -815,120 +942,104 @@ input#tab-watched:checked ~ .controls .controls-watched {
 .tooltip.tooltip-down::before {
   top: -6px;
   bottom: auto;
-
-  border-right: 0;
-  border-bottom: 0;
-  border-left: 1px solid rgba(230, 232, 255, 0.10);
-  border-top: 1px solid rgba(230, 232, 255, 0.10);
+  border: 0;
+  border-left: 1px solid var(--line);
+  border-top: 1px solid var(--line);
 }
 
-/* =========================
-   LISTS
-   ========================= */
-
-.lists > ul {
-  display: none;
+/* a pointer that can hover sees them on hover, and a keyboard on focus. a
+   finger only ever taps, so on a phone they stay out of the way */
+@media (hover: hover) {
+  .chip:hover .tooltip,
+  .info-badge:hover .tooltip,
+  .status:hover .tooltip {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(-50%) translateY(0);
+  }
 }
 
-input#tab-unwatched:checked ~ .lists .unwatched,
-input#tab-watched:checked ~ .lists .watched {
-  display: grid;
-}
-
-ul {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: grid;
-  gap: 14px;
+.info-badge:focus-visible .tooltip,
+.status:focus-visible .tooltip,
+input[type="radio"]:focus-visible + .chip .tooltip {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(0);
 }
 
 /* =========================
    CARDS
    ========================= */
 
-.left {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+.cards {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 14px;
 }
 
-/* film title */
-.filmTitle {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 10px;
+/* the title on the left with the badge and the menu beside it, and the
+   hearts and comments under both. the hearts used to share a line with the
+   badge and the menu, which made a watched card wider than a phone */
+.cards > li {
+  position: relative;
 
-  font-family: var(--font-content);
-  font-weight: 600;
-  font-size: 1.02rem;
-  letter-spacing: 0.01em;
-  line-height: 1.2;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "title side"
+    "meta meta";
+  align-items: start;
+  column-gap: 12px;
 
-  color: rgba(230, 232, 255, 0.94);
-  text-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
-}
-
-/* muted date label */
-.watch-date {
-  font-family: var(--font-badge);
-  font-size: 0.72rem;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-
-  color: rgba(154, 160, 214, 0.86);
-  opacity: 0.9;
-  white-space: nowrap;
-
-  margin: 0; /* important: don't push layout */
-}
-
-/* meta line under title */
-.meta {
-  font-family: var(--font-content);
-  font-size: 0.9rem;
-  line-height: 1.35;
-
-  color: rgba(154, 160, 214, 0.9);
-  opacity: 0.78;
-}
-
-li {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-
-  padding: 16px 20px;
+  padding: 14px 14px 14px 16px;
   border: 1px solid rgba(255, 255, 255, 0.03);
-  border-radius: 18px;
-  border-left: 4px solid transparent;
+  border-left: 4px solid var(--c-00);
+  border-radius: var(--radius);
 
-  background: linear-gradient(
-    180deg,
-    rgba(10, 10, 20, 0.95),
-    rgba(5, 5, 10, 0.95)
-  );
+  background: var(--surface);
   backdrop-filter: blur(4px);
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.45);
+  box-shadow: var(--shadow);
 
-  /* animation: fadeUp .6s ease both; */
-  transition: transform .35s ease, box-shadow .35s ease;
+  transition: transform 0.35s ease, box-shadow 0.35s ease;
 }
 
-li:hover {
-  transform: translateY(-4px) scale(1.01);
-  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.65);
+.cards > li[data-status="01"] {
+  border-left-color: var(--c-01);
 }
 
-/* card animations control */
+.cards > li[data-status="10"] {
+  border-left-color: var(--c-10);
+}
+
+.cards > li[data-status="11"] {
+  border-left-color: var(--c-11);
+}
+
+.cards > li.is-hidden {
+  display: none;
+}
+
+/* the open menu stays over the cards below it */
+.cards > li.menu-open {
+  z-index: 5;
+}
+
+@media (hover: hover) {
+  .cards > li:hover {
+    z-index: 2;
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-lift);
+  }
+}
 
 li.is-animating {
-  animation: fadeUp .6s ease both;
+  animation: fade-up 0.6s ease both;
   animation-delay: var(--anim-delay, 0s);
 }
 
-@keyframes fadeUp {
+@keyframes fade-up {
   from {
     opacity: 0;
     transform: translateY(12px);
@@ -940,26 +1051,226 @@ li.is-animating {
   }
 }
 
+.left {
+  display: contents;
+}
+
+.filmTitle {
+  grid-area: title;
+  align-self: center;
+
+  font-family: var(--font-content);
+  font-weight: 600;
+  font-size: 1.02rem;
+  line-height: 1.25;
+  letter-spacing: 0.01em;
+  overflow-wrap: anywhere;
+
+  color: var(--ink-strong);
+  text-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+}
+
+.watch-date {
+  display: block;
+  margin-top: 6px;
+
+  font-family: var(--font-mono);
+  font-weight: 400;
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.meta {
+  grid-area: meta;
+  margin-top: 12px;
+
+  font-family: var(--font-content);
+  font-size: 0.9rem;
+  line-height: 1.35;
+  color: var(--muted);
+}
+
+.meta:empty {
+  display: none;
+}
+
+.right {
+  grid-area: side;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* the status badge, with what its two digits mean on hover */
+.status {
+  position: relative;
+  padding: 6px 11px;
+  border-radius: var(--pill);
+
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  letter-spacing: 0.12em;
+
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--line-soft);
+  cursor: default;
+}
+
+/* the badge sits by the right edge, so its tooltip grows to the left */
+.status .tooltip {
+  min-width: 0;
+  width: max-content;
+  left: auto;
+  right: -8px;
+  transform: translateY(-6px);
+  text-transform: uppercase;
+}
+
+.status .tooltip::before {
+  left: auto;
+  right: 18px;
+  transform: rotate(45deg);
+}
+
+.status .tooltip.tooltip-down {
+  transform: translateY(6px);
+}
+
+@media (hover: hover) {
+  .status:hover .tooltip {
+    transform: translateY(0);
+  }
+}
+
+.status:focus-visible .tooltip {
+  transform: translateY(0);
+}
+
+/* the edge colour of 00 is too dark to read as text */
+.s-00 {
+  color: #7a80b4;
+}
+
+.s-01 {
+  color: var(--c-01);
+}
+
+.s-10 {
+  color: var(--c-10);
+}
+
+.s-11 {
+  color: var(--c-11);
+}
+
+.card-actions {
+  width: 34px;
+  height: 34px;
+  border-radius: var(--pill);
+
+  display: grid;
+  place-items: center;
+
+  font-family: var(--font-mono);
+  font-size: 1.05rem;
+  color: rgba(230, 232, 255, 0.72);
+  background: var(--glass);
+  border: 1px solid rgba(230, 232, 255, 0.08);
+
+  transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+}
+
+@media (hover: hover) {
+  .card-actions:hover {
+    transform: translateY(-1px);
+    background: var(--glass-hover);
+    border-color: rgba(230, 232, 255, 0.14);
+  }
+}
+
+.card-menu {
+  position: absolute;
+  top: 52px;
+  right: 10px;
+  z-index: 6;
+
+  min-width: 200px;
+  padding: 8px;
+  border-radius: 16px;
+
+  background: var(--popover);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-pop);
+
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateY(8px);
+  transition: opacity 0.16s ease, transform 0.16s ease, visibility 0.16s ease;
+}
+
+.card-menu[data-open="true"] {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+.card-menu button {
+  display: block;
+  width: 100%;
+  margin: 0 0 4px;
+  padding: 10px;
+  border-radius: var(--radius-sm);
+
+  text-align: left;
+  font-family: var(--font-content);
+  font-size: 0.88rem;
+  color: rgba(230, 232, 255, 0.88);
+  background: transparent;
+  border: 1px solid var(--line-soft);
+}
+
+.card-menu button:last-child {
+  margin-bottom: 0;
+}
+
+.card-menu button:hover {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: var(--line);
+}
+
+.card-menu button.danger {
+  color: var(--vika);
+}
+
+.card-menu .menu-sep {
+  height: 1px;
+  margin: 8px 2px;
+  background: rgba(230, 232, 255, 0.08);
+}
+
 /* =========================
-   RATING STARS IN CARDS
+   HEARTS ON A CARD
    ========================= */
 
 .rating {
-  display: flex;
-  flex-direction: column;
+  display: grid;
   gap: 6px;
 }
 
 .rating-row {
   display: flex;
   align-items: center;
-  gap: 3px;
+  gap: 4px;
 }
 
 .rating-name {
   min-width: 42px;
-  color: var(--muted);
   font-size: 0.8rem;
+  color: var(--muted);
 }
 
 .rating-stars {
@@ -968,31 +1279,41 @@ li.is-animating {
 }
 
 .rating-heart {
-  font-size: 0.9rem;
+  font-size: 0.95rem;
+  line-height: 1;
   opacity: 0.2;
-  transform: scale(1);
   transition: transform 0.12s ease, opacity 0.12s ease;
+}
+
+/* a finger needs a bigger heart than a mouse does */
+@media (pointer: coarse) {
+  .rating-stars {
+    gap: 4px;
+  }
+
+  .rating-heart {
+    font-size: 1.12rem;
+  }
 }
 
 .rating-heart.vlad.filled,
 .rating-heart.vlad.hovered {
   opacity: 1;
-  color: #9b6cff;
-  text-shadow:
-    0 0 6px rgba(155, 108, 255, 0.35),
-    0 0 12px rgba(155, 108, 255, 0.15);
+  color: var(--vlad);
+  text-shadow: var(--vlad-glow);
 }
 
 .rating-heart.vika.filled,
 .rating-heart.vika.hovered {
   opacity: 1;
-  color: #ff7abf;
-  text-shadow:
-    0 0 6px rgba(255, 122, 191, 0.35),
-    0 0 12px rgba(255, 122, 191, 0.15);
+  color: var(--vika);
+  text-shadow: var(--vika-glow);
 }
 
-/* hover preview size */
+.rating-row.is-editable .rating-heart {
+  cursor: pointer;
+}
+
 .rating-row.is-editable .rating-heart.hovered {
   transform: scale(1.14);
 }
@@ -1002,1163 +1323,67 @@ li.is-animating {
 }
 
 /* =========================
-   STATUS COLORS
+   COMMENTS ON A CARD
    ========================= */
 
-li[data-status="00"] { border-color: var(--c-00); }
-li[data-status="01"] { border-color: var(--c-01); }
-li[data-status="10"] { border-color: var(--c-10); }
-li[data-status="11"] { border-color: var(--c-11); }
-
-/* status badge text */
-.status {
-  font-family: var(--font-badge);
-  letter-spacing: 0.12em;
-  font-size: 0.78rem;
-
-  padding: 6px 12px;
-  border-radius: 999px;
-
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(230, 232, 255, 0.06);
-
-  position: relative;   /* important for absolute tooltip positioning */
-  cursor: default;
-}
-
-.status .tooltip {
-  text-transform: uppercase;
-}
-
-.s-00 { color: var(--c-00); }
-.s-01 { color: var(--c-01); }
-.s-10 { color: var(--c-10); }
-.s-11 { color: var(--c-11); }
-
-/* =========================
-   FOOTER
-   ========================= */
-
-/* footer */
-footer {
-  margin: 48px auto 0;
-  width: 100%;
-  text-align: center;
-
-  font-family: var(--font-body);
-  letter-spacing: 0.08em;
-  text-transform: none;
-
-  color: rgba(154, 160, 214, 0.85);
-  font-size: 0.72rem;
-
-  opacity: 0;
-  transform: translateY(12px);
-
-  transition:
-    opacity 0.6s ease,
-    transform 0.6s ease;
-}
-
-/* =========================
-   CROSSED HEARTS
-   ========================= */
-
-.tab-icon-hearts,
-.footer-hearts {
-  position: relative;
-  display: inline-block;
-  width: 18px;
-  height: 18px;
-  line-height: 1;
-}
-
-.tab-icon-hearts {
-  margin: 0;           
-  flex: 0 0 24px;    
-}
-
-.footer-hearts {
-  margin: 0 6px;  
-  top: 5px;   
-}
-
-.tab-icon-hearts::before,
-.tab-icon-hearts::after,
-.footer-hearts::before,
-.footer-hearts::after {
-  content: "❤";
-  position: absolute;
-  top: 0;
-  left: 50%;
-  font-size: 0.95rem;  
-  transform-origin: center;
-}
-
-.tab-icon-hearts::before,
-.footer-hearts::before {
-  color: #9b6cff;
-  text-shadow:
-    0 0 6px rgba(155, 108, 255, 0.35),
-    0 0 12px rgba(155, 108, 255, 0.15);
-
-  transform: translateX(-75%) rotate(-22deg);
-  z-index: 2;
-}
-
-.tab-icon-hearts::after,
-.footer-hearts::after {
-  color: #ff7abf;
-  text-shadow:
-    0 0 6px rgba(255, 122, 191, 0.35),
-    0 0 12px rgba(255, 122, 191, 0.15);
-
-  transform: translateX(-25%) rotate(22deg);
-  z-index: 1;
-}
-
-/* visible footer */
-footer.visible {
-  opacity: 1;
-  transform: translateY(0);
-}
-
-/* instant hide of footer (without animation) */
-footer.instant-hide {
-  transition: none;
-  opacity: 0;
-  transform: translateY(12px);
-}
-
-/* =========================
-   AUTH OVERLAY (VLAD / VIKA)
-   ========================= */
-
-body.auth-open {
-  overflow-y: hidden;
-}
-
-.auth-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 9999;
-
-  display: grid;
-  place-items: center;
-
-  background: rgba(0, 0, 0, 0.62);
-  backdrop-filter: blur(8px);
-
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
-
-  /* closing: fade first, then hide */
-  transition: opacity 0.22s ease, visibility 0s linear 0.22s;
-}
-
-.auth-overlay.is-open {
-  opacity: 1;
-  visibility: visible;
-  pointer-events: auto;
-
-  /* opening: visible at once. a transition on visibility keeps it hidden for
-     the first frame, and a hidden field cannot take focus, so the email field
-     missed the focus it was given the moment the overlay opened */
-  transition: opacity 0.22s ease, visibility 0s;
-}
-
-.auth-card {
-  width: min(520px, 92vw);
-  padding: 18px 18px 16px;
-  border-radius: 22px;
-
-  background: linear-gradient(
-    180deg,
-    rgba(10, 10, 20, 0.92),
-    rgba(5, 5, 10, 0.92)
-  );
-  border: 1px solid rgba(230, 232, 255, 0.10);
-  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.75);
-
-  transform: translateY(10px) scale(0.98);
-  opacity: 0;
-
-  transition: transform 0.42s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.22s ease;
-
-  text-align: center; /* keeps title/desc perfectly centered */
-}
-
-.auth-overlay.is-open .auth-card {
-  transform: translateY(0) scale(1);
-  opacity: 1;
-}
-
-.auth-title {
-  width: 100%;
-  display: block;
-
-  font-family: var(--font-title);
-  font-weight: 700;
-  font-size: clamp(1.35rem, 3.2vw, 1.75rem);
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  text-align: center;
-
-  margin: 6px 0 10px;
-
-  color: rgba(230, 232, 255, 0.88);
-
-  text-shadow:
-    0 2px 0 rgba(0, 0, 0, 0.75),
-    0 10px 28px rgba(0, 0, 0, 0.85),
-    0 0 22px rgba(155, 108, 255, 0.10);
-}
-
-/* subtle mini “horizon line” under auth title */
-.auth-title::after {
-  content: "";
-  display: block;
-
-  height: 1px;
-  width: min(340px, 78%);
-  margin: 12px auto 0;
-
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(230, 232, 255, 0.88),
-    transparent
-  );
-  opacity: 0.75;
-}
-
-.auth-desc {
-  font-family: var(--font-body);
-  font-weight: 600;
-  letter-spacing: 0.12em;
-  font-size: 0.72rem;
-  text-transform: uppercase;
-  line-height: 1.35;
-
-  color: rgba(154, 160, 214, 0.92);
-  opacity: 0.9;
-
-  margin: 0 0 14px;
-  text-align: center;
-}
-
-.auth-actions {
+.comment-lines {
   display: flex;
-  gap: 12px;
-  justify-content: center;
   flex-wrap: wrap;
-  margin-bottom: 10px;
-}
-
-.auth-choice {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-
-  padding: 10px 18px;
-  border-radius: 999px;
-
-  font-family: var(--font-body);
-  font-weight: 600;
-  letter-spacing: 0.12em;
-  font-size: 0.78rem;
-  text-transform: uppercase;
-  line-height: 1;
-
-  color: rgba(230, 232, 255, 0.92);
-  background: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.10),
-    rgba(255, 255, 255, 0.04)
-  );
-
-  border: 1px solid rgba(230, 232, 255, 0.14);
-  cursor: pointer;
-
-  transition:
-    transform 0.25s ease,
-    box-shadow 0.25s ease,
-    border-color 0.25s ease;
-}
-
-.auth-choice:hover {
-  transform: translateY(-1px);
-  border-color: rgba(230, 232, 255, 0.18);
-  box-shadow:
-    0 18px 46px rgba(0, 0, 0, 0.60),
-    0 0 18px rgba(155, 108, 255, 0.14);
-}
-
-.auth-choice:focus-visible {
-  outline: none;
-  border-color: rgba(255, 211, 106, 0.35);
-  box-shadow:
-    0 0 0 3px rgba(255, 211, 106, 0.12),
-    0 18px 46px rgba(0, 0, 0, 0.60);
-}
-
-.auth-choice:disabled {
-  opacity: 0.5;
-  cursor: default;
-  transform: none;
-}
-
-/* the form and the signed-in buttons take turns through the hidden
-   attribute. .auth-actions sets display: flex, which would win over the
-   browser's own [hidden] rule and show both at once */
-.auth-card [hidden] {
-  display: none;
-}
-
-.auth-form .field-input {
-  margin-bottom: 14px;
-  text-align: center;
-}
-
-/* what happened to the link: sent, refused, expired. empty most of the time,
-   so it takes no room until there is something to say */
-.auth-status {
-  font-family: var(--font-body);
-  font-size: 0.78rem;
-  letter-spacing: 0.04em;
-  line-height: 1.4;
-  color: rgba(154, 160, 214, 0.92);
-  margin: 0;
-}
-
-.auth-status:empty {
-  display: none;
-}
-
-/* a guest reads, and the controls that would only be refused are not drawn.
-   hiding them is for the eye: the database turns the writes down either way */
-body.is-guest #addToggle,
-body.is-guest #wishlistToggle,
-body.is-guest .card-actions,
-body.is-guest .card-menu {
-  display: none;
-}
-
-/* =========================
-   LOGS WIDGET (BOTTOM LEFT)
-   ========================= */
-
-.logs-widget {
-  position: fixed;
-  left: calc(16px + env(safe-area-inset-left));
-  bottom: calc(16px + env(safe-area-inset-bottom));
-  z-index: 60;
-
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-
-  pointer-events: none; /* only children should be clickable */
-}
-
-.logs-toggle,
-.logs-panel {
-  pointer-events: auto;
-}
-
-/* button matches filters vibe */
-.logs-toggle {
-  position: relative;
-
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-
-  padding: 10px 18px;
-  border-radius: 999px;
-
-  font-family: var(--font-body);
-  font-weight: 600;
-  letter-spacing: 0.12em;
-  font-size: 0.78rem;
-  text-transform: uppercase;
-  line-height: 1;
-
-  color: rgba(154, 160, 214, 0.92);
-  background: transparent;
-
-  cursor: pointer;
-  user-select: none;
-
-  border: 1px solid rgba(230, 232, 255, 0.06);
-
-  backdrop-filter: blur(8px);
-
-  transition:
-    background 0.25s ease,
-    color 0.25s ease,
-    border-color 0.25s ease,
-    transform 0.25s ease,
-    box-shadow 0.25s ease;
-}
-
-.logs-toggle:hover {
-  background: rgba(253, 250, 250, 0.05);
-  border-color: rgba(230, 232, 255, 0.10);
-  transform: translateY(-1px);
-  box-shadow:
-    0 10px 30px rgba(0, 0, 0, 0.45),
-    0 0 18px rgba(155, 108, 255, 0.10);
-}
-
-.logs-toggle:focus-visible {
-  outline: none;
-  border-color: rgba(255, 211, 106, 0.35);
-  box-shadow:
-    0 0 0 3px rgba(255, 211, 106, 0.12),
-    0 12px 36px rgba(0, 0, 0, 0.55);
-}
-
-.logs-toggle-icon::before {
-  content: "▾";
-  display: inline-block;
-  transform: translateY(-1px);
-  transition: transform 0.25s ease;
-  opacity: 0.9;
-}
-
-.logs-toggle.is-open .logs-toggle-icon::before {
-  transform: translateY(-1px) rotate(180deg);
-}
-
-/* panel open/close like filters */
-.logs-panel {
-  width: min(420px, 92vw);
-
-  max-height: 0;
-  opacity: 0;
-  transform: translateY(10px);
-  overflow: hidden;
-
-  border-radius: 18px;
-
-  background: linear-gradient(
-    180deg,
-    rgba(10, 10, 20, 0.92),
-    rgba(5, 5, 10, 0.92)
-  );
-
-  border: 1px solid rgba(230, 232, 255, 0.10);
-  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.75);
-
-  transition:
-    max-height 0.42s cubic-bezier(0.16, 1, 0.3, 1),
-    opacity 0.22s ease,
-    transform 0.42s cubic-bezier(0.16, 1, 0.3, 1);
-
-  will-change: max-height, opacity, transform;
-}
-
-.logs-panel[data-open="true"] {
-  max-height: 420px;
-  opacity: 1;
-  transform: translateY(0);
-}
-
-.logs-head {
-  padding: 12px 14px 8px;
-}
-
-.logs-head-title {
-  font-family: var(--font-badge);
-  font-size: 0.66rem;
-  letter-spacing: 0.26em;
-  text-transform: uppercase;
-
-  color: rgba(154, 160, 214, 0.88);
-  opacity: 0.85;
-}
-
-/* list */
-.logs-list {
-  list-style: none;
-  margin: 0;
-  padding: 0 12px 12px;
-
-  display: grid;
-  gap: 10px;
-}
-
-.log-item {
-  padding: 10px 12px;
-  border-radius: 14px;
-
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(230, 232, 255, 0.06);
-}
-
-.log-time {
-  font-family: var(--font-badge);
-  font-size: 0.64rem;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-
-  color: rgba(154, 160, 214, 0.82);
-  opacity: 0.7;
-
-  margin-bottom: 6px;
-}
-
-.log-text {
-  font-family: var(--font-content);
-  font-size: 0.86rem;
-  line-height: 1.35;
-
-  color: rgba(230, 232, 255, 0.92);
-  opacity: 0.92;
-}
-
-/* =========================
-   RATINGS (EDITABILITY)
-   ========================= */
-
-.rating-row.is-editable .rating-heart {
-  cursor: pointer;
-}
-
-.rating-row.is-editable .rating-heart:hover {
-  opacity: 1;
-}
-
-/* =========================
-   LOGS — TITLE + SCORE STYLING
-   ========================= */
-
-.log-title {
-  font-style: normal;
-  font-size: 0.9em;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: rgba(230, 232, 255, 0.88);
-
-  margin-inline-start: 4px;
-  margin-inline-end: 3px;
-
-  /* text-decoration: underline; */
-}
-
-.log-score {
-  font-family: var(--font-badge);
-  letter-spacing: 0.12em;
-  font-size: 0.82em;
-  opacity: 0.95;
-  white-space: nowrap;
-}
-
-.log-score.vlad {
-  color: #9b6cff;
-  text-shadow:
-    0 0 6px rgba(155, 108, 255, 0.35),
-    0 0 12px rgba(155, 108, 255, 0.15);
-}
-
-.log-score.vika {
-  color: #ff7abf;
-  text-shadow:
-    0 0 6px rgba(255, 122, 191, 0.35),
-    0 0 12px rgba(255, 122, 191, 0.15);
-}
-
-/* =========================
-   ADD TOGGLE
-   ========================= */
-
-.filters-bar {
-  gap: 12px;
-}
-
-.add-toggle {
-  position: relative;
-
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-
-  padding: 10px 18px;
-  border-radius: 999px;
-
-  font-family: var(--font-body);
-  font-weight: 600;
-  letter-spacing: 0.12em;
-  font-size: 0.78rem;
-  text-transform: uppercase;
-  line-height: 1;
-
-  color: rgba(154, 160, 214, 0.92);
-  background: transparent;
-
-  cursor: pointer;
-  user-select: none;
-
-  border: 1px solid rgba(230, 232, 255, 0.06);
-  transition:
-    background 0.25s ease,
-    color 0.25s ease,
-    border-color 0.25s ease,
-    transform 0.25s ease,
-    box-shadow 0.25s ease;
-}
-
-.add-toggle:hover {
-  background: rgba(253, 250, 250, 0.05);
-  border-color: rgba(230, 232, 255, 0.10);
-  transform: translateY(-1px);
-  box-shadow:
-    0 10px 30px rgba(0, 0, 0, 0.45),
-    0 0 18px rgba(155, 108, 255, 0.10);
-}
-
-.add-toggle:focus-visible {
-  outline: none;
-  border-color: rgba(255, 211, 106, 0.35);
-  box-shadow:
-    0 0 0 3px rgba(255, 211, 106, 0.12),
-    0 12px 36px rgba(0, 0, 0, 0.55);
-}
-
-/* =========================
-   MODALS (GENERIC)
-   ========================= */
-
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 10000;
-
-  display: grid;
-  place-items: center;
-
-  background: rgba(0, 0, 0, 0.62);
-  backdrop-filter: blur(8px);
-
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
-
-  transition: opacity 0.22s ease, visibility 0.22s ease;
-}
-
-.modal-overlay.is-open {
-  opacity: 1;
-  visibility: visible;
-  pointer-events: auto;
-}
-
-.modal-card {
-  width: min(620px, 92vw);
-  padding: 18px 18px 16px;
-  border-radius: 22px;
-
-  background: linear-gradient(
-    180deg,
-    rgba(10, 10, 20, 0.92),
-    rgba(5, 5, 10, 0.92)
-  );
-  border: 1px solid rgba(230, 232, 255, 0.10);
-  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.75);
-
-  transform: translateY(10px) scale(0.98);
-  opacity: 0;
-
-  transition: transform 0.42s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.22s ease;
-}
-
-.modal-overlay.is-open .modal-card {
-  transform: translateY(0) scale(1);
-  opacity: 1;
-}
-
-.modal-title {
-  font-family: var(--font-title);
-  font-weight: 700;
-  font-size: clamp(1.25rem, 3vw, 1.6rem);
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  text-align: center;
-
-  margin: 6px 0 10px;
-
-  color: rgba(230, 232, 255, 0.88);
-  text-shadow:
-    0 2px 0 rgba(0, 0, 0, 0.75),
-    0 10px 28px rgba(0, 0, 0, 0.85),
-    0 0 22px rgba(155, 108, 255, 0.10);
-}
-
-.modal-desc {
-  font-family: var(--font-body);
-  font-weight: 600;
-  letter-spacing: 0.12em;
-  font-size: 0.72rem;
-  text-transform: uppercase;
-  line-height: 1.35;
-
-  color: rgba(154, 160, 214, 0.92);
-  opacity: 0.9;
-
-  margin: 0 0 14px;
-  text-align: center;
-}
-
-.modal-form {
-  display: grid;
-  gap: 12px;
-}
-
-.field {
-  display: grid;
   gap: 8px;
 }
 
-.field-label {
-  font-family: var(--font-badge);
-  font-size: 0.66rem;
-  letter-spacing: 0.26em;
-  text-transform: uppercase;
-
-  color: rgba(154, 160, 214, 0.88);
-  opacity: 0.85;
+.comment-lines:empty {
+  display: none;
 }
 
-/* =========================
-   FORMS — DARK NATIVE CONTROLS
-   ========================= */
-
-body {
-  color-scheme: dark;
-}
-
-.field-select {
-  background: rgba(255, 255, 255, 0.03);
-  color: rgba(230, 232, 255, 0.92);
-}
-
-.field-select option {
-  background: #080a14;
-  color: rgba(230, 232, 255, 0.92);
-}
-
-.field-input,
-.field-select,
-.field-textarea {
-  width: 100%;
-  padding: 10px 12px;
-  border-radius: 14px;
-
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(230, 232, 255, 0.10);
-  color: rgba(230, 232, 255, 0.92);
-
-  font-family: var(--font-content);
-  font-size: 0.92rem;
-  line-height: 1.25;
-
-  outline: none;
-}
-
-.field-textarea {
-  resize: vertical;
-  min-height: 92px;
-}
-
-.field-input:focus,
-.field-select:focus,
-.field-textarea:focus {
-  border-color: rgba(255, 211, 106, 0.35);
-  box-shadow: 0 0 0 3px rgba(255, 211, 106, 0.12);
-}
-
-/* a column per field, however many the row has */
-.field-grid {
-  display: grid;
-  gap: 12px;
-  grid-auto-flow: column;
-  grid-auto-columns: minmax(0, 1fr);
-}
-
-@media (max-width: 560px) {
-  .field-grid {
-    grid-auto-flow: row;
-  }
-}
-
-.modal-actions {
-  display: flex;
-  justify-content: center;
-  gap: 12px;
-
-  margin-top: 6px;
-}
-
-.modal-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-
-  padding: 10px 18px;
-  border-radius: 999px;
-
-  font-family: var(--font-body);
-  font-weight: 600;
-  letter-spacing: 0.12em;
-  font-size: 0.78rem;
-  text-transform: uppercase;
-
-  color: rgba(230, 232, 255, 0.92);
-  background: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.10),
-    rgba(255, 255, 255, 0.04)
-  );
-
-  border: 1px solid rgba(230, 232, 255, 0.14);
-  cursor: pointer;
-
-  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
-}
-
-.modal-btn:hover {
-  transform: translateY(-1px);
-  border-color: rgba(230, 232, 255, 0.18);
-  box-shadow:
-    0 18px 46px rgba(0, 0, 0, 0.60),
-    0 0 18px rgba(155, 108, 255, 0.14);
-}
-
-.modal-btn.ghost {
-  background: rgba(255, 255, 255, 0.03);
-}
-
-/* =========================
-   CARD MENU (ACTIONS)
-   ========================= */
-
-.right {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.card-actions {
-  width: 34px;
-  height: 34px;
-  border-radius: 999px;
-
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-
-  font-family: var(--font-badge);
-  font-size: 1.05rem;
-
-  color: rgba(230, 232, 255, 0.72);
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(230, 232, 255, 0.08);
-
-  cursor: pointer;
-  user-select: none;
-
-  transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
-}
-
-.card-actions:hover {
-  transform: translateY(-1px);
-  background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(230, 232, 255, 0.14);
-}
-
-.card-actions:focus-visible {
-  outline: none;
-  border-color: rgba(255, 211, 106, 0.35);
-  box-shadow: 0 0 0 3px rgba(255, 211, 106, 0.12);
-}
-
-.card-menu {
-  position: absolute;
-  right: 14px;
-  top: 14px;
-  z-index: 5;
-
-  min-width: 220px;
-  padding: 10px;
-  border-radius: 16px;
-
-  background: rgba(8, 10, 20, 0.96);
-  border: 1px solid rgba(230, 232, 255, 0.10);
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.65);
-
-  opacity: 0;
-  visibility: hidden;
-  transform: translateY(8px);
-  pointer-events: none;
-
-  transition: opacity 0.16s ease, transform 0.16s ease, visibility 0.16s ease;
-}
-
-.card-menu[data-open="true"] {
-  opacity: 1;
-  visibility: visible;
-  transform: translateY(0);
-  pointer-events: auto;
-}
-
-.card-menu button {
-  width: 100%;
-  text-align: left;
-
-  padding: 10px 10px;
-  border-radius: 12px;
-
-  background: transparent;
-  border: 1px solid rgba(230, 232, 255, 0.06);
-
-  color: rgba(230, 232, 255, 0.88);
-  font-family: var(--font-content);
-  font-size: 0.86rem;
-
-  cursor: pointer;
-}
-
-.card-menu button:hover {
-  background: rgba(255, 255, 255, 0.04);
-  border-color: rgba(230, 232, 255, 0.10);
-}
-
-.card-menu button.danger {
-  color: #ff7abf;
-}
-
-.card-menu .menu-sep {
-  height: 1px;
-  margin: 10px 2px;
-  background: rgba(230, 232, 255, 0.08);
-}
-
-/* =========================
-   COMMENTS PREVIEW
-   ========================= */
-
-.comment-lines {
-  margin-top: 8px;
-  display: grid;
-  gap: 6px;
-}
-
-.comment-line {
-  font-family: var(--font-content);
-  font-size: 0.86rem;
-  line-height: 1.35;
-  color: rgba(230, 232, 255, 0.86);
-  opacity: 0.92;
-}
-
-.comment-line .who {
-  font-family: var(--font-badge);
-  letter-spacing: 0.12em;
-  font-size: 0.76em;
-  text-transform: uppercase;
-  opacity: 0.9;
-  margin-right: 8px;
-}
-
-.comment-line .who.vlad {
-  color: #9b6cff;
-  text-shadow:
-    0 0 6px rgba(155, 108, 255, 0.30),
-    0 0 12px rgba(155, 108, 255, 0.12);
-}
-
-.comment-line .who.vika {
-  color: #ff7abf;
-  text-shadow:
-    0 0 6px rgba(255, 122, 191, 0.30),
-    0 0 12px rgba(255, 122, 191, 0.12);
-}
-
-/* =========================
-   LOGS "LOAD MORE"
-   ========================= */
-
-.logs-foot {
-  padding: 0 12px 12px;
-  display: flex;
-  justify-content: center;
-}
-
-.logs-more {
-  width: 100%;
-
-  padding: 10px 14px;
-  border-radius: 999px;
-
-  font-family: var(--font-body);
-  font-weight: 600;
-  letter-spacing: 0.12em;
-  font-size: 0.78rem;
-  text-transform: uppercase;
-
-  color: rgba(154, 160, 214, 0.92);
-  background: transparent;
-
-  border: 1px solid rgba(230, 232, 255, 0.06);
-  cursor: pointer;
-
-  transition:
-    background 0.25s ease,
-    border-color 0.25s ease,
-    transform 0.25s ease,
-    box-shadow 0.25s ease;
-}
-
-.logs-more:hover {
-  background: rgba(253, 250, 250, 0.05);
-  border-color: rgba(230, 232, 255, 0.10);
-  transform: translateY(-1px);
-  box-shadow:
-    0 10px 30px rgba(0, 0, 0, 0.45),
-    0 0 18px rgba(155, 108, 255, 0.10);
-}
-
-.logs-more[disabled] {
-  opacity: 0.5;
-  cursor: default;
-  transform: none;
-  box-shadow: none;
-}
-
-/* =========================
-   CARD MENU (ACTIONS) — THEMED + ALWAYS ON TOP
-   ========================= */
-
-li.menu-open {
-  z-index: 50;
-}
-
-.card-menu {
-  z-index: 200;
-}
-
-/* make menu buttons match site typography */
-.card-menu button {
-  width: 100%;
-  text-align: left;
-
-  padding: 10px 12px;
-  border-radius: 12px;
-
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(230, 232, 255, 0.08);
-
-  font-family: var(--font-badge);
-  letter-spacing: 0.22em;
-  font-size: 0.70rem;
-  text-transform: uppercase;
-
-  color: rgba(230, 232, 255, 0.88);
-
-  cursor: pointer;
-}
-
-.card-menu button:hover {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(230, 232, 255, 0.14);
-  box-shadow:
-    0 18px 46px rgba(0, 0, 0, 0.55),
-    0 0 18px rgba(155, 108, 255, 0.12);
-}
-
-/* =========================
-   LOGS — SCROLL + WRAP LONG LINES
-   ========================= */
-
-.logs-list {
-  max-height: 320px;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  padding-right: 6px;
-}
-
-.log-text {
-  white-space: normal;
-  overflow-wrap: anywhere;
-  word-break: break-word;
-}
-
-/* =========================
-   COMMENTS — TOGGLES + COLORED NAMES
-   ========================= */
-
-.comment-lines {
-  margin-top: 10px;
-  display: grid;
-  gap: 8px;
+.rating + .comment-lines {
+  margin-top: 12px;
 }
 
 .comment-toggle {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-
-  width: fit-content;
   padding: 7px 12px;
-  border-radius: 999px;
+  border-radius: var(--pill);
 
-  font-family: var(--font-badge);
+  font-family: var(--font-mono);
+  font-size: 0.64rem;
   letter-spacing: 0.18em;
-  font-size: 0.66rem;
   text-transform: uppercase;
 
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--glass);
   border: 1px solid rgba(230, 232, 255, 0.08);
-
-  color: rgba(230, 232, 255, 0.80);
-  cursor: pointer;
-}
-
-.comment-toggle:hover {
-  border-color: rgba(230, 232, 255, 0.14);
-  background: rgba(255, 255, 255, 0.05);
 }
 
 .comment-toggle.vlad {
-  color: #9b6cff;
-  text-shadow:
-    0 0 6px rgba(155, 108, 255, 0.25),
-    0 0 12px rgba(155, 108, 255, 0.10);
+  color: var(--vlad);
+  text-shadow: var(--vlad-glow);
 }
 
 .comment-toggle.vika {
-  color: #ff7abf;
-  text-shadow:
-    0 0 6px rgba(255, 122, 191, 0.25),
-    0 0 12px rgba(255, 122, 191, 0.10);
+  color: var(--vika);
+  text-shadow: var(--vika-glow);
 }
 
+.comment-toggle[aria-expanded="true"] {
+  border-color: var(--line-strong);
+  background: var(--glass-hover);
+}
+
+/* an unfolded comment takes a line of its own, under the toggles */
 .comment-body {
+  order: 1;
+  flex-basis: 100%;
   padding: 10px 12px;
   border-radius: 14px;
 
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(230, 232, 255, 0.06);
-
   font-family: var(--font-content);
-  font-size: 0.86rem;
-  line-height: 1.35;
-
+  font-size: 0.88rem;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
   color: rgba(230, 232, 255, 0.88);
+
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--line-soft);
 }
 
 .comment-body[data-open="false"] {
@@ -2166,482 +1391,135 @@ li.menu-open {
 }
 
 /* =========================
-   LOGS — SCROLL + SCROLLBAR
+   WISHLISTS
    ========================= */
-
-.logs-panel {
-  display: flex;
-  flex-direction: column;
-}
-
-/* makes the list area scroll instead of clipping */
-.logs-list {
-  max-height: 280px;
-  overflow-y: auto;
-
-  padding-right: 6px;
-
-  /* firefox */
-  scrollbar-width: thin;
-  scrollbar-color: rgba(230, 232, 255, 0.18) rgba(255, 255, 255, 0.03);
-}
-
-/* webkit */
-.logs-list::-webkit-scrollbar {
-  width: 10px;
-}
-
-.logs-list::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(230, 232, 255, 0.06);
-  border-radius: 999px;
-}
-
-.logs-list::-webkit-scrollbar-thumb {
-  background: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.14),
-    rgba(155, 108, 255, 0.18)
-  );
-  border: 1px solid rgba(230, 232, 255, 0.10);
-  border-radius: 999px;
-}
-
-.logs-list::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.18),
-    rgba(255, 122, 191, 0.18)
-  );
-}
-
-/* keeps long text readable */
-.log-text {
-  overflow-wrap: anywhere;
-  word-break: break-word;
-}
-
-/* =========================
-   LOGS — USER COLORS
-   ========================= */
-
-.log-user {
-  font-family: var(--font-badge);
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-
-.log-user.vlad {
-  color: #9b6cff;
-  text-shadow:
-    0 0 6px rgba(155, 108, 255, 0.35),
-    0 0 12px rgba(155, 108, 255, 0.15);
-}
-
-.log-user.vika {
-  color: #ff7abf;
-  text-shadow:
-    0 0 6px rgba(255, 122, 191, 0.35),
-    0 0 12px rgba(255, 122, 191, 0.15);
-}
-
-/* =========================
-   SECRET GIFT
-   ========================= */
-
-/* =========================
-   HEARTS TOGGLE (TOP LEFT)
-   ========================= */
-
-.love-toggle {
-  position: fixed;
-  top: calc(16px + env(safe-area-inset-top));
-  left: calc(16px + env(safe-area-inset-left));
-  z-index: 50;
-
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 122, 191, 0.25);
-  
-  cursor: pointer;
-  backdrop-filter: blur(8px);
-  box-shadow:
-    0 10px 24px rgba(0, 0, 0, 0.55),
-    0 0 16px rgba(255, 122, 191, 0.15);
-
-  transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
-  animation: floatLove 4s ease-in-out infinite;
-}
-
-.love-toggle:hover {
-  transform: scale(1.1) rotate(5deg);
-  border-color: rgba(255, 122, 191, 0.45);
-  box-shadow:
-    0 14px 32px rgba(0, 0, 0, 0.65),
-    0 0 24px rgba(255, 122, 191, 0.35);
-}
-
-.header-hearts {
-  position: relative;
-  display: inline-block;
-  width: 24px;
-  height: 24px;
-  line-height: 1;
-  margin-top: 5px; /* optical center adjustment */
-}
-
-.header-hearts::before,
-.header-hearts::after {
-  content: "❤";
-  position: absolute;
-  top: 0;
-  left: 50%;
-  font-size: 1.3rem;
-  transform-origin: center;
-}
-
-.header-hearts::before {
-  color: #9b6cff;
-  text-shadow:
-    0 0 6px rgba(155, 108, 255, 0.35),
-    0 0 12px rgba(155, 108, 255, 0.15);
-  transform: translateX(-75%) rotate(-22deg);
-  z-index: 2;
-}
-
-.header-hearts::after {
-  color: #ff7abf;
-  text-shadow:
-    0 0 6px rgba(255, 122, 191, 0.35),
-    0 0 12px rgba(255, 122, 191, 0.15);
-  transform: translateX(-25%) rotate(22deg);
-  z-index: 1;
-}
-
-@keyframes floatLove {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-6px); }
-}
-
-/* ---------------------------
-   modal styles
----------------------------- */
-
-.gift-modal-card {
-  border-color: rgba(255, 122, 191, 0.25);
-  box-shadow: 
-    0 30px 80px rgba(0, 0, 0, 0.85),
-    0 0 40px rgba(255, 122, 191, 0.15);
-}
-
-.gift-art-wrapper {
-  width: 100%;
-  max-height: 400px;
-  border-radius: 14px;
-  overflow: hidden;
-  margin-bottom: 20px; /* spacing for the button */
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  background: rgba(0,0,0,0.3);
-}
-
-/* the link around the art opens the original. as a flex item it would shrink
-   to its content, and the image inside sizes itself from the link, so without
-   a width of its own the picture has nothing to be 100% of */
-.gift-art-link {
-  display: block;
-  width: 100%;
-  cursor: zoom-in;
-}
-
-.gift-art {
-  width: 100%;
-  height: auto;
-  object-fit: cover;
-  display: block;
-}
-
-/* =========================
-   WISHLIST (TOGGLE + MODAL)
-   ========================= */
-
-.wishlist-toggle {
-  position: fixed;
-  top: calc(64px + env(safe-area-inset-top));
-  right: calc(16px + env(safe-area-inset-right));
-  z-index: 50;
-
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-
-  padding: 10px 16px;
-  border-radius: 999px;
-
-  font-family: var(--font-badge);
-  font-weight: 600;
-  letter-spacing: 0.12em;
-  font-size: 0.72rem;
-  text-transform: uppercase;
-  line-height: 1;
-
-  color: rgba(154, 160, 214, 0.92);
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(230, 232, 255, 0.10);
-
-  cursor: pointer;
-  user-select: none;
-  backdrop-filter: blur(8px);
-  box-shadow: 0 18px 46px rgba(0, 0, 0, 0.55);
-
-  transition: transform 0.25s ease, border-color 0.25s ease, background 0.25s ease;
-}
-
-.wishlist-toggle:hover {
-  transform: translateY(-1px);
-  background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(230, 232, 255, 0.16);
-}
-
-.wishlist-modal-card {
-  width: min(800px, 92vw);
-}
 
 .wishlist-columns {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 24px;
-  margin-top: 20px;
+  gap: 18px;
 }
 
-@media (max-width: 600px) {
+@media (min-width: 720px) {
   .wishlist-columns {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr 1fr;
+    align-items: start;
   }
 }
 
 .wishlist-col {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border-radius: var(--radius);
   background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(230, 232, 255, 0.06);
-  border-radius: 18px;
-  padding: 16px;
+  border: 1px solid var(--line-soft);
 }
 
 .wishlist-col-header {
-  font-family: var(--font-badge);
+  font-family: var(--font-mono);
+  font-weight: 600;
   font-size: 0.86rem;
   letter-spacing: 0.2em;
   text-transform: uppercase;
   text-align: center;
-  margin-bottom: 8px;
 }
 
 .wishlist-col-header.vlad {
-  color: #9b6cff;
+  color: var(--vlad);
   text-shadow: 0 0 12px rgba(155, 108, 255, 0.2);
 }
 
 .wishlist-col-header.vika {
-  color: #ff7abf;
+  color: var(--vika);
   text-shadow: 0 0 12px rgba(255, 122, 191, 0.2);
 }
 
 .wishes-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+  list-style: none;
   margin: 0;
   padding: 0;
-  list-style: none;
-  max-height: 300px;
-  overflow-y: auto;
-  overflow-x: hidden; /* block horizontal scroll absolutely */
-  padding-right: 4px;
+  display: grid;
+  gap: 10px;
 }
 
-.wishes-list::-webkit-scrollbar { width: 6px; }
-.wishes-list::-webkit-scrollbar-track { background: transparent; }
-.wishes-list::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 10px;
+.wishes-list:empty {
+  display: none;
 }
 
 .wish-item {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   gap: 12px;
   padding: 12px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(230, 232, 255, 0.06);
-  border-radius: 12px;
+  border-radius: var(--radius-sm);
+  background: var(--glass);
+  border: 1px solid var(--line-soft);
 }
-
-.wish-info {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  overflow: hidden;
-}
-
-.wish-title {
-  font-family: var(--font-content);
-  font-size: 0.92rem;
-  color: rgba(230, 232, 255, 0.94);
-  word-break: break-word;
-}
-
-.wish-link {
-  font-family: var(--font-badge);
-  font-size: 0.65rem;
-  color: rgba(154, 160, 214, 0.8);
-  text-decoration: none;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-}
-
-.wish-link:hover {
-  color: #ffd36a;
-}
-
-/* =========================
-   WISHLIST EDIT AND DELETE BUTTONS
-   ========================= */
-
-.wish-btn {
-  position: relative; /* required for absolute tooltip positioning */
-  width: 32px;
-  height: 32px;
-  border-radius: 999px;
-  
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  
-  font-family: var(--font-badge);
-  font-size: 1.1rem;
-  line-height: 1;
-  padding-bottom: 2px;
-  
-  color: rgba(154, 160, 214, 0.92);
-  background: transparent;
-  border: 1px solid rgba(230, 232, 255, 0.06);
-  
-  cursor: pointer;
-  transition:
-    background 0.25s ease,
-    color 0.25s ease,
-    border-color 0.25s ease,
-    transform 0.25s ease,
-    box-shadow 0.25s ease;
-}
-
-.wish-btn:hover {
-  background: rgba(253, 250, 250, 0.05);
-  border-color: rgba(230, 232, 255, 0.10);
-  transform: translateY(-1px);
-  box-shadow:
-    0 10px 30px rgba(0, 0, 0, 0.45),
-    0 0 18px rgba(155, 108, 255, 0.10);
-}
-
-/* animate out to the left and make visible */
-.wish-btn:hover .tooltip,
-.wish-btn:focus-visible .tooltip {
-  opacity: 1;
-  visibility: visible;
-  transform: translateX(0) translateY(-50%);
-}
-/* position tooltip to the left of the button to prevent clipping and scrolling */
-.wish-btn .tooltip {
-  top: 50%;
-  left: auto;
-  right: calc(100% + 12px); /* spacing from the button */
-  bottom: auto;
-  transform: translateX(6px) translateY(-50%); /* slightly pushed in */
-
-  min-width: auto;
-  padding: 8px 14px;
-  white-space: nowrap;
-  text-transform: uppercase;
-}
-
-/* move the little arrow to the right side of the tooltip */
-.wish-btn .tooltip::before {
-  top: 50%;
-  left: auto;
-  right: -6.5px;
-  bottom: auto;
-  transform: translateY(-50%) rotate(45deg);
-
-  /* draw only top and right borders to make it point right */
-  border-top: 1px solid rgba(230, 232, 255, 0.10);
-  border-right: 1px solid rgba(230, 232, 255, 0.10);
-  border-bottom: 0;
-  border-left: 0;
-}
-
-/* remove the default question mark */
-.wish-btn .tooltip::after {
-  display: none;
-}
-
-.add-wish-btn {
-  width: 100%;
-  padding: 10px;
-  border-radius: 12px;
-  background: transparent;
-  border: 1px dashed rgba(230, 232, 255, 0.15);
-  color: rgba(154, 160, 214, 0.8);
-  font-family: var(--font-badge);
-  font-size: 0.72rem;
-  letter-spacing: 0.15em;
-  text-transform: uppercase;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.add-wish-btn:hover {
-  border-color: rgba(230, 232, 255, 0.3);
-  color: rgba(230, 232, 255, 0.9);
-  background: rgba(255, 255, 255, 0.02);
-}
-
-/* =========================
-   WISHLIST DONE
-   ========================= */
 
 .wish-info {
   flex: 1;
   min-width: 0;
+  display: grid;
+  gap: 6px;
 }
 
-/* the round box in front of a wish. ticked, it fills with the site's violet,
-   and the wish moves down into its column's done list */
+.wish-title {
+  font-family: var(--font-content);
+  font-size: 0.94rem;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  color: var(--ink-strong);
+}
+
+/* several links on one line, each named by its site */
+.wish-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+}
+
+.wish-link {
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  text-decoration: none;
+  color: rgba(154, 160, 214, 0.85);
+}
+
+.wish-link:hover {
+  color: var(--gold);
+}
+
+.wish-done-note {
+  font-family: var(--font-mono);
+  font-size: 0.64rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  opacity: 0.8;
+}
+
+.wish-item.is-done .wish-title {
+  color: var(--muted);
+  text-decoration: line-through;
+  text-decoration-color: rgba(154, 160, 214, 0.5);
+}
+
+/* the round box in front of a wish. ticked, it fills with violet, and the
+   wish moves down into its column's done list */
 .wish-check {
   position: relative;
   flex: 0 0 auto;
-  width: 22px;
-  height: 22px;
+  width: 24px;
+  height: 24px;
+  margin-top: 1px;
   padding: 0;
-  border-radius: 999px;
+  border-radius: 50%;
 
   background: transparent;
   border: 1px solid rgba(230, 232, 255, 0.22);
-
-  cursor: pointer;
   transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
 }
 
@@ -2651,22 +1529,11 @@ li.menu-open {
   inset: 0;
   display: grid;
   place-items: center;
-
-  font-size: 0.78rem;
+  font-size: 0.8rem;
   line-height: 1;
   color: rgba(230, 232, 255, 0.95);
-
   opacity: 0;
   transition: opacity 0.2s ease;
-}
-
-.wish-check:hover {
-  border-color: rgba(155, 108, 255, 0.6);
-  transform: scale(1.06);
-}
-
-.wish-check:hover::after {
-  opacity: 0.35;
 }
 
 .wish-check[aria-pressed="true"] {
@@ -2678,78 +1545,134 @@ li.menu-open {
   opacity: 1;
 }
 
-.wish-check:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 3px rgba(255, 211, 106, 0.18);
+@media (hover: hover) {
+  .wish-check:hover {
+    border-color: rgba(155, 108, 255, 0.6);
+    transform: scale(1.06);
+  }
+
+  .wish-check:hover::after {
+    opacity: 0.35;
+  }
+
+  .wish-check[aria-pressed="true"]:hover::after {
+    opacity: 1;
+  }
 }
 
-/* the list scrolls, so a tooltip above the box would be cut off: it opens to
-   the right instead, the way the delete button's opens to the left */
-.wish-check .tooltip {
-  top: 50%;
-  left: calc(100% + 12px);
-  right: auto;
-  bottom: auto;
-  transform: translateX(-6px) translateY(-50%);
+.wish-actions {
+  flex: 0 0 auto;
+  display: flex;
+  gap: 6px;
+}
 
-  min-width: auto;
+.wish-btn {
+  position: relative;
+  width: 32px;
+  height: 32px;
+  padding: 0 0 2px;
+  border-radius: var(--pill);
+
+  display: grid;
+  place-items: center;
+
+  font-family: var(--font-mono);
+  font-size: 1.05rem;
+  line-height: 1;
+  color: var(--muted);
+  background: transparent;
+  border: 1px solid var(--line-soft);
+
+  transition: background 0.25s ease, border-color 0.25s ease, transform 0.25s ease;
+}
+
+@media (hover: hover) {
+  .wish-btn:hover {
+    background: var(--glass-hover);
+    border-color: var(--line);
+    transform: translateY(-1px);
+  }
+}
+
+/* the buttons of a wish name what they do beside them, on the side with
+   room: the box to its right, edit and delete to their left */
+.wish-check .tooltip,
+.wish-btn .tooltip {
+  top: 50%;
+  bottom: auto;
+  min-width: 0;
   padding: 8px 14px;
   white-space: nowrap;
   text-transform: uppercase;
 }
 
-.wish-check:hover .tooltip,
-.wish-check:focus-visible .tooltip {
+.wish-check .tooltip {
+  left: calc(100% + 12px);
+  transform: translateX(-6px) translateY(-50%);
+}
+
+.wish-btn .tooltip {
+  left: auto;
+  right: calc(100% + 12px);
+  transform: translateX(6px) translateY(-50%);
+}
+
+.wish-check .tooltip::before,
+.wish-check .tooltip::after,
+.wish-btn .tooltip::before,
+.wish-btn .tooltip::after {
+  display: none;
+}
+
+@media (hover: hover) {
+  .wish-check:hover .tooltip,
+  .wish-btn:hover .tooltip {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(0) translateY(-50%);
+  }
+}
+
+.wish-check:focus-visible .tooltip,
+.wish-btn:focus-visible .tooltip {
   opacity: 1;
   visibility: visible;
   transform: translateX(0) translateY(-50%);
 }
 
-.wish-check .tooltip::before {
-  top: 50%;
-  left: -6.5px;
-  right: auto;
-  bottom: auto;
-  transform: translateY(-50%) rotate(45deg);
+.add-wish-btn {
+  width: 100%;
+  padding: 10px;
+  border-radius: var(--radius-sm);
 
-  border-bottom: 1px solid rgba(230, 232, 255, 0.10);
-  border-left: 1px solid rgba(230, 232, 255, 0.10);
-  border-top: 0;
-  border-right: 0;
-}
-
-.wish-check .tooltip::after {
-  display: none;
-}
-
-.wish-item.is-done .wish-title {
-  color: rgba(230, 232, 255, 0.62);
-}
-
-.wish-done-note {
-  font-family: var(--font-badge);
-  font-size: 0.62rem;
-  letter-spacing: 0.1em;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.15em;
   text-transform: uppercase;
-  color: rgba(155, 108, 255, 0.85);
+  color: rgba(154, 160, 214, 0.85);
+
+  background: transparent;
+  border: 1px dashed rgba(230, 232, 255, 0.15);
+  transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
 }
 
-/* the wishes that came true, folded under each column */
-.wishes-done {
-  border-top: 1px solid rgba(230, 232, 255, 0.06);
-  padding-top: 10px;
+.add-wish-btn:hover {
+  color: var(--ink);
+  border-color: rgba(230, 232, 255, 0.3);
+  background: rgba(255, 255, 255, 0.02);
 }
 
 .wishes-done summary {
   list-style: none;
+  width: fit-content;
   cursor: pointer;
   user-select: none;
 
-  font-family: var(--font-badge);
+  font-family: var(--font-mono);
   font-size: 0.68rem;
   letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: rgba(154, 160, 214, 0.8);
+  color: rgba(154, 160, 214, 0.85);
 }
 
 .wishes-done summary::-webkit-details-marker {
@@ -2768,7 +1691,7 @@ li.menu-open {
 }
 
 .wishes-done summary:hover {
-  color: rgba(230, 232, 255, 0.9);
+  color: var(--ink);
 }
 
 .wishes-done .wishes-list {
@@ -2776,20 +1699,361 @@ li.menu-open {
 }
 
 /* =========================
-   WISHLIST LINKS AND FORM
+   ACTIVITY
    ========================= */
 
-.wish-actions {
-  display: flex;
-  gap: 6px;
-  flex: 0 0 auto;
+.logs-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
 }
 
-/* several links sit on one line, each named by its site */
-.wish-links {
+.log-item {
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: var(--glass);
+  border: 1px solid var(--line-soft);
+}
+
+.log-time {
+  margin-bottom: 6px;
+  font-family: var(--font-mono);
+  font-size: 0.64rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(154, 160, 214, 0.75);
+}
+
+.log-text {
+  font-family: var(--font-content);
+  font-size: 0.9rem;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+  color: var(--ink);
+}
+
+.log-user {
+  font-weight: 600;
+}
+
+.log-user.vlad {
+  color: var(--vlad);
+  text-shadow: var(--vlad-glow);
+}
+
+.log-user.vika {
+  color: var(--vika);
+  text-shadow: var(--vika-glow);
+}
+
+.log-title {
+  font-style: normal;
+  font-size: 0.9em;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(230, 232, 255, 0.88);
+  margin: 0 3px 0 4px;
+}
+
+.log-score {
+  font-family: var(--font-mono);
+  font-size: 0.82em;
+  letter-spacing: 0.12em;
+  white-space: nowrap;
+}
+
+.log-score.vlad {
+  color: var(--vlad);
+  text-shadow: var(--vlad-glow);
+}
+
+.log-score.vika {
+  color: var(--vika);
+  text-shadow: var(--vika-glow);
+}
+
+.logs-foot {
+  display: flex;
+  justify-content: center;
+  margin-top: 18px;
+}
+
+/* =========================
+   DIALOGS
+   ========================= */
+
+.dialog {
+  width: min(560px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  margin: auto;
+  padding: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+
+  color: var(--ink);
+  background: linear-gradient(180deg, rgba(10, 10, 20, 0.96), rgba(5, 5, 10, 0.96));
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.75);
+}
+
+.dialog::backdrop {
+  background: rgba(0, 0, 0, 0.62);
+  backdrop-filter: blur(8px);
+}
+
+.dialog[open] {
+  animation: dialog-in 0.42s var(--ease-out);
+}
+
+.dialog[open]::backdrop {
+  animation: fade-in 0.22s ease;
+}
+
+@keyframes dialog-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+.dialog-narrow {
+  width: min(460px, calc(100vw - 32px));
+}
+
+/* everything inside a dialog sits in here, so that a click on the dialog
+   itself can only have landed on the dark around it */
+.dialog-body {
+  padding: 20px 18px 18px;
+}
+
+.dialog-title {
+  font-family: var(--font-title);
+  font-weight: 700;
+  font-size: clamp(1.2rem, 4.6vw, 1.6rem);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  text-align: center;
+  color: rgba(230, 232, 255, 0.88);
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.75), 0 10px 28px rgba(0, 0, 0, 0.85), 0 0 22px rgba(155, 108, 255, 0.1);
+}
+
+.dialog-title::after {
+  content: "";
+  display: block;
+  height: 1px;
+  width: min(340px, 78%);
+  margin: 12px auto 0;
+  background: linear-gradient(90deg, transparent, rgba(230, 232, 255, 0.88), transparent);
+  opacity: 0.75;
+}
+
+.dialog-desc {
+  margin: 12px 0 16px;
+  text-align: center;
+
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+  line-height: 1.4;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* the name of what a question is about, inside the question */
+.dialog-name {
+  display: block;
+  margin: 8px 0 2px;
+  font-family: var(--font-content);
+  font-weight: 600;
+  font-size: 0.95rem;
+  letter-spacing: normal;
+  text-transform: none;
+  overflow-wrap: anywhere;
+  color: var(--ink-strong);
+}
+
+.dialog-form,
+.auth-form {
+  display: grid;
+  gap: 14px;
+  margin-top: 16px;
+}
+
+.dialog-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 2px 12px;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 112px;
+  padding: 11px 18px;
+  border-radius: var(--pill);
+
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 0.76rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  line-height: 1;
+
+  color: var(--ink);
+  background: var(--raised);
+  border: 1px solid rgba(230, 232, 255, 0.14);
+
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+}
+
+.btn.ghost {
+  background: var(--glass);
+}
+
+.btn.danger {
+  color: var(--vika);
+  border-color: rgba(255, 122, 191, 0.35);
+}
+
+.btn.love {
+  color: var(--vika);
+  border-color: rgba(255, 122, 191, 0.4);
+  background: rgba(255, 122, 191, 0.08);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+@media (hover: hover) {
+  .btn:not(:disabled):hover {
+    transform: translateY(-1px);
+    border-color: rgba(230, 232, 255, 0.2);
+    box-shadow: 0 18px 46px rgba(0, 0, 0, 0.6), 0 0 18px rgba(155, 108, 255, 0.14);
+  }
+}
+
+/* =========================
+   FORM FIELDS
+   ========================= */
+
+.field {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.field-label {
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.field-input,
+.field-select,
+.field-textarea {
+  width: 100%;
+  min-width: 0;
+  padding: 11px 12px;
+  border-radius: 14px;
+
+  font-family: var(--font-content);
+  font-size: 1rem; /* under 16px, a phone zooms in on the field it focuses */
+  line-height: 1.3;
+  color: var(--ink);
+
+  background: var(--glass);
+  border: 1px solid var(--line);
+  outline: none;
+}
+
+.field-input:focus,
+.field-select:focus,
+.field-textarea:focus {
+  border-color: var(--focus-line);
+  box-shadow: var(--focus-ring);
+}
+
+.field-select option {
+  background: #080a14;
+  color: var(--ink);
+}
+
+.field-textarea {
+  resize: vertical;
+  min-height: 96px;
+}
+
+/* a column per field, however many the row has, and one under the other on
+   a phone */
+.field-grid {
+  display: grid;
+  gap: 14px;
+}
+
+@media (min-width: 560px) {
+  .field-grid {
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
+  }
+}
+
+/* what is wrong with a form, said under it rather than in an alert. empty
+   most of the time, and then it takes no room */
+.form-error {
+  font-family: var(--font-content);
+  font-size: 0.82rem;
+  line-height: 1.35;
+  text-align: center;
+  color: var(--vika);
+}
+
+.form-error:empty {
+  display: none;
+}
+
+.auth-form .field-input {
+  text-align: center;
+}
+
+/* what happened to the link: sent, refused, expired */
+.auth-status {
+  margin-top: 14px;
+  text-align: center;
+  font-family: var(--font-body);
+  font-size: 0.78rem;
+  line-height: 1.4;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+.auth-status:empty {
+  display: none;
 }
 
 .wish-owner {
@@ -2797,7 +2061,7 @@ li.menu-open {
 }
 
 .wish-title-input {
-  min-height: 64px;
+  min-height: 72px;
 }
 
 .wish-link-rows {
@@ -2807,102 +2071,125 @@ li.menu-open {
 
 .wish-link-row {
   display: flex;
-  align-items: center;
   gap: 8px;
 }
 
 .wish-link-remove {
   flex: 0 0 auto;
-  width: 34px;
-  height: 34px;
-  border-radius: 999px;
-
+  width: 44px;
+  border-radius: 14px;
   font-size: 1.05rem;
   line-height: 1;
-
-  color: rgba(154, 160, 214, 0.92);
+  color: var(--muted);
   background: transparent;
   border: 1px solid rgba(230, 232, 255, 0.08);
-  cursor: pointer;
   transition: color 0.2s ease, border-color 0.2s ease;
 }
 
 .wish-link-remove:hover {
-  color: #ff7abf;
+  color: var(--vika);
   border-color: rgba(255, 122, 191, 0.35);
 }
 
 .add-link-btn {
   justify-self: start;
-  padding: 7px 12px;
-  border-radius: 999px;
+  padding: 8px 12px;
+  border-radius: var(--pill);
 
-  background: transparent;
-  border: 1px dashed rgba(230, 232, 255, 0.15);
-  color: rgba(154, 160, 214, 0.85);
-
-  font-family: var(--font-badge);
+  font-family: var(--font-mono);
   font-size: 0.66rem;
   letter-spacing: 0.15em;
   text-transform: uppercase;
-  cursor: pointer;
+  color: rgba(154, 160, 214, 0.85);
+
+  background: transparent;
+  border: 1px dashed rgba(230, 232, 255, 0.15);
   transition: border-color 0.2s ease, color 0.2s ease;
 }
 
 .add-link-btn:hover {
+  color: var(--ink);
   border-color: rgba(230, 232, 255, 0.3);
-  color: rgba(230, 232, 255, 0.9);
-}
-
-/* what is wrong with the form, said under it rather than in an alert. empty
-   most of the time, and then it takes no room */
-.form-error {
-  margin: 0;
-  font-family: var(--font-content);
-  font-size: 0.8rem;
-  line-height: 1.35;
-  color: #ff7abf;
-  text-align: center;
-}
-
-.form-error:empty {
-  display: none;
-}
-
-/* the name of what a confirmation is about, inside its sentence */
-.modal-desc-name {
-  display: inline-block;
-  margin-top: 6px;
-  font-family: var(--font-content);
-  font-weight: 600;
-  letter-spacing: normal;
-  text-transform: none;
-  color: rgba(230, 232, 255, 0.94);
 }
 
 /* =========================
-   DATABASE BANNER
+   OUR ART
    ========================= */
 
-/* says the database is not the one this page was written for. it is the
-   only thing on the page that asks one of us to do something, so it is the
-   one place the warm accent is used for text */
+.dialog-gift {
+  width: min(760px, calc(100vw - 32px));
+  border-color: rgba(255, 122, 191, 0.25);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.85), 0 0 40px rgba(255, 122, 191, 0.15);
+}
+
+.gift-art-link {
+  display: block;
+  margin-bottom: 18px;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: rgba(0, 0, 0, 0.3);
+  cursor: zoom-in;
+}
+
+/* the whole picture, however the screen is shaped. it used to be cut to a
+   fixed height, which took the bottom 33 pixels of it */
+.gift-art {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: calc(100dvh - 160px);
+  object-fit: contain;
+}
+
+/* =========================
+   THE DATABASE BANNER
+   ========================= */
+
+/* the only thing on the page that asks one of us to do something, so the
+   one place the gold is used for text */
 .db-banner {
+  max-width: 640px;
   margin: 0 auto 24px;
   padding: 12px 16px;
   border-radius: 14px;
-  max-width: 640px;
 
   font-family: var(--font-content);
   font-size: 0.86rem;
   line-height: 1.45;
   text-align: center;
 
-  color: #ffd36a;
+  color: var(--gold);
   background: rgba(255, 211, 106, 0.06);
   border: 1px solid rgba(255, 211, 106, 0.28);
 }
 
-.db-banner[hidden] {
-  display: none;
+/* =========================
+   GUESTS
+   ========================= */
+
+/* a guest reads, and the controls that would only be refused are not drawn.
+   hiding them is for the eye: the database turns the writes down either way */
+body.is-guest .members-only,
+body.is-guest .card-actions,
+body.is-guest .card-menu {
+  display: none !important;
+}
+
+body:not(.is-guest) .guests-only {
+  display: none !important;
+}
+
+/* =========================
+   LESS MOTION
+   ========================= */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

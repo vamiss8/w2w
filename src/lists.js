@@ -1,17 +1,16 @@
-// the two lists: which cards are on each, in what order, which ones the
-// filters let through, and the tabs and controls that choose between them.
-// everything here is worked out from the rows in src/store.js and then drawn,
-// so the order and the filters never depend on what happens to be on screen.
+// the two lists: which cards are on each, in what order, and which ones the
+// filters let through. everything here is worked out from the rows in
+// src/store.js and then drawn, so the order and the filters never depend on
+// what happens to be on screen.
 
-import { LIST_TO_WATCH, LIST_WATCHED, STATE_STARTED, drawCard, listOf, normalizeStatusCode, stateOf } from "./cards.js";
+import { LIST_TO_WATCH, LIST_WATCHED, STATE_PLANNED, STATE_STARTED, drawCard, listOf, normalizeStatusCode, stateOf } from "./cards.js";
 import { parseISODate } from "./dates.js";
-import { allCards, getComment, onStoreChange } from "./store.js";
+import { currentSection, onSectionChange } from "./router.js";
+import { allCards, cardsLoaded, getComment, onStoreChange } from "./store.js";
 import { getActiveUser, onUserChange } from "./user.js";
 
-export const TAB_INPUT_SELECTOR = 'input[name="tabs"]';
-export const UNWATCHED_TAB_ID = "tab-unwatched";
-
-const LIST_SELECTOR = { [LIST_TO_WATCH]: ".lists ul.unwatched", [LIST_WATCHED]: ".lists ul.watched" };
+const VIEW_OF = { [LIST_TO_WATCH]: "#view-to-watch", [LIST_WATCHED]: "#view-watched" };
+const SECTION_OF = { "to-watch": LIST_TO_WATCH, watched: LIST_WATCHED };
 
 /* ---------------------------
    ORDER
@@ -143,16 +142,44 @@ function drawLists() {
   };
 
   for (const [list, sorted] of Object.entries(lists)) {
-    const ul = document.querySelector(LIST_SELECTOR[list]);
+    const view = document.querySelector(VIEW_OF[list]);
+    const ul = view?.querySelector("ul.cards");
     if (!ul) continue;
 
     // appending a node that is already in the list moves it, so appending in
     // sorted order is the whole sort
+    let shown = 0;
     sorted.forEach(row => {
       const li = cardFor(row);
-      li.classList.toggle("is-hidden", !passes(row));
+      const pass = passes(row);
+      li.classList.toggle("is-hidden", !pass);
+      if (pass) shown += 1;
       ul.appendChild(li);
     });
+
+    describeList(view, list, sorted, shown);
+  }
+}
+
+// the line under a list's title, and what an empty list says instead of
+// nothing at all
+function describeList(view, list, rows, shown) {
+  const count = view.querySelector("[data-count]");
+  const empty = view.querySelector("[data-empty]");
+  if (!cardsLoaded()) return;
+
+  if (count) {
+    if (list === LIST_WATCHED) {
+      count.textContent = `${rows.length} watched together`;
+    } else {
+      const planned = rows.filter(r => stateOf(r) === STATE_PLANNED).length;
+      count.textContent = `${planned} planned · ${rows.length - planned} started`;
+    }
+  }
+
+  if (empty) {
+    empty.hidden = shown > 0;
+    empty.textContent = rows.length ? "nothing here with these filters" : "nothing here yet";
   }
 }
 
@@ -191,7 +218,7 @@ function showFooterAfter(seconds) {
 }
 
 function animateList(list) {
-  const cards = document.querySelectorAll(`${LIST_SELECTOR[list]} li:not(.is-hidden)`);
+  const cards = document.querySelectorAll(`${VIEW_OF[list]} ul.cards > li:not(.is-hidden)`);
 
   cards.forEach(card => card.classList.remove("is-animating"));
 
@@ -207,9 +234,9 @@ function animateList(list) {
   showFooterAfter(cards.length * ANIMATION_STEP_DELAY + FOOTER_EXTRA_DELAY);
 }
 
+// the list on screen, or null when the section is not one of the two
 export function activeList() {
-  const tab = document.querySelector(`${TAB_INPUT_SELECTOR}:checked`);
-  return tab && tab.id !== UNWATCHED_TAB_ID ? LIST_WATCHED : LIST_TO_WATCH;
+  return SECTION_OF[currentSection()] || null;
 }
 
 let renderRaf = 0;
@@ -227,13 +254,14 @@ export function scheduleRender({ animate = false } = {}) {
     renderAnimate = false;
 
     drawLists();
-    if (doAnimate) animateList(activeList());
+    const list = activeList();
+    if (doAnimate && list) animateList(list);
     else showFooterAfter(0);
   });
 }
 
 /* ---------------------------
-   TABS AND CONTROLS
+   CONTROLS
 ---------------------------- */
 
 function restoreChecked(key, fallbackId) {
@@ -242,31 +270,20 @@ function restoreChecked(key, fallbackId) {
   if (el) el.checked = true;
 }
 
-const FILTERS_MENU_ID = "filtersMenu";
+// the filters of both lists open and close together, and stay as they were
+// left, closed on a first visit
 const LS_FILTERS_OPEN = "filtersOpen";
 
 function setFiltersOpen(isOpen) {
-  const menu = document.getElementById(FILTERS_MENU_ID);
-  const button = document.querySelector(".filters-toggle");
-  if (!menu || !button) return;
-
-  menu.dataset.open = isOpen ? "true" : "false";
-  button.setAttribute("aria-expanded", isOpen ? "true" : "false");
-  button.classList.toggle("is-open", isOpen);
+  document.querySelectorAll(".filters-toggle").forEach(button => {
+    const menu = document.getElementById(button.getAttribute("aria-controls"));
+    if (menu) menu.dataset.open = isOpen ? "true" : "false";
+    button.setAttribute("aria-expanded", isOpen ? "true" : "false");
+  });
   localStorage.setItem(LS_FILTERS_OPEN, isOpen ? "true" : "false");
 }
 
 export function initializeLists() {
-  // the open tab
-  restoreChecked("activeTab", UNWATCHED_TAB_ID);
-  document.querySelectorAll(TAB_INPUT_SELECTOR).forEach(tab => {
-    tab.addEventListener("change", () => {
-      localStorage.setItem("activeTab", tab.id);
-      scheduleRender({ animate: true });
-    });
-  });
-
-  // the filters and the sort
   for (const { name, key, fallback } of CONTROLS) {
     restoreChecked(key, fallback);
     document.querySelectorAll(`input[name="${name}"]`).forEach(input => {
@@ -277,12 +294,16 @@ export function initializeLists() {
     });
   }
 
-  // the menu they sit in, closed on a first visit
   setFiltersOpen(localStorage.getItem(LS_FILTERS_OPEN) === "true");
-  document.querySelector(".filters-toggle")?.addEventListener("click", () => {
-    setFiltersOpen(document.getElementById(FILTERS_MENU_ID).dataset.open !== "true");
+  document.querySelectorAll(".filters-toggle").forEach(button => {
+    button.addEventListener("click", () => setFiltersOpen(button.getAttribute("aria-expanded") !== "true"));
   });
 
+  // a list fades in each time it is opened. the first time, the cards are
+  // usually not there yet, and the first pull asks for the fade instead
+  onSectionChange((section, { first }) => {
+    if (!first) scheduleRender({ animate: true });
+  });
   onStoreChange(() => scheduleRender());
   onUserChange(() => scheduleRender());
 }

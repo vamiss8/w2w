@@ -90,12 +90,15 @@ function commentToggles(row) {
     const text = getComment(row.id, who).trim();
     if (!text) continue;
 
+    const open = openComments.has(`${row.id}:${who}`);
+
     const btn = el("button", `comment-toggle ${who}`, `${who}'s comment`);
     btn.type = "button";
     btn.dataset.who = who;
+    btn.setAttribute("aria-expanded", open ? "true" : "false");
 
     const body = el("div", "comment-body", text);
-    body.dataset.open = openComments.has(`${row.id}:${who}`) ? "true" : "false";
+    body.dataset.open = open ? "true" : "false";
 
     box.append(btn, body);
   }
@@ -116,11 +119,12 @@ export function drawCard(li, row) {
   const date = watchDateText(row);
   if (date) title.append(el("span", "watch-date", date));
 
-  // hearts on a watched card, a dash on any other
+  // under the title: the hearts of a watched card, and the comments. a card
+  // with neither has nothing there at all, rather than a dash standing in
   const meta = el("div", "meta");
   if (stateOf(row) === STATE_WATCHED) meta.append(renderRatings(row));
-  else meta.append("—");
-  meta.append(commentToggles(row));
+  const comments = commentToggles(row);
+  if (comments.childElementCount) meta.append(comments);
 
   const left = el("div", "left");
   left.append(title, meta);

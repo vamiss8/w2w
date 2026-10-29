@@ -1,47 +1,24 @@
-// the activity panel in the corner: pages of the log, newest first, and new
-// entries prepended live while the panel is open.
+// the activity section: pages of the log, newest first, and new entries
+// prepended live once it has been opened. it used to be a panel in the
+// corner, which on a phone lay over the cards it was about.
 
 import { STATE_STARTED, STATE_WATCHED } from "./cards.js";
 import { formatISOForUI } from "./dates.js";
 import { remoteFetchLogs } from "./db.js";
+import { onSectionChange } from "./router.js";
 
-export const LOGS_PANEL_ID = "logsPanel";
-const LOGS_TOGGLE_ID = "logsToggle";
 const LOGS_LIST_ID = "logsList";
 const LOGS_MORE_ID = "logsMore";
 const LOGS_PAGE_SIZE = 20;
-const LS_LOGS_OPEN = "logsOpen";
+
+// nothing is fetched until the section is first opened
+let loaded = false;
 
 // paging: where the next page starts, whether there is one, and whether a
 // request is already out
 let logsCursorTs = null;
 let logsHasMore = true;
 let logsIsLoading = false;
-
-function persistLogsOpen(isOpen) {
-  localStorage.setItem(LS_LOGS_OPEN, isOpen ? "true" : "false");
-}
-
-function restoreLogsOpen(defaultOpen = false) {
-  const saved = localStorage.getItem(LS_LOGS_OPEN);
-  if (saved === null) return defaultOpen;
-  return saved === "true";
-}
-
-function setLogsOpen(isOpen) {
-  const panel = document.getElementById(LOGS_PANEL_ID);
-  const btn = document.getElementById(LOGS_TOGGLE_ID);
-  if (!panel || !btn) return;
-
-  panel.dataset.open = isOpen ? "true" : "false";
-  btn.setAttribute("aria-expanded", isOpen ? "true" : "false");
-  btn.classList.toggle("is-open", isOpen);
-
-  persistLogsOpen(isOpen);
-
-  // render on open
-  if (isOpen) renderLogs();
-}
 
 function formatTimeAgo(iso) {
   const ts = new Date(iso).getTime();
@@ -341,16 +318,12 @@ async function loadMoreLogsPage({ reset = false } = {}) {
 }
 
 export function refreshLogsUI() {
-  const panel = document.getElementById(LOGS_PANEL_ID);
-  if (!panel) return;
-
-  // update only when open (saves work)
-  if (panel.dataset.open === "true") renderLogs();
+  if (loaded) renderLogs();
 }
 
 export function prependRemoteLog(row) {
   const listEl = document.getElementById(LOGS_LIST_ID);
-  if (!listEl) return;
+  if (!listEl || !loaded) return;
 
   // prevent duplicates if realtime reconnects
   const key = row.id ? String(row.id) : `${row.ts}-${row.user_name}-${row.action}`;
@@ -394,19 +367,17 @@ function refreshLogTimesOnly() {
   });
 }
 
-export function initializeLogsWidget() {
-  const panel = document.getElementById(LOGS_PANEL_ID);
-  const btn = document.getElementById(LOGS_TOGGLE_ID);
-  if (!panel || !btn) return;
+export function initializeActivity() {
+  // the old corner panel remembered whether it was open
+  localStorage.removeItem("logsOpen");
 
-  setLogsOpen(restoreLogsOpen(false));
-
-  btn.addEventListener("click", () => {
-    const isOpen = panel.dataset.open === "true";
-    setLogsOpen(!isOpen);
+  onSectionChange(section => {
+    if (section !== "activity" || loaded) return;
+    loaded = true;
+    renderLogs();
   });
 
-  // keep "time ago" fresh if open
+  // keep "time ago" fresh
   window.setInterval(() => refreshLogTimesOnly(), 30 * 1000);
 
   const moreBtn = document.getElementById(LOGS_MORE_ID);

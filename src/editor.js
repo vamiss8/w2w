@@ -6,47 +6,40 @@
 
 import { LIST_WATCHED, STATE_PLANNED, STATE_STARTED, STATE_WATCHED, normalizeStatusCode, setCommentOpen, stateOf, titleOf } from "./cards.js";
 import { remoteDeleteCard, remoteInsertCard, remoteInsertLog, remoteSaveComment, remoteUpdateCard } from "./db.js";
-import { activeList } from "./lists.js";
-import { closeModal, openModal } from "./modals.js";
+import { closeDialog, confirmDialog, openDialog } from "./dialogs.js";
 import { dropCard, getCard, getComment, putCard, putComment } from "./store.js";
-import { getActiveUser, openAuthOverlay } from "./user.js";
-
-const CARD_MODAL_ID = "cardModal";
-const COMMENT_MODAL_ID = "commentModal";
-const DELETE_MODAL_ID = "deleteModal";
+import { getActiveUser, openAuthDialog } from "./user.js";
 
 // what the open forms are about: null while adding a card, the id otherwise
 let editingId = null;
 let commentCardId = null;
-let deleteCardId = null;
 
 const field = id => document.getElementById(id);
 
 // a card added from the watched list starts out watched, and one added from
 // the other list planned
-function openAddCardModal() {
+function openAddCard(list) {
   editingId = null;
 
-  field("cardModalTitle").textContent = "add card";
-  field("cardModalDesc").textContent = "create a new entry in the list";
+  field("cardDialogTitle").textContent = "add card";
+  field("cardDialogDesc").textContent = "create a new entry in the list";
 
   field("cardTitle").value = "";
-  field("cardState").value = activeList() === LIST_WATCHED ? STATE_WATCHED : STATE_PLANNED;
+  field("cardState").value = list === LIST_WATCHED ? STATE_WATCHED : STATE_PLANNED;
   field("cardStatus").value = "00";
   field("cardStart").value = "";
   field("cardEnd").value = "";
 
-  openModal(CARD_MODAL_ID);
-  field("cardTitle").focus();
+  openDialog("cardDialog", "cardTitle");
 }
 
-function openEditCardModal(id) {
+function openEditCard(id) {
   const row = getCard(id);
   if (!row) return;
   editingId = String(row.id);
 
-  field("cardModalTitle").textContent = "edit card";
-  field("cardModalDesc").textContent = "update fields and sync to the server";
+  field("cardDialogTitle").textContent = "edit card";
+  field("cardDialogDesc").textContent = "update fields and sync to the server";
 
   field("cardTitle").value = titleOf(row);
   field("cardState").value = stateOf(row);
@@ -54,36 +47,19 @@ function openEditCardModal(id) {
   field("cardStart").value = row.start_date || "";
   field("cardEnd").value = row.end_date || "";
 
-  openModal(CARD_MODAL_ID);
-  field("cardTitle").focus();
+  openDialog("cardDialog", "cardTitle");
 }
 
-function openCommentModal(id) {
+function openComment(id) {
   const active = getActiveUser();
   if (!active) {
-    openAuthOverlay();
+    openAuthDialog();
     return;
   }
 
   commentCardId = String(id);
   field("commentText").value = getComment(id, active);
-
-  openModal(COMMENT_MODAL_ID);
-  field("commentText").focus();
-}
-
-// opens the confirmation. the delete itself happens on confirm
-function openDeleteModal(id) {
-  const row = getCard(id);
-  if (!row) return;
-  deleteCardId = String(row.id);
-
-  const name = document.createElement("span");
-  name.className = "modal-desc-name";
-  name.textContent = titleOf(row);
-  field("deleteModalDesc").replaceChildren("are you sure you want to delete ", name, "?");
-
-  openModal(DELETE_MODAL_ID);
+  openDialog("commentDialog", "commentText");
 }
 
 function closeAllCardMenus() {
@@ -116,7 +92,7 @@ function snapshot(row) {
   };
 }
 
-// one log line per kind of change, so the activity panel can say what changed
+// one log line per kind of change, so the activity can say what changed
 // rather than only that something did
 async function logEditDiffs(before, after, cardId) {
   if (before.title !== after.title) {
@@ -175,7 +151,7 @@ async function saveCardForm() {
     }
   }
 
-  closeModal(CARD_MODAL_ID);
+  closeDialog("cardDialog");
 }
 
 async function saveCommentForm() {
@@ -190,16 +166,17 @@ async function saveCommentForm() {
     await remoteInsertLog("comment", { title: titleOf(getCard(id)) }, id);
   }
 
-  closeModal(COMMENT_MODAL_ID);
+  closeDialog("commentDialog");
 }
 
-async function confirmDelete() {
-  const id = deleteCardId;
-  deleteCardId = null;
-  closeModal(DELETE_MODAL_ID);
-  if (!id) return;
+async function deleteCard(id) {
+  const row = getCard(id);
+  if (!row) return;
 
-  const title = titleOf(getCard(id));
+  const title = titleOf(row);
+  const sure = await confirmDialog({ title: "delete card", question: "are you sure you want to delete ", name: title });
+  if (!sure) return;
+
   const result = await remoteDeleteCard(id);
   if (result === "failed") return;
 
@@ -210,18 +187,11 @@ async function confirmDelete() {
 }
 
 export function initializeCardUi() {
-  field("addToggle")?.addEventListener("click", openAddCardModal);
-
   // one listener for every card, the ones drawn later included
   document.addEventListener("click", e => {
-    if (e.target.closest("#deleteCancel")) {
-      deleteCardId = null;
-      closeModal(DELETE_MODAL_ID);
-      return;
-    }
-
-    if (e.target.closest("#deleteConfirm")) {
-      confirmDelete();
+    const add = e.target.closest("[data-add]");
+    if (add) {
+      openAddCard(add.closest(".view")?.dataset.list);
       return;
     }
 
@@ -234,6 +204,7 @@ export function initializeCardUi() {
 
       const open = body.dataset.open !== "true";
       body.dataset.open = open ? "true" : "false";
+      toggle.setAttribute("aria-expanded", open ? "true" : "false");
       setCommentOpen(li.dataset.id, toggle.dataset.who, open);
       return;
     }
@@ -250,9 +221,9 @@ export function initializeCardUi() {
       closeAllCardMenus();
       if (!id) return;
 
-      if (item.dataset.action === "edit") openEditCardModal(id);
-      if (item.dataset.action === "comment") openCommentModal(id);
-      if (item.dataset.action === "delete") openDeleteModal(id);
+      if (item.dataset.action === "edit") openEditCard(id);
+      if (item.dataset.action === "comment") openComment(id);
+      if (item.dataset.action === "delete") deleteCard(id);
       return;
     }
 
@@ -260,22 +231,17 @@ export function initializeCardUi() {
     if (!e.target.closest(".card-menu")) closeAllCardMenus();
   });
 
-  field("cardCancel")?.addEventListener("click", () => closeModal(CARD_MODAL_ID));
+  document.addEventListener("keydown", e => {
+    if (e.key === "Escape") closeAllCardMenus();
+  });
+
   field("cardForm")?.addEventListener("submit", e => {
     e.preventDefault();
     saveCardForm();
   });
 
-  field("commentCancel")?.addEventListener("click", () => closeModal(COMMENT_MODAL_ID));
   field("commentForm")?.addEventListener("submit", e => {
     e.preventDefault();
     saveCommentForm();
-  });
-
-  // esc closes modals
-  document.addEventListener("keydown", e => {
-    if (e.key !== "Escape") return;
-    closeAllCardMenus();
-    ["cardModal", "commentModal", "deleteModal", "giftModal", "wishlistModal", "wishModal", "wishDeleteModal"].forEach(closeModal);
   });
 }

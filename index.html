@@ -2,22 +2,24 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="color-scheme" content="dark" />
+  <meta name="theme-color" content="#05050a" />
   <title>W2W</title>
   <link rel="icon" type="image/png" sizes="64x64" href="favicon.png" />
 
-  <!-- CINZEL DECORATIVE + SORA + SPACE MONO + IBM PLEX MONO + IBM PLEX SANS -->
+  <!-- four families, and only the weights the stylesheet asks for: the
+       title, the controls, the text we type, and the small labels. ibm plex
+       is there for the cyrillic, which sora and cinzel do not have -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700;900&family=Sora:wght@300;400;600&family=Space+Mono:wght@400;700&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;600&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;600&family=Sora:wght@400;600&display=swap" rel="stylesheet" />
 
   <link rel="stylesheet" href="style.css" />
 
   <!-- both run once the whole page is parsed, in this order: defer on the
-       first, and a module is deferred without asking. the old main.js sat in
-       the middle of the body and ran before the gift button and every modal
-       under it existed. supabase-js is pinned to the version the site
-       already ran, since @2 takes whatever 2.x is newest -->
+       first, and a module is deferred without asking. supabase-js is pinned,
+       since @2 takes whatever 2.x is newest -->
   <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js"></script>
   <script type="module" src="src/main.js"></script>
 </head>
@@ -27,33 +29,43 @@
 <body class="is-guest">
   <div class="stars"></div>
 
-  <button class="user-pill" id="userToggle" type="button" aria-label="Sign in or out">SIGN IN</button>
-  <button class="wishlist-toggle" id="wishlistToggle" type="button" aria-label="Open Wishlists">WISHLISTS</button>
+  <!-- the heart, the title and the sign-in share one row on a wide screen
+       and two on a phone. they used to float over the page on their own, and
+       on a phone they landed on top of the title -->
+  <header class="top">
+    <button class="love-toggle" id="secretGiftToggle" type="button" aria-label="Our art">
+      <span class="hearts hearts-lg" aria-hidden="true"></span>
+    </button>
 
-  <!-- sign-in overlay. a guest can read everything but the comments and the
-       wishlists, so it opens only when asked for. src/user.js switches it
-       between the form and the signed-in view, and fills in the title -->
-  <div class="auth-overlay" id="authOverlay" aria-hidden="true">
-    <div class="auth-card" role="dialog" aria-modal="true" aria-labelledby="authTitle" aria-describedby="authDesc">
-      <div class="auth-title" id="authTitle">sign in</div>
-      <div class="auth-desc" id="authDesc">we send a link to your email, no password</div>
-
-      <form class="auth-form" id="authForm">
-        <input class="field-input" id="authEmail" type="email" autocomplete="email" placeholder="your email" required />
-        <div class="auth-actions">
-          <button class="auth-choice" id="authSend" type="submit">send link</button>
-          <button class="auth-choice" type="button" data-auth-close>just looking</button>
-        </div>
-      </form>
-
-      <div class="auth-actions" id="authSignedIn" hidden>
-        <button class="auth-choice" id="authSignOut" type="button">sign out</button>
-        <button class="auth-choice" type="button" data-auth-close>close</button>
-      </div>
-
-      <p class="auth-status" id="authStatus" aria-live="polite"></p>
+    <div class="brand">
+      <h1 class="title">what to watch on a date?</h1>
+      <p class="subtitle">vika &amp; vlad</p>
     </div>
-  </div>
+
+    <button class="user-pill" id="userToggle" type="button" aria-label="Sign in or out">SIGN IN</button>
+  </header>
+
+  <!-- one section at a time, each with an address: #/to-watch, #/watched,
+       #/wishlists, #/activity. above the content on a wide screen, a bar at
+       the bottom on a phone. src/router.js -->
+  <nav class="nav" aria-label="Sections">
+    <a class="nav-item" href="#/to-watch" data-section="to-watch">
+      <span class="nav-icon icon-star" aria-hidden="true"></span>
+      <span class="nav-label">to watch</span>
+    </a>
+    <a class="nav-item" href="#/watched" data-section="watched">
+      <span class="nav-icon hearts" aria-hidden="true"></span>
+      <span class="nav-label">watched</span>
+    </a>
+    <a class="nav-item members-only" href="#/wishlists" data-section="wishlists">
+      <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11h16v9H4zM3 7h18v4H3zM12 7v13M12 7c-1.5-3-5-3.5-5-1.2C7 7 9.5 7 12 7zm0 0c1.5-3 5-3.5 5-1.2C17 7 14.5 7 12 7z" /></svg>
+      <span class="nav-label">wishes</span>
+    </a>
+    <a class="nav-item" href="#/activity" data-section="activity">
+      <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h4l2.5-6 5 12 2.5-6h4" /></svg>
+      <span class="nav-label">activity</span>
+    </a>
+  </nav>
 
   <main class="container">
 
@@ -61,253 +73,241 @@
          page was written for, and only for one of us -->
     <p class="db-banner" id="dbBanner" role="alert" hidden></p>
 
-    <header>
-      <div class="title">what to watch on a date?</div>
-      <div class="subtitle">vika & vlad</div>
-    </header>
-
-    <!-- tabs -->
-    <input type="radio" name="tabs" id="tab-unwatched" checked />
-    <input type="radio" name="tabs" id="tab-watched" />
-
-    <nav class="tabs" aria-label="Watchlist tabs">
-      <label class="tab" for="tab-unwatched">
-        not watched yet <span class="tab-icon-star"></span>
-      </label>
-      <label class="tab" for="tab-watched">
-        watched already <span class="tab-icon-hearts"></span>
-      </label>
-    </nav>
-
-  <!-- filters toggle -->
-  <div class="filters-bar">
-    <button class="add-toggle" id="addToggle" type="button" aria-label="Add new card">
-      add card
-    </button>
-
-    <button class="filters-toggle" type="button" aria-expanded="false" aria-controls="filtersMenu">
-      filters <span class="filters-toggle-icon" aria-hidden="true"></span>
-    </button>
-  </div>
-
-
-  <!-- controls -->
-  <section class="controls" id="filtersMenu" data-open="false" aria-label="Sorting and filters">
-
-    <!-- UNWATCHED -->
-    <div class="controls-panel controls-unwatched" role="group" aria-label="Unwatched controls">
-      <div class="control-row">
-        <div class="control-caption">
-          progress
-
-          <span class="info-badge" tabindex="0" role="button" aria-label="Progress info">
-            ?
-            <span class="tooltip tooltip-wide">
-              By default content is sorted by <u>the date we added it to the list</u>.
-            </span>
-          </span>
-        </div>
-
-        <div class="control-group">
-          <input type="radio" name="uw-progress" id="uw-progress-all" checked />
-          <label class="chip" for="uw-progress-all">
-            all
-            <span class="tooltip">Displays everything.</span>
-          </label>
-
-          <input type="radio" name="uw-progress" id="uw-progress-planned" />
-          <label class="chip" for="uw-progress-planned">
-            planned
-            <span class="tooltip">Displays everything that is <u>planned</u>.</span>
-          </label>
-
-          <input type="radio" name="uw-progress" id="uw-progress-started" />
-          <label class="chip" for="uw-progress-started">
-            started
-            <span class="tooltip">Displays everything that is <u>started</u>.</span>
-          </label>
-        </div>
+    <!-- NOT WATCHED YET -->
+    <section class="view" id="view-to-watch" data-section="to-watch" data-list="unwatched" aria-labelledby="toWatchTitle" hidden>
+      <div class="view-head">
+        <h2 class="view-title" id="toWatchTitle">not watched yet</h2>
+        <p class="view-count" data-count></p>
       </div>
 
-      <div class="control-row">
-        <div class="control-caption">
-          status
-
-          <span class="info-badge" tabindex="0" role="button" aria-label="Status info">
-            ?
-            <span class="tooltip tooltip-wide">
-              By default content is sorted by <u>the date we added it to the list</u>, and status <u>does not affect it</u>.
-            </span>
-          </span>
-        </div>
-
-        <div class="control-group">
-          <input type="radio" name="uw-status" id="uw-status-all" checked />
-          <label class="chip" for="uw-status-all">
-            all
-            <span class="tooltip">Displays everything.</span>
-          </label>
-
-          <input type="radio" name="uw-status" id="uw-status-00" />
-          <label class="chip" for="uw-status-00">
-            00
-            <span class="tooltip">Displays content that none of us watched.</span>
-          </label>
-
-          <input type="radio" name="uw-status" id="uw-status-01" />
-          <label class="chip" for="uw-status-01">
-            01
-            <span class="tooltip">Displays content that <u>Vlad</u> watched, but not <u>Vika</u>.</span>
-          </label>
-
-          <input type="radio" name="uw-status" id="uw-status-10" />
-          <label class="chip" for="uw-status-10">
-            10
-            <span class="tooltip">Displays content that <u>Vika</u> watched, but not <u>Vlad</u>.</span>
-          </label>
-
-          <input type="radio" name="uw-status" id="uw-status-11" />
-          <label class="chip" for="uw-status-11">
-            11
-            <span class="tooltip">Displays content that we want to <u>rewatch</u>.</span>
-          </label>
-        </div>
-      </div>
-    </div>
-
-    <!-- WATCHED -->
-    <div class="controls-panel controls-watched" role="group" aria-label="Watched controls">
-      <div class="control-row">
-        <div class="control-caption">
-          favorites
-
-          <span class="info-badge" tabindex="0" role="button" aria-label="Favorites info">
-            ?
-            <span class="tooltip tooltip-wide">
-              By default content is sorted by <u>how recent we watched it</u>.
-            </span>
-          </span>
-        </div>
-
-        <div class="control-group">
-          <input type="radio" name="w-sort" id="w-sort-recent" checked />
-          <label class="chip" for="w-sort-recent">
-            recent
-            <span class="tooltip">Displays recently watched content.</span>
-          </label>
-
-          <input type="radio" name="w-sort" id="w-sort-vlad" />
-          <label class="chip" for="w-sort-vlad">
-            vlad favorites
-            <span class="tooltip">Displays <u>Vlad's</u> favorite ones.</span>
-          </label>
-
-          <input type="radio" name="w-sort" id="w-sort-vika" />
-          <label class="chip" for="w-sort-vika">
-            vika favorites
-            <span class="tooltip">Displays <u>Vika's</u> favorite ones.</span>
-          </label>
-
-          <input type="radio" name="w-sort" id="w-sort-avg" />
-          <label class="chip" for="w-sort-avg">
-            overall favorites
-            <span class="tooltip">Displays <u>our</u> favorite ones.</span>
-          </label>
-        </div>
-      </div>
-
-      <div class="control-row">
-        <div class="control-caption">
-          status
-
-          <span class="info-badge" tabindex="0" role="button" aria-label="Status info">
-            ?
-            <span class="tooltip tooltip-wide">
-              By default content is sorted by <u>how recent we watched it</u>, and status <u>does not affect it</u>.
-            </span>
-          </span>
-        </div>
-
-        <div class="control-group">
-          <input type="radio" name="w-status" id="w-status-all" checked />
-          <label class="chip" for="w-status-all">
-            all
-            <span class="tooltip">Displays everything.</span>
-          </label>
-
-          <input type="radio" name="w-status" id="w-status-00" />
-          <label class="chip" for="w-status-00">
-            00
-            <span class="tooltip">Displays content that none of us watched.</span>
-          </label>
-
-          <input type="radio" name="w-status" id="w-status-01" />
-          <label class="chip" for="w-status-01">
-            01
-            <span class="tooltip">Displays content that <u>Vlad</u> watched, but not <u>Vika</u>.</span>
-          </label>
-
-          <input type="radio" name="w-status" id="w-status-10" />
-          <label class="chip" for="w-status-10">
-            10
-            <span class="tooltip">Displays content that <u>Vika</u> watched, but not <u>Vlad</u>.</span>
-          </label>
-
-          <input type="radio" name="w-status" id="w-status-11" />
-          <label class="chip" for="w-status-11">
-            11
-            <span class="tooltip">Displays content that we want to <u>rewatch</u>.</span>
-          </label>
-        </div>
-      </div>
-    </div>
-  </section>
-
-
-    <section class="lists" aria-live="polite">
-
-      <!-- both lists start empty: every card comes from the database. cards
-           written into the page were drawn before the first pull and nothing
-           ever took them away, so one deleted from the database stayed on
-           screen for good -->
-      <ul class="unwatched"></ul>
-      <ul class="watched"></ul>
-    </section>
-
-    <footer>
-      made with love <span class="footer-hearts"></span> for the best couple
-    </footer>
-  </main>
-
-  <!-- logs widget (bottom-left) -->
-  <div class="logs-widget" id="logsWidget" aria-live="polite">
-    <button class="logs-toggle" id="logsToggle" type="button" aria-expanded="false" aria-controls="logsPanel">
-      logs <span class="logs-toggle-icon" aria-hidden="true"></span>
-    </button>
-
-    <section class="logs-panel" id="logsPanel" data-open="false" aria-label="Event logs">
-      <div class="logs-head">
-        <div class="logs-head-title">activity</div>
-      </div>
-
-      <ul class="logs-list" id="logsList"></ul>
-
-      <div class="logs-foot">
-        <button class="logs-more" id="logsMore" type="button" aria-label="Load more logs">
-          load more
+      <div class="toolbar">
+        <button class="pill add-toggle members-only" type="button" data-add>add card</button>
+        <button class="pill filters-toggle" type="button" aria-expanded="false" aria-controls="filtersToWatch">
+          filters <span class="caret" aria-hidden="true"></span>
         </button>
       </div>
 
+      <div class="controls" id="filtersToWatch" data-open="false" role="group" aria-label="Filters for the cards not watched yet">
+        <div class="control-row">
+          <div class="control-caption">
+            progress
+            <span class="info-badge" tabindex="0" role="button" aria-label="Progress info">
+              ?
+              <span class="tooltip tooltip-wide">
+                Planned cards come in the order we added them, and the ones we <u>started</u> after them, the latest first.
+              </span>
+            </span>
+          </div>
+
+          <div class="control-group">
+            <input type="radio" name="uw-progress" id="uw-progress-all" checked />
+            <label class="chip" for="uw-progress-all">all <span class="tooltip">Displays everything.</span></label>
+
+            <input type="radio" name="uw-progress" id="uw-progress-planned" />
+            <label class="chip" for="uw-progress-planned">planned <span class="tooltip">Displays everything that is <u>planned</u>.</span></label>
+
+            <input type="radio" name="uw-progress" id="uw-progress-started" />
+            <label class="chip" for="uw-progress-started">started <span class="tooltip">Displays everything that is <u>started</u>.</span></label>
+          </div>
+        </div>
+
+        <div class="control-row">
+          <div class="control-caption">
+            status
+            <span class="info-badge" tabindex="0" role="button" aria-label="Status info">
+              ?
+              <span class="tooltip tooltip-wide">
+                The first digit is <u>Vika</u>, the second <u>Vlad</u>, and a 1 means that one of us has seen it before. It <u>does not change</u> the order.
+              </span>
+            </span>
+          </div>
+
+          <div class="control-group">
+            <input type="radio" name="uw-status" id="uw-status-all" checked />
+            <label class="chip" for="uw-status-all">all <span class="tooltip">Displays everything.</span></label>
+
+            <input type="radio" name="uw-status" id="uw-status-00" />
+            <label class="chip" for="uw-status-00">00 <span class="tooltip">Displays content that none of us watched.</span></label>
+
+            <input type="radio" name="uw-status" id="uw-status-01" />
+            <label class="chip" for="uw-status-01">01 <span class="tooltip">Displays content that <u>Vlad</u> watched, but not <u>Vika</u>.</span></label>
+
+            <input type="radio" name="uw-status" id="uw-status-10" />
+            <label class="chip" for="uw-status-10">10 <span class="tooltip">Displays content that <u>Vika</u> watched, but not <u>Vlad</u>.</span></label>
+
+            <input type="radio" name="uw-status" id="uw-status-11" />
+            <label class="chip" for="uw-status-11">11 <span class="tooltip">Displays content that we want to <u>rewatch</u>.</span></label>
+          </div>
+        </div>
+      </div>
+
+      <ul class="cards unwatched"></ul>
+      <p class="empty-note" data-empty hidden></p>
     </section>
-  </div>
 
-  <!-- card modal (add/edit) -->
-  <div class="modal-overlay" id="cardModal" aria-hidden="true">
-    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="cardModalTitle">
-      <div class="modal-title" id="cardModalTitle">add card</div>
-      <div class="modal-desc" id="cardModalDesc">create a new entry in the list</div>
+    <!-- WATCHED -->
+    <section class="view" id="view-watched" data-section="watched" data-list="watched" aria-labelledby="watchedTitle" hidden>
+      <div class="view-head">
+        <h2 class="view-title" id="watchedTitle">watched already</h2>
+        <p class="view-count" data-count></p>
+      </div>
 
-      <form class="modal-form" id="cardForm">
+      <div class="toolbar">
+        <button class="pill add-toggle members-only" type="button" data-add>add card</button>
+        <button class="pill filters-toggle" type="button" aria-expanded="false" aria-controls="filtersWatched">
+          filters <span class="caret" aria-hidden="true"></span>
+        </button>
+      </div>
+
+      <div class="controls" id="filtersWatched" data-open="false" role="group" aria-label="Sorting and filters for the watched cards">
+        <div class="control-row">
+          <div class="control-caption">
+            favorites
+            <span class="info-badge" tabindex="0" role="button" aria-label="Favorites info">
+              ?
+              <span class="tooltip tooltip-wide">
+                By default the cards are sorted by <u>how recently we watched them</u>.
+              </span>
+            </span>
+          </div>
+
+          <div class="control-group">
+            <input type="radio" name="w-sort" id="w-sort-recent" checked />
+            <label class="chip" for="w-sort-recent">recent <span class="tooltip">Displays recently watched content.</span></label>
+
+            <input type="radio" name="w-sort" id="w-sort-vlad" />
+            <label class="chip" for="w-sort-vlad">vlad favorites <span class="tooltip">Displays <u>Vlad's</u> favorite ones.</span></label>
+
+            <input type="radio" name="w-sort" id="w-sort-vika" />
+            <label class="chip" for="w-sort-vika">vika favorites <span class="tooltip">Displays <u>Vika's</u> favorite ones.</span></label>
+
+            <input type="radio" name="w-sort" id="w-sort-avg" />
+            <label class="chip" for="w-sort-avg">overall favorites <span class="tooltip">Displays <u>our</u> favorite ones.</span></label>
+          </div>
+        </div>
+
+        <div class="control-row">
+          <div class="control-caption">
+            status
+            <span class="info-badge" tabindex="0" role="button" aria-label="Status info">
+              ?
+              <span class="tooltip tooltip-wide">
+                The first digit is <u>Vika</u>, the second <u>Vlad</u>, and a 1 means that one of us had seen it before. It <u>does not change</u> the order.
+              </span>
+            </span>
+          </div>
+
+          <div class="control-group">
+            <input type="radio" name="w-status" id="w-status-all" checked />
+            <label class="chip" for="w-status-all">all <span class="tooltip">Displays everything.</span></label>
+
+            <input type="radio" name="w-status" id="w-status-00" />
+            <label class="chip" for="w-status-00">00 <span class="tooltip">Displays content that none of us watched.</span></label>
+
+            <input type="radio" name="w-status" id="w-status-01" />
+            <label class="chip" for="w-status-01">01 <span class="tooltip">Displays content that <u>Vlad</u> watched, but not <u>Vika</u>.</span></label>
+
+            <input type="radio" name="w-status" id="w-status-10" />
+            <label class="chip" for="w-status-10">10 <span class="tooltip">Displays content that <u>Vika</u> watched, but not <u>Vlad</u>.</span></label>
+
+            <input type="radio" name="w-status" id="w-status-11" />
+            <label class="chip" for="w-status-11">11 <span class="tooltip">Displays content that we want to <u>rewatch</u>.</span></label>
+          </div>
+        </div>
+      </div>
+
+      <ul class="cards watched"></ul>
+      <p class="empty-note" data-empty hidden></p>
+    </section>
+
+    <!-- WISHLISTS. a wish that came true moves down into its column's done
+         list, which stays folded until it is asked for. src/wishlists.js
+         fills both columns -->
+    <section class="view" id="view-wishlists" data-section="wishlists" aria-labelledby="wishlistsTitle" hidden>
+      <div class="view-head">
+        <h2 class="view-title" id="wishlistsTitle">our wishlists</h2>
+        <p class="view-count">gifts we dream about</p>
+      </div>
+
+      <div class="guest-note guests-only">
+        <p>our wishlists are only for the two of us</p>
+        <button class="pill" type="button" data-sign-in>sign in</button>
+      </div>
+
+      <div class="wishlist-columns members-only">
+        <div class="wishlist-col" data-owner="vlad">
+          <h3 class="wishlist-col-header vlad">vlad</h3>
+          <ul class="wishes-list" id="wishesVlad"></ul>
+          <button class="add-wish-btn" type="button" data-owner="vlad">+ add wish</button>
+          <details class="wishes-done" data-owner="vlad" hidden>
+            <summary>done · <span class="wishes-done-count">0</span></summary>
+            <ul class="wishes-list" id="wishesVladDone"></ul>
+          </details>
+        </div>
+
+        <div class="wishlist-col" data-owner="vika">
+          <h3 class="wishlist-col-header vika">vika</h3>
+          <ul class="wishes-list" id="wishesVika"></ul>
+          <button class="add-wish-btn" type="button" data-owner="vika">+ add wish</button>
+          <details class="wishes-done" data-owner="vika" hidden>
+            <summary>done · <span class="wishes-done-count">0</span></summary>
+            <ul class="wishes-list" id="wishesVikaDone"></ul>
+          </details>
+        </div>
+      </div>
+    </section>
+
+    <!-- ACTIVITY. src/logs.js loads it the first time it is opened -->
+    <section class="view" id="view-activity" data-section="activity" aria-labelledby="activityTitle" hidden>
+      <div class="view-head">
+        <h2 class="view-title" id="activityTitle">activity</h2>
+        <p class="view-count">everything we did here, the newest first</p>
+      </div>
+
+      <ul class="logs-list" id="logsList" aria-live="polite"></ul>
+
+      <div class="logs-foot">
+        <button class="pill logs-more" id="logsMore" type="button">load more</button>
+      </div>
+    </section>
+
+    <footer>
+      made with love <span class="hearts" aria-hidden="true"></span> for the best couple
+    </footer>
+  </main>
+
+  <!-- SIGN IN. a guest can read everything but the comments and the
+       wishlists, so it opens only when asked for. src/user.js switches it
+       between the form and the signed-in view, and fills in the title -->
+  <dialog class="dialog" id="authDialog" aria-labelledby="authTitle" aria-describedby="authDesc" data-light-dismiss>
+    <div class="dialog-body">
+      <h2 class="dialog-title" id="authTitle">sign in</h2>
+      <p class="dialog-desc" id="authDesc">we send a link to your email, no password</p>
+
+      <form class="auth-form" id="authForm">
+        <input class="field-input" id="authEmail" type="email" autocomplete="email" placeholder="your email" aria-label="your email" required />
+        <div class="dialog-actions">
+          <button class="btn" id="authSend" type="submit">send link</button>
+          <button class="btn ghost" type="button" data-close>just looking</button>
+        </div>
+      </form>
+
+      <div class="dialog-actions" id="authSignedIn" hidden>
+        <button class="btn" id="authSignOut" type="button">sign out</button>
+        <button class="btn ghost" type="button" data-close>close</button>
+      </div>
+
+      <p class="auth-status" id="authStatus" aria-live="polite"></p>
+    </div>
+  </dialog>
+
+  <!-- ADD OR EDIT A CARD -->
+  <dialog class="dialog" id="cardDialog" aria-labelledby="cardDialogTitle">
+    <div class="dialog-body">
+      <h2 class="dialog-title" id="cardDialogTitle">add card</h2>
+      <p class="dialog-desc" id="cardDialogDesc">create a new entry in the list</p>
+
+      <form class="dialog-form" id="cardForm">
         <label class="field">
           <span class="field-label">title</span>
           <input class="field-input" id="cardTitle" type="text" autocomplete="off" placeholder="e.g. The Fifth Element" required />
@@ -328,10 +328,10 @@
           <label class="field">
             <span class="field-label">status</span>
             <select class="field-select" id="cardStatus">
-              <option value="00">00</option>
-              <option value="01">01</option>
-              <option value="10">10</option>
-              <option value="11">11</option>
+              <option value="00">00 · new to both</option>
+              <option value="01">01 · vika's first time</option>
+              <option value="10">10 · vlad's first time</option>
+              <option value="11">11 · a rewatch</option>
             </select>
           </label>
         </div>
@@ -348,119 +348,60 @@
           </label>
         </div>
 
-        <div class="modal-actions">
-          <button class="modal-btn ghost" id="cardCancel" type="button">cancel</button>
-          <button class="modal-btn" id="cardSave" type="submit">save</button>
+        <p class="form-error" id="cardError" role="alert"></p>
+
+        <div class="dialog-actions">
+          <button class="btn ghost" type="button" data-close>cancel</button>
+          <button class="btn" id="cardSave" type="submit">save</button>
         </div>
       </form>
     </div>
-  </div>
+  </dialog>
 
-  <!-- comment modal -->
-  <div class="modal-overlay" id="commentModal" aria-hidden="true">
-    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="commentModalTitle">
-      <div class="modal-title" id="commentModalTitle">comment</div>
-      <div class="modal-desc" id="commentModalDesc">leave a short note for this title</div>
+  <!-- A COMMENT, one per card and person -->
+  <dialog class="dialog" id="commentDialog" aria-labelledby="commentDialogTitle">
+    <div class="dialog-body">
+      <h2 class="dialog-title" id="commentDialogTitle">comment</h2>
+      <p class="dialog-desc" id="commentDialogDesc">leave a short note for this title</p>
 
-      <form class="modal-form" id="commentForm">
+      <form class="dialog-form" id="commentForm">
         <label class="field">
           <span class="field-label">text</span>
           <textarea class="field-textarea" id="commentText" rows="4" placeholder="type here..."></textarea>
         </label>
 
-        <div class="modal-actions">
-          <button class="modal-btn ghost" id="commentCancel" type="button">cancel</button>
-          <button class="modal-btn" id="commentSave" type="submit">save</button>
+        <p class="form-error" id="commentError" role="alert"></p>
+
+        <div class="dialog-actions">
+          <button class="btn ghost" type="button" data-close>cancel</button>
+          <button class="btn" id="commentSave" type="submit">save</button>
         </div>
       </form>
     </div>
-  </div>  
+  </dialog>
 
-  <div class="modal-overlay" id="deleteModal" aria-hidden="true">
-    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="deleteModalTitle">
-      <div class="modal-title" id="deleteModalTitle">delete card</div>
-      <div class="modal-desc" id="deleteModalDesc">are you sure?</div>
+  <!-- ARE YOU SURE. deleting a card and deleting a wish both ask here, and
+       the question names what would go. src/dialogs.js -->
+  <dialog class="dialog dialog-narrow" id="confirmDialog" aria-labelledby="confirmTitle" aria-describedby="confirmDesc" data-light-dismiss>
+    <div class="dialog-body">
+      <h2 class="dialog-title" id="confirmTitle">delete</h2>
+      <p class="dialog-desc dialog-question" id="confirmDesc">are you sure?</p>
 
-      <div class="modal-actions" style="margin-top: 24px;">
-        <button class="modal-btn ghost" id="deleteCancel" type="button">cancel</button>
-        <button class="modal-btn" id="deleteConfirm" type="button" style="color: #ff7abf; border-color: rgba(255, 122, 191, 0.35);">delete</button>
+      <div class="dialog-actions">
+        <button class="btn ghost" id="confirmCancel" type="button" data-close>cancel</button>
+        <button class="btn danger" id="confirmOk" type="button">delete</button>
       </div>
     </div>
-  </div>
+  </dialog>
 
-  <button class="love-toggle" id="secretGiftToggle" type="button" aria-label="Our art">
-    <span class="header-hearts"></span>
-  </button>
+  <!-- ADD OR EDIT A WISH. a wish takes as many links as it needs, a row
+       each, and a paste of several at once splits into rows of its own.
+       src/wishlists.js fills the rows -->
+  <dialog class="dialog" id="wishDialog" aria-labelledby="wishDialogTitle">
+    <div class="dialog-body">
+      <h2 class="dialog-title" id="wishDialogTitle">add wish</h2>
 
-  <div class="modal-overlay" id="giftModal" aria-hidden="true">
-    <div class="modal-card gift-modal-card" role="dialog" aria-modal="true">
-      
-      <!-- the modal never draws the art wider than about 1170 pixels, so it
-           shows a 1200 pixel webp of 184 KB. the original png is 14 MB and
-           stays one click away, for anyone who wants every stroke.
-
-           data-src and not src: the overlay is hidden with opacity rather
-           than display, so the browser counts the picture as on screen and
-           fetches it on every visit, loading="lazy" or not. src/gift.js sets
-           src when someone reaches for the gift -->
-      <div class="gift-art-wrapper">
-        <a class="gift-art-link" href="april25_fixed.PNG" target="_blank" rel="noopener" aria-label="Open the full-size original">
-          <img data-src="april25.webp" alt="Our Art" class="gift-art" width="1200" height="896" decoding="async" />
-        </a>
-      </div>
-
-      <div class="modal-actions">
-        <button class="modal-btn" id="giftClose" type="button" style="color: #ff7abf; border-color: rgba(255, 122, 191, 0.4); background: rgba(255, 122, 191, 0.08);">
-          i love you
-        </button>
-      </div>
-
-    </div>
-  </div>
-
-<div class="modal-overlay" id="wishlistModal" aria-hidden="true">
-    <div class="modal-card wishlist-modal-card" role="dialog" aria-modal="true">
-      <div class="modal-title">our wishlists</div>
-      <div class="modal-desc">gifts we dream about</div>
-
-      <!-- a wish that came true moves down into its column's done list, which
-           stays folded until it is asked for. src/wishlists.js fills both -->
-      <div class="wishlist-columns">
-        <div class="wishlist-col">
-          <div class="wishlist-col-header vlad">vlad</div>
-          <ul class="wishes-list" id="wishesVlad"></ul>
-          <button class="add-wish-btn" data-owner="vlad">+ add wish</button>
-          <details class="wishes-done" data-owner="vlad" hidden>
-            <summary>done · <span class="wishes-done-count">0</span></summary>
-            <ul class="wishes-list" id="wishesVladDone"></ul>
-          </details>
-        </div>
-
-        <div class="wishlist-col">
-          <div class="wishlist-col-header vika">vika</div>
-          <ul class="wishes-list" id="wishesVika"></ul>
-          <button class="add-wish-btn" data-owner="vika">+ add wish</button>
-          <details class="wishes-done" data-owner="vika" hidden>
-            <summary>done · <span class="wishes-done-count">0</span></summary>
-            <ul class="wishes-list" id="wishesVikaDone"></ul>
-          </details>
-        </div>
-      </div>
-
-      <div class="modal-actions" style="margin-top: 24px;">
-        <button class="modal-btn ghost" id="wishlistClose" type="button">close</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- adding a wish and editing one share this form. a wish takes as many
-       links as it needs, a row each, and a paste of several at once splits
-       into rows of its own. src/wishlists.js fills the rows -->
-  <div class="modal-overlay" id="wishModal" aria-hidden="true">
-    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="wishModalTitle">
-      <div class="modal-title" id="wishModalTitle">add wish</div>
-
-      <form class="modal-form" id="wishForm" novalidate>
+      <form class="dialog-form" id="wishForm" novalidate>
         <div class="field">
           <span class="field-label">for</span>
           <div class="control-group wish-owner">
@@ -484,25 +425,32 @@
 
         <p class="form-error" id="wishError" role="alert"></p>
 
-        <div class="modal-actions">
-          <button class="modal-btn ghost" id="wishCancel" type="button">cancel</button>
-          <button class="modal-btn" id="wishSave" type="submit">save</button>
+        <div class="dialog-actions">
+          <button class="btn ghost" id="wishCancel" type="button" data-close>cancel</button>
+          <button class="btn" id="wishSave" type="submit">save</button>
         </div>
       </form>
     </div>
-  </div>
+  </dialog>
 
-  <div class="modal-overlay" id="wishDeleteModal" aria-hidden="true">
-    <div class="modal-card" role="dialog" aria-modal="true">
-      <div class="modal-title">delete wish</div>
-      <div class="modal-desc" id="wishDeleteDesc">are you sure you want to remove it?</div>
+  <!-- OUR ART. the dialog never draws it wider than about 1170 pixels, so it
+       shows a 1200 pixel webp of 184 KB. the original png is 14 MB and stays
+       one click away, for anyone who wants every stroke.
 
-      <div class="modal-actions" style="margin-top: 24px;">
-        <button class="modal-btn ghost" id="wishDeleteCancel" type="button">cancel</button>
-        <button class="modal-btn" id="wishDeleteConfirm" type="button" style="color: #ff7abf; border-color: rgba(255, 122, 191, 0.35);">delete</button>
+       data-src and not src: the browser fetches a picture with a src even
+       inside a closed dialog. src/gift.js sets it when someone reaches for
+       the heart -->
+  <dialog class="dialog dialog-gift" id="giftDialog" aria-label="Our art" data-light-dismiss>
+    <div class="dialog-body">
+      <a class="gift-art-link" href="april25_fixed.PNG" target="_blank" rel="noopener" aria-label="Open the full-size original">
+        <img data-src="april25.webp" alt="Our art" class="gift-art" width="1200" height="896" decoding="async" />
+      </a>
+
+      <div class="dialog-actions">
+        <button class="btn love" id="giftClose" type="button" data-close>i love you</button>
       </div>
     </div>
-  </div>
+  </dialog>
 
 </body>
 </html>

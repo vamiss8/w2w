@@ -1,5 +1,6 @@
-// our two wishlists. they are short, so any change to the table, from either
-// of us, simply fetches them again.
+// our two wishlists, side by side on a wide screen and one under the other on
+// a phone. they are short, so any change to the table, from either of us,
+// simply fetches them again.
 //
 // a wish that came true is ticked off rather than deleted: it moves down into
 // its column's done list, with the day and who ticked it, and can be unticked
@@ -8,7 +9,7 @@
 
 import { formatTimestampForUI } from "./dates.js";
 import { remoteDeleteWish, remoteFetchWishes, remoteInsertWish, remoteUpdateWish } from "./db.js";
-import { closeModal, openModal } from "./modals.js";
+import { closeDialog, confirmDialog, openDialog } from "./dialogs.js";
 import { getActiveUser } from "./user.js";
 
 const OWNERS = { vlad: "Vlad", vika: "Vika" };
@@ -238,7 +239,7 @@ function setWishError(text, field = null) {
 function openWishForm({ owner, wish = null }) {
   editingId = wish ? String(wish.id) : null;
 
-  document.getElementById("wishModalTitle").textContent = wish ? "edit wish" : "add wish";
+  document.getElementById("wishDialogTitle").textContent = wish ? "edit wish" : "add wish";
   const who = wish ? wish.owner : owner;
   document.getElementById("wishOwnerVlad").checked = who === "vlad";
   document.getElementById("wishOwnerVika").checked = who === "vika";
@@ -249,15 +250,7 @@ function openWishForm({ owner, wish = null }) {
   links.forEach(link => addLinkRow(link));
   setWishError("");
 
-  closeModal("wishlistModal");
-  openModal("wishModal");
-  document.getElementById("wishTitle").focus();
-}
-
-function closeWishForm() {
-  editingId = null;
-  closeModal("wishModal");
-  openModal("wishlistModal");
+  openDialog("wishDialog", "wishTitle");
 }
 
 async function saveWishForm() {
@@ -293,7 +286,7 @@ async function saveWishForm() {
 
   // realtime brings the change back too, but the list should not wait for it
   await remotePullWishes();
-  closeWishForm();
+  closeDialog("wishDialog");
 }
 
 function initializeWishForm() {
@@ -304,8 +297,6 @@ function initializeWishForm() {
     e.preventDefault();
     saveWishForm();
   });
-
-  document.getElementById("wishCancel").addEventListener("click", closeWishForm);
 
   document.getElementById("wishAddLink").addEventListener("click", () => {
     addLinkRow().focus();
@@ -327,24 +318,23 @@ function initializeWishForm() {
   });
 }
 
-// which wish the delete modal is about
-let wishDeleteTargetId = null;
+async function deleteWish(id) {
+  const wish = wishesData.find(w => String(w.id) === String(id));
+  if (!wish) return;
+
+  const sure = await confirmDialog({ title: "delete wish", question: "are you sure you want to delete ", name: wish.title });
+  if (!sure) return;
+
+  await remoteDeleteWish(id);
+  await remotePullWishes();
+}
 
 export function initializeWishlists() {
-  const toggle = document.getElementById("wishlistToggle");
-  if (toggle) toggle.addEventListener("click", () => openModal("wishlistModal"));
-
   restoreDoneOpen();
   initializeWishForm();
 
-  // one listener for the modals and for the wish buttons, which are redrawn on
-  // every change
+  // the wish buttons are redrawn on every change, so one listener serves them
   document.addEventListener("click", async e => {
-    if (e.target.closest("#wishlistClose")) {
-      closeModal("wishlistModal");
-      return;
-    }
-
     const check = e.target.closest(".wish-check");
     if (check) {
       await toggleDone(check.dataset.id);
@@ -365,37 +355,6 @@ export function initializeWishlists() {
     }
 
     const delBtn = e.target.closest(".wish-delete");
-    if (delBtn) {
-      wishDeleteTargetId = delBtn.dataset.id;
-      const wish = wishesData.find(w => String(w.id) === wishDeleteTargetId);
-
-      const name = document.createElement("span");
-      name.className = "modal-desc-name";
-      name.textContent = wish ? wish.title : "this wish";
-      document.getElementById("wishDeleteDesc").replaceChildren("are you sure you want to delete ", name, "?");
-
-      closeModal("wishlistModal");
-      openModal("wishDeleteModal");
-      return;
-    }
-
-    if (e.target.closest("#wishDeleteCancel")) {
-      wishDeleteTargetId = null;
-      closeModal("wishDeleteModal");
-      openModal("wishlistModal");
-      return;
-    }
-
-    if (e.target.closest("#wishDeleteConfirm")) {
-      if (!wishDeleteTargetId) return;
-
-      await remoteDeleteWish(wishDeleteTargetId);
-      wishDeleteTargetId = null;
-      await remotePullWishes();
-
-      closeModal("wishDeleteModal");
-      openModal("wishlistModal");
-      return;
-    }
+    if (delBtn) deleteWish(delBtn.dataset.id);
   });
 }

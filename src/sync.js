@@ -3,7 +3,7 @@
 // socket was down.
 
 import { getSupabase, remoteFetchCards, remoteFetchComments } from "./db.js";
-import { LOGS_PANEL_ID, prependRemoteLog, refreshLogsUI } from "./logs.js";
+import { prependRemoteLog, refreshLogsUI } from "./logs.js";
 import { dropCard, putCard, putComment, replaceCards, replaceComments } from "./store.js";
 import { getActiveUser } from "./user.js";
 import { remotePullWishes } from "./wishlists.js";
@@ -22,9 +22,7 @@ export async function initializeRealtime() {
       else if (payload.new) putCard(payload.new);
     })
     .on("postgres_changes", { event: "INSERT", schema: "public", table: "logs" }, payload => {
-      if (!payload.new) return;
-      const panel = document.getElementById(LOGS_PANEL_ID);
-      if (panel && panel.dataset.open === "true") prependRemoteLog(payload.new);
+      if (payload.new) prependRemoteLog(payload.new);
     })
     .on("postgres_changes", { event: "*", schema: "public", table: "wishes" }, () => {
       remotePullWishes();

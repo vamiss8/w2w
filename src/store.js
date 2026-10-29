@@ -10,6 +10,14 @@
 const cards = new Map();
 const comments = new Map();
 
+// false until the first pull has answered, so an empty list can tell "not
+// here yet" from "none at all"
+let loaded = false;
+
+export function cardsLoaded() {
+  return loaded;
+}
+
 // every change ends here, so the lists know to redraw
 const listeners = [];
 
@@ -36,6 +44,7 @@ export function allCards() {
 export function replaceCards(rows) {
   cards.clear();
   rows.forEach(row => cards.set(key(row.id), row));
+  loaded = true;
   changed();
 }
 
