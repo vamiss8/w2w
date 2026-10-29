@@ -46,8 +46,8 @@
   </header>
 
   <!-- one section at a time, each with an address: #/to-watch, #/watched,
-       #/wishlists, #/activity. above the content on a wide screen, a bar at
-       the bottom on a phone. src/router.js -->
+       #/wishlists, #/activity, #/stats. above the content on a wide screen, a
+       bar at the bottom on a phone. src/router.js -->
   <nav class="nav" aria-label="Sections">
     <a class="nav-item" href="#/to-watch" data-section="to-watch">
       <span class="nav-icon icon-star" aria-hidden="true"></span>
@@ -64,6 +64,10 @@
     <a class="nav-item" href="#/activity" data-section="activity">
       <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h4l2.5-6 5 12 2.5-6h4" /></svg>
       <span class="nav-label">activity</span>
+    </a>
+    <a class="nav-item" href="#/stats" data-section="stats">
+      <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 20V12M10 20V6M15 20v-5M20 20V9" /></svg>
+      <span class="nav-label">stats</span>
     </a>
   </nav>
 
@@ -292,6 +296,16 @@
       <div class="logs-foot">
         <button class="pill logs-more" id="logsMore" type="button">load more</button>
       </div>
+    </section>
+
+    <!-- STATS, worked out from the cards. src/stats.js -->
+    <section class="view" id="view-stats" data-section="stats" aria-labelledby="statsTitle" hidden>
+      <div class="view-head">
+        <h2 class="view-title" id="statsTitle">our numbers</h2>
+        <p class="view-count">worked out from the cards</p>
+      </div>
+
+      <div class="stats" id="stats"></div>
     </section>
 
     <footer>

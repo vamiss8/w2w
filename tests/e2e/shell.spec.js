@@ -85,7 +85,7 @@ test.describe("on a phone", () => {
 
   test("nothing is wider than the screen, in any section", async ({ page }) => {
     await signIn(page, "vlad");
-    for (const section of ["to-watch", "watched", "wishlists", "activity"]) {
+    for (const section of ["to-watch", "watched", "wishlists", "activity", "stats"]) {
       await goTo(page, section);
       expect(await overflow(page), section).toEqual({ scroll: 0, wide: [] });
     }
