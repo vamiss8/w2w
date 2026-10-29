@@ -81,11 +81,17 @@
       </div>
 
       <div class="toolbar">
-        <button class="pill add-toggle members-only" type="button" data-add>add card</button>
-        <button class="pill filters-toggle" type="button" aria-expanded="false" aria-controls="filtersToWatch">
-          filters <span class="caret" aria-hidden="true"></span>
-        </button>
+        <input class="search-input" type="search" placeholder="find a title" aria-label="find a title" autocomplete="off" spellcheck="false" enterkeyhint="search" data-search />
+        <div class="toolbar-buttons">
+          <button class="pill add-toggle members-only" type="button" data-add>add card</button>
+          <button class="pill filters-toggle" type="button" aria-expanded="false" aria-controls="filtersToWatch">
+            filters <span class="caret" aria-hidden="true"></span>
+          </button>
+        </div>
       </div>
+
+      <!-- a title found on the other list, pointed at. src/lists.js -->
+      <p class="search-hint" data-search-hint hidden><a href="#/watched" data-search-other></a></p>
 
       <div class="controls" id="filtersToWatch" data-open="false" role="group" aria-label="Filters for the cards not watched yet">
         <div class="control-row">
@@ -153,11 +159,17 @@
       </div>
 
       <div class="toolbar">
-        <button class="pill add-toggle members-only" type="button" data-add>add card</button>
-        <button class="pill filters-toggle" type="button" aria-expanded="false" aria-controls="filtersWatched">
-          filters <span class="caret" aria-hidden="true"></span>
-        </button>
+        <input class="search-input" type="search" placeholder="find a title" aria-label="find a title" autocomplete="off" spellcheck="false" enterkeyhint="search" data-search />
+        <div class="toolbar-buttons">
+          <button class="pill add-toggle members-only" type="button" data-add>add card</button>
+          <button class="pill filters-toggle" type="button" aria-expanded="false" aria-controls="filtersWatched">
+            filters <span class="caret" aria-hidden="true"></span>
+          </button>
+        </div>
       </div>
+
+      <!-- a title found on the other list, pointed at. src/lists.js -->
+      <p class="search-hint" data-search-hint hidden><a href="#/to-watch" data-search-other></a></p>
 
       <div class="controls" id="filtersWatched" data-open="false" role="group" aria-label="Sorting and filters for the watched cards">
         <div class="control-row">

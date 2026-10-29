@@ -6,6 +6,7 @@
 import { LIST_TO_WATCH, LIST_WATCHED, STATE_PLANNED, STATE_STARTED, drawCard, listOf, normalizeStatusCode, stateOf } from "./cards.js";
 import { parseISODate } from "./dates.js";
 import { currentSection, onSectionChange } from "./router.js";
+import { matchesSearch, onSearchChange, searchQuery } from "./search.js";
 import { allCards, cardsLoadState, getComment, onStoreChange } from "./store.js";
 import { getActiveUser, onUserChange } from "./user.js";
 
@@ -81,6 +82,8 @@ function chosen(name) {
 }
 
 function passes(row) {
+  if (!matchesSearch(row)) return false;
+
   const list = listOf(row);
   const status = chosen(list === LIST_WATCHED ? "w-status" : "uw-status");
   if (status !== "all" && normalizeStatusCode(row.status) !== status) return false;
@@ -146,6 +149,9 @@ function drawLists() {
     const ul = view?.querySelector("ul.cards");
     if (!ul) continue;
 
+    const other = lists[list === LIST_WATCHED ? LIST_TO_WATCH : LIST_WATCHED];
+    pointElsewhere(view, list, other.filter(passes).length);
+
     // appending a node that is already in the list moves it, so appending in
     // sorted order is the whole sort
     let shown = 0;
@@ -161,6 +167,17 @@ function drawLists() {
   }
 }
 
+// a search that finds titles on the other list says how many, with a link
+// there. only while something is typed: an empty box finds everything
+function pointElsewhere(view, list, found) {
+  const hint = view.querySelector("[data-search-hint]");
+  const link = hint?.querySelector("[data-search-other]");
+  if (!hint || !link) return;
+
+  hint.hidden = !searchQuery() || found === 0;
+  link.textContent = `${found} more in ${list === LIST_WATCHED ? "not watched yet" : "watched already"} →`;
+}
+
 // the line under a list's title, and what an empty list says instead of
 // nothing at all
 function describeList(view, list, rows, shown) {
@@ -173,6 +190,7 @@ function describeList(view, list, rows, shown) {
     empty.textContent =
       state === "loading" ? "the cards are on their way..." :
       state === "failed" ? "could not reach the database. reload to try again" :
+      searchQuery() ? "no title like that here" :
       rows.length ? "nothing here with these filters" : "nothing here yet";
   }
 
@@ -309,4 +327,5 @@ export function initializeLists() {
   });
   onStoreChange(() => scheduleRender());
   onUserChange(() => scheduleRender());
+  onSearchChange(() => scheduleRender());
 }
