@@ -1,0 +1,21 @@
+# headers cloudflare pages adds to the site's responses. tests/e2e/site.js
+# serves the site with the same ones, so every browser test runs under them.
+#
+# the policy names every place the page may load from or talk to: the site
+# itself, google fonts, and our supabase project, over https and its socket.
+# nothing else can run here, a script or a style that slipped into a wish
+# included. require-trusted-types-for turns markup put together from strings
+# into an error: the page builds every node it shows, and a wish's link once
+# went into the page as markup, typed by one of us and run in the other's
+# browser.
+/*
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://esdhstxcxxgcexddkxqi.supabase.co wss://esdhstxcxxgcexddkxqi.supabase.co; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; require-trusted-types-for 'script'
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: strict-origin-when-cross-origin
+  Cross-Origin-Opener-Policy: same-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=()
+
+# the file name carries the version, so a browser may keep it for good
+/vendor/*
+  Cache-Control: public, max-age=31536000, immutable
