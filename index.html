@@ -46,8 +46,8 @@
   </header>
 
   <!-- one section at a time, each with an address: #/to-watch, #/watched,
-       #/wishlists, #/activity. above the content on a wide screen, a bar at
-       the bottom on a phone. src/router.js -->
+       #/wishlists, #/activity, #/stats. above the content on a wide screen, a
+       bar at the bottom on a phone. src/router.js -->
   <nav class="nav" aria-label="Sections">
     <a class="nav-item" href="#/to-watch" data-section="to-watch">
       <span class="nav-icon icon-star" aria-hidden="true"></span>
@@ -65,6 +65,10 @@
       <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h4l2.5-6 5 12 2.5-6h4" /></svg>
       <span class="nav-label">activity</span>
     </a>
+    <a class="nav-item" href="#/stats" data-section="stats">
+      <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 20V12M10 20V6M15 20v-5M20 20V9" /></svg>
+      <span class="nav-label">stats</span>
+    </a>
   </nav>
 
   <main class="container">
@@ -81,11 +85,18 @@
       </div>
 
       <div class="toolbar">
-        <button class="pill add-toggle members-only" type="button" data-add>add card</button>
-        <button class="pill filters-toggle" type="button" aria-expanded="false" aria-controls="filtersToWatch">
-          filters <span class="caret" aria-hidden="true"></span>
-        </button>
+        <input class="search-input" type="search" placeholder="find a title" aria-label="find a title" autocomplete="off" spellcheck="false" enterkeyhint="search" data-search />
+        <div class="toolbar-buttons">
+          <button class="pill add-toggle members-only" type="button" data-add>add card</button>
+          <button class="pill" type="button" data-tonight>tonight?</button>
+          <button class="pill filters-toggle" type="button" aria-expanded="false" aria-controls="filtersToWatch">
+            filters <span class="caret" aria-hidden="true"></span>
+          </button>
+        </div>
       </div>
+
+      <!-- a title found on the other list, pointed at. src/lists.js -->
+      <p class="search-hint" data-search-hint hidden><a href="#/watched" data-search-other></a></p>
 
       <div class="controls" id="filtersToWatch" data-open="false" role="group" aria-label="Filters for the cards not watched yet">
         <div class="control-row">
@@ -153,11 +164,17 @@
       </div>
 
       <div class="toolbar">
-        <button class="pill add-toggle members-only" type="button" data-add>add card</button>
-        <button class="pill filters-toggle" type="button" aria-expanded="false" aria-controls="filtersWatched">
-          filters <span class="caret" aria-hidden="true"></span>
-        </button>
+        <input class="search-input" type="search" placeholder="find a title" aria-label="find a title" autocomplete="off" spellcheck="false" enterkeyhint="search" data-search />
+        <div class="toolbar-buttons">
+          <button class="pill add-toggle members-only" type="button" data-add>add card</button>
+          <button class="pill filters-toggle" type="button" aria-expanded="false" aria-controls="filtersWatched">
+            filters <span class="caret" aria-hidden="true"></span>
+          </button>
+        </div>
       </div>
+
+      <!-- a title found on the other list, pointed at. src/lists.js -->
+      <p class="search-hint" data-search-hint hidden><a href="#/to-watch" data-search-other></a></p>
 
       <div class="controls" id="filtersWatched" data-open="false" role="group" aria-label="Sorting and filters for the watched cards">
         <div class="control-row">
@@ -279,6 +296,16 @@
       <div class="logs-foot">
         <button class="pill logs-more" id="logsMore" type="button">load more</button>
       </div>
+    </section>
+
+    <!-- STATS, worked out from the cards. src/stats.js -->
+    <section class="view" id="view-stats" data-section="stats" aria-labelledby="statsTitle" hidden>
+      <div class="view-head">
+        <h2 class="view-title" id="statsTitle">our numbers</h2>
+        <p class="view-count">worked out from the cards</p>
+      </div>
+
+      <div class="stats" id="stats"></div>
     </section>
 
     <footer>
@@ -403,6 +430,21 @@
       <div class="dialog-actions">
         <button class="btn ghost" id="confirmCancel" type="button" data-close>cancel</button>
         <button class="btn danger" id="confirmOk" type="button">delete</button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- TONIGHT, one card at random from what the list shows. src/tonight.js -->
+  <dialog class="dialog dialog-narrow" id="tonightDialog" aria-labelledby="tonightTitle" data-light-dismiss>
+    <div class="dialog-body">
+      <h2 class="dialog-title" id="tonightTitle">tonight</h2>
+      <p class="dialog-desc">how about</p>
+      <p class="tonight-pick" id="tonightPick" aria-live="polite"></p>
+      <p class="tonight-meta" id="tonightMeta"></p>
+
+      <div class="dialog-actions">
+        <button class="btn ghost" id="tonightAgain" type="button">another one</button>
+        <button class="btn" id="tonightOk" type="button">this one</button>
       </div>
     </div>
   </dialog>

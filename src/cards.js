@@ -3,8 +3,10 @@
 // what they look like.
 
 import { formatISOForUI } from "./dates.js";
+import { progressLine } from "./episodes.js";
 import { renderRatings } from "./ratings.js";
 import { getComment } from "./store.js";
+import { getActiveUser } from "./user.js";
 
 // a card's progress, the state column. it also says which list the card is
 // on: only a watched card sits in the watched one
@@ -119,10 +121,13 @@ export function drawCard(li, row) {
   const date = watchDateText(row);
   if (date) title.append(el("span", "watch-date", date));
 
-  // under the title: the hearts of a watched card, and the comments. a card
-  // with neither has nothing there at all, rather than a dash standing in
+  // under the title: the hearts of a watched card, how far into a started
+  // one we are, and the comments. a card with none of them has nothing there
+  // at all, rather than a dash standing in. the episodes are read out of the
+  // comments, which a guest never gets, so only one of us sees them
   const meta = el("div", "meta");
   if (stateOf(row) === STATE_WATCHED) meta.append(renderRatings(row));
+  if (stateOf(row) === STATE_STARTED && getActiveUser()) meta.append(progressLine(row));
   const comments = commentToggles(row);
   if (comments.childElementCount) meta.append(comments);
 

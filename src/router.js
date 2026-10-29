@@ -1,14 +1,14 @@
 // the sections of the page, one on screen at a time, each with an address of
-// its own: #/to-watch, #/watched, #/wishlists, #/activity. a link to one opens
-// it, the back button walks between them, and a visit comes back to the one
-// it left.
+// its own: #/to-watch, #/watched, #/wishlists, #/activity, #/stats. a link to
+// one opens it, the back button walks between them, and a visit comes back to
+// the one it left.
 //
 // a magic link lands with the session in the address bar, #access_token=...,
 // and that belongs to supabase-js until it has read it. so nothing here
 // writes to the address bar on the way in: a hash that is not a section is
 // left alone, and the last section shown is opened instead.
 
-export const SECTIONS = ["to-watch", "watched", "wishlists", "activity"];
+export const SECTIONS = ["to-watch", "watched", "wishlists", "activity", "stats"];
 
 const LS_SECTION = "section";
 const listeners = [];
