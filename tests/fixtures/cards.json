@@ -2,7 +2,6 @@
   {
     "id": 1,
     "title": "Arrival",
-    "tab": "watched",
     "state": "watched",
     "status": "10",
     "start_date": "2025-11-04",
@@ -14,7 +13,6 @@
   {
     "id": 2,
     "title": "Paddington 2",
-    "tab": "watched",
     "state": "watched",
     "status": "11",
     "start_date": "2025-11-12",
@@ -26,7 +24,6 @@
   {
     "id": 3,
     "title": "The Grand Budapest Hotel",
-    "tab": "unwatched",
     "state": "planned",
     "status": "01",
     "start_date": null,
@@ -38,7 +35,6 @@
   {
     "id": 4,
     "title": "Spirited Away",
-    "tab": "watched",
     "state": "watched",
     "status": "10",
     "start_date": "2025-12-20",
@@ -50,7 +46,6 @@
   {
     "id": 5,
     "title": "Twin Peaks",
-    "tab": "unwatched",
     "state": "started",
     "status": "00",
     "start_date": "2026-09-25",
@@ -62,7 +57,6 @@
   {
     "id": 6,
     "title": "Amélie",
-    "tab": "watched",
     "state": "watched",
     "status": "01",
     "start_date": "2026-01-05",
@@ -74,7 +68,6 @@
   {
     "id": 7,
     "title": "Tom & Jerry: The Movie",
-    "tab": "unwatched",
     "state": "planned",
     "status": "00",
     "start_date": null,
@@ -86,7 +79,6 @@
   {
     "id": 8,
     "title": "Ирония судьбы",
-    "tab": "watched",
     "state": "watched",
     "status": "11",
     "start_date": "2025-12-31",
@@ -98,7 +90,6 @@
   {
     "id": 9,
     "title": "Dark",
-    "tab": "watched",
     "state": "watched",
     "status": "00",
     "start_date": "2026-02-01",
@@ -110,7 +101,6 @@
   {
     "id": 10,
     "title": "Howl's Moving Castle",
-    "tab": "watched",
     "state": "watched",
     "status": "10",
     "start_date": "2026-03-20",
@@ -122,7 +112,6 @@
   {
     "id": 11,
     "title": "Avatar: The Last Airbender",
-    "tab": "unwatched",
     "state": "started",
     "status": "01",
     "start_date": "2026-10-02",
@@ -134,7 +123,6 @@
   {
     "id": 12,
     "title": "Moonrise Kingdom",
-    "tab": "unwatched",
     "state": "planned",
     "status": "10",
     "start_date": null,
@@ -146,7 +134,6 @@
   {
     "id": 13,
     "title": "Fargo",
-    "tab": "watched",
     "state": "watched",
     "status": "00",
     "start_date": "2026-04-02",
@@ -158,7 +145,6 @@
   {
     "id": 14,
     "title": "Before Sunrise",
-    "tab": "watched",
     "state": "watched",
     "status": "10",
     "start_date": "2026-05-14",
@@ -170,7 +156,6 @@
   {
     "id": 15,
     "title": "Princess Mononoke",
-    "tab": "unwatched",
     "state": "planned",
     "status": "00",
     "start_date": null,
@@ -182,7 +167,6 @@
   {
     "id": 16,
     "title": "Knives Out",
-    "tab": "watched",
     "state": "watched",
     "status": "01",
     "start_date": "2026-06-01",
@@ -194,7 +178,6 @@
   {
     "id": 17,
     "title": "Severance",
-    "tab": "unwatched",
     "state": "started",
     "status": "00",
     "start_date": "2026-10-02",
@@ -206,7 +189,6 @@
   {
     "id": 18,
     "title": "Ratatouille",
-    "tab": "watched",
     "state": "watched",
     "status": "11",
     "start_date": "2026-07-11",
@@ -218,7 +200,6 @@
   {
     "id": 19,
     "title": "Past Lives",
-    "tab": "unwatched",
     "state": "planned",
     "status": "00",
     "start_date": null,
@@ -230,7 +211,6 @@
   {
     "id": 20,
     "title": "Pride & Prejudice",
-    "tab": "watched",
     "state": "watched",
     "status": "10",
     "start_date": "2026-09-23",
@@ -242,7 +222,6 @@
   {
     "id": 21,
     "title": "The Office",
-    "tab": "unwatched",
     "state": "started",
     "status": "11",
     "start_date": "2026-08-01",
@@ -254,7 +233,6 @@
   {
     "id": 22,
     "title": "Kiki's Delivery Service",
-    "tab": "unwatched",
     "state": "planned",
     "status": "01",
     "start_date": null,
@@ -266,7 +244,6 @@
   {
     "id": 23,
     "title": "Coraline",
-    "tab": "watched",
     "state": "watched",
     "status": "10",
     "start_date": "2026-08-30",
@@ -278,7 +255,6 @@
   {
     "id": 24,
     "title": "Little Women",
-    "tab": "watched",
     "state": "watched",
     "status": "00",
     "start_date": "2026-09-23",

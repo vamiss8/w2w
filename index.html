@@ -57,6 +57,10 @@
 
   <main class="container">
 
+    <!-- src/version.js fills this in when the database is not the one this
+         page was written for, and only for one of us -->
+    <p class="db-banner" id="dbBanner" role="alert" hidden></p>
+
     <header>
       <div class="title">what to watch on a date?</div>
       <div class="subtitle">vika & vlad</div>
@@ -309,15 +313,9 @@
           <input class="field-input" id="cardTitle" type="text" autocomplete="off" placeholder="e.g. The Fifth Element" required />
         </label>
 
+        <!-- no field for the list: a card is on the watched one when it is
+             watched, and on the other one otherwise -->
         <div class="field-grid">
-          <label class="field">
-            <span class="field-label">tab</span>
-            <select class="field-select" id="cardTab">
-              <option value="unwatched">unwatched</option>
-              <option value="watched">watched</option>
-            </select>
-          </label>
-
           <label class="field">
             <span class="field-label">state</span>
             <select class="field-select" id="cardState">

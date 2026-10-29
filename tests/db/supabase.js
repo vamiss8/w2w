@@ -1,7 +1,8 @@
 // a fresh postgres (pglite, postgres 17 compiled to wasm) with the parts of
-// supabase the sql in db/ leans on: the anon and authenticated roles,
-// auth.jwt(), and the realtime publication. plus a way to run a statement the
-// way postgrest would, as a role with a session's claims.
+// supabase the sql in db/ leans on: the anon and authenticated roles, the
+// grants supabase hands them by default, auth.jwt(), and the realtime
+// publication. plus a way to run a statement the way postgrest would, as a
+// role with a session's claims.
 
 import { PGlite } from "@electric-sql/pglite";
 import fs from "node:fs";
@@ -34,6 +35,14 @@ export async function freshSupabase() {
     $$;
     grant usage on schema auth to anon, authenticated;
     create publication supabase_realtime;
+
+    -- what a supabase project does for everything created in public: every
+    -- privilege, to both roles. row level security is what stands in the way,
+    -- and it only stops rows, so whatever a grant here allows that a policy
+    -- cannot see, truncate above all, is allowed for real
+    alter default privileges in schema public grant all on tables to anon, authenticated;
+    alter default privileges in schema public grant all on sequences to anon, authenticated;
+    alter default privileges in schema public grant all on functions to anon, authenticated;
   `);
   return db;
 }
@@ -125,9 +134,9 @@ export async function catalog(db) {
 export async function seed(db) {
   for (const c of fixture("cards")) {
     await db.query(
-      `insert into public.cards (id, title, tab, state, status, start_date, end_date, vlad_score, vika_score, updated_at)
-       overriding system value values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
-      [c.id, c.title, c.tab, c.state, c.status, c.start_date, c.end_date, c.vlad_score, c.vika_score, c.updated_at],
+      `insert into public.cards (id, title, state, status, start_date, end_date, vlad_score, vika_score, updated_at)
+       overriding system value values ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+      [c.id, c.title, c.state, c.status, c.start_date, c.end_date, c.vlad_score, c.vika_score, c.updated_at],
     );
   }
   for (const c of fixture("comments")) {

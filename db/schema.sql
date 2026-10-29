@@ -31,6 +31,16 @@ as $$
   where m.email = lower(auth.jwt() ->> 'email')
 $$;
 
+-- which migration this is, so the page can tell a database that is behind it.
+-- every migration ends by raising the number
+create function public.schema_version()
+returns int
+language sql
+immutable
+as $$
+  select 4
+$$;
+
 create function public.touch_updated_at()
 returns trigger language plpgsql as $$
 begin
@@ -58,11 +68,11 @@ $$;
 
 -- tables ---------------------------------------------------------------------------
 
--- tab always follows from state: only a watched card is on the watched list
+-- which list a card is on follows from its state: only a watched card is on
+-- the watched one
 create table public.cards (
   id bigint generated always as identity primary key,
   title text not null,
-  tab text not null check (tab in ('unwatched','watched')),
   state text not null check (state in ('planned','started','watched')),
   status text not null check (status in ('00','01','10','11')),
   start_date date,
@@ -192,14 +202,20 @@ create policy "members delete their own comments" on public.comments
 
 -- grants -----------------------------------------------------------------------------
 
+-- supabase gives anon and authenticated every privilege on a new table, and
+-- row level security only ever stops rows: truncate does not ask a policy. so
+-- everything is taken back first, and the grants after it are all there is.
+--
 -- select stays granted to anon on the private tables too, so a guest's read
 -- comes back empty instead of failing, and realtime quietly sends a guest nothing
 
 grant usage on schema public to anon, authenticated;
 
-revoke all on public.members from anon, authenticated;
+revoke all on all tables in schema public from anon, authenticated;
 revoke all on function public.app_user() from public;
 grant execute on function public.app_user() to anon, authenticated;
+revoke all on function public.schema_version() from public;
+grant execute on function public.schema_version() to anon, authenticated;
 
 grant select on public.cards to anon;
 grant select, insert, update, delete on public.cards to authenticated;

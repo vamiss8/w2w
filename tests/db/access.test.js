@@ -45,7 +45,7 @@ describe("a guest", () => {
   });
 
   test("cannot write anything", async () => {
-    refused(await guest("insert into public.cards (title, tab, state, status) values ('x','unwatched','planned','00')"));
+    refused(await guest("insert into public.cards (title, state, status) values ('x','planned','00')"));
     refused(await guest("update public.cards set title = 'x' where id = 1"));
     refused(await guest("delete from public.cards where id = 1"));
     refused(await guest("insert into public.logs (user_name, action) values ('vlad','login')"));
@@ -55,6 +55,13 @@ describe("a guest", () => {
 
   test("cannot read the members", async () => {
     refused(await guest("select * from public.members"));
+  });
+
+  test("cannot empty a table, which no policy would have stopped", async () => {
+    for (const table of ["cards", "logs", "wishes", "comments", "members"]) {
+      refused(await guest(`truncate public.${table} cascade`));
+    }
+    assert.equal(rowsOf(await guest("select count(*)::int as n from public.cards"))[0].n, cards.length);
   });
 });
 
@@ -71,7 +78,7 @@ describe("a stranger with an account", () => {
   });
 
   test("cannot add, and an update or delete touches nothing", async () => {
-    refused(await stranger("insert into public.cards (title, tab, state, status) values ('x','unwatched','planned','00')"));
+    refused(await stranger("insert into public.cards (title, state, status) values ('x','planned','00')"));
     assert.equal((await stranger("update public.cards set title = 'x' where id = 1")).count, 0);
     assert.equal((await stranger("delete from public.cards where id = 1")).count, 0);
     refused(await stranger("insert into public.logs (action) values ('login')"));
@@ -90,13 +97,13 @@ describe("the two of us", () => {
   });
 
   test("add, change and delete cards", async () => {
-    const [{ id }] = rowsOf(await vlad("insert into public.cards (title, tab, state, status) values ('test card','unwatched','planned','00') returning id"));
+    const [{ id }] = rowsOf(await vlad("insert into public.cards (title, state, status) values ('test card','planned','00') returning id"));
     assert.equal((await vika("update public.cards set status = '01' where id = $1", [id])).count, 1);
     assert.equal((await vika("delete from public.cards where id = $1", [id])).count, 1);
   });
 
   test("cannot send an id: the database hands them out", async () => {
-    refused(await vlad("insert into public.cards (id, title, tab, state, status) values (9999, 'x','unwatched','planned','00')"));
+    refused(await vlad("insert into public.cards (id, title, state, status) values (9999, 'x','planned','00')"));
     refused(await vlad("update public.cards set id = 9999 where id = 1"));
   });
 
@@ -104,6 +111,14 @@ describe("the two of us", () => {
     const [line] = rowsOf(await vlad("insert into public.logs (action, details) values ('login', '{}') returning user_name"));
     assert.equal(line.user_name, "vlad");
     refused(await vlad("insert into public.logs (user_name, action) values ('vika', 'login')"));
+  });
+
+  test("a log line stays as it was written, and so does every table", async () => {
+    refused(await vika("update public.logs set action = 'rate' where id = 1"));
+    refused(await vika("delete from public.logs where id = 1"));
+    for (const table of ["cards", "logs", "wishes", "comments"]) {
+      refused(await vlad(`truncate public.${table} cascade`));
+    }
   });
 
   test("comment under our own name only, and saving again overwrites", async () => {
@@ -118,7 +133,7 @@ describe("the two of us", () => {
   });
 
   test("a deleted card takes its comments with it, and its log lines let go", async () => {
-    const [{ id }] = rowsOf(await vlad("insert into public.cards (title, tab, state, status) values ('short-lived','unwatched','planned','00') returning id"));
+    const [{ id }] = rowsOf(await vlad("insert into public.cards (title, state, status) values ('short-lived','planned','00') returning id"));
     rowsOf(await vlad("insert into public.comments (card_id, author, body) values ($1, 'vlad', 'x')", [id]));
     rowsOf(await vlad("insert into public.logs (action, card_id) values ('add_card', $1)", [id]));
     assert.equal((await vika("delete from public.cards where id = $1", [id])).count, 1);

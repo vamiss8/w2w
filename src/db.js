@@ -265,6 +265,23 @@ export async function remoteSaveComment(cardId, author, body) {
   return true;
 }
 
+// the migration the database is on, 0 for one from before 004, which had no
+// way to say, and null when it could not be asked at all. a plain get: the
+// answer only changes with a migration
+export async function remoteSchemaVersion() {
+  const sb = getSupabase();
+  if (!sb) return null;
+
+  const { data, error } = await sb.rpc("schema_version", {}, { get: true });
+  if (!error) return data;
+
+  // postgrest's answer for a function it does not know
+  if (error.code === "PGRST202") return 0;
+
+  console.error("[supabase] schema_version failed", error);
+  return null;
+}
+
 // the magic link. only an account that already exists gets one: the two of us
 // were created by hand, and sign-ups are switched off, so this form cannot
 // make a new one either

@@ -12,6 +12,7 @@ import { startStarfield } from "./starfield.js";
 import { initializeRealtime, resyncFromRemote } from "./sync.js";
 import { initializeTooltipAutoFlip } from "./tooltips.js";
 import { initializeAuth, onUserChange } from "./user.js";
+import { initializeVersionCheck } from "./version.js";
 import { applyActiveTabView, initializeControls, initializeFiltersToggle, initializeTabs } from "./view.js";
 import { initializeWishlists, remotePullWishes } from "./wishlists.js";
 
@@ -19,6 +20,7 @@ startStarfield();
 
 initializeAuth();
 onUserChange(() => resyncFromRemote());
+initializeVersionCheck();
 initializeCardUi();
 initializeFiltersToggle();
 initializeLogsWidget();
