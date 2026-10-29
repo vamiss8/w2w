@@ -62,8 +62,11 @@ export async function catalog(db) {
   const q = async text => (await db.query(text)).rows;
   return {
     columns: await q(`
-      select table_name, column_name, ordinal_position, data_type, is_nullable,
-             column_default, is_identity, identity_generation
+      select table_name, column_name,
+             -- the place of a column among the ones that are left: a dropped
+             -- column keeps its number, so the numbers can have gaps
+             row_number() over (partition by table_name order by ordinal_position)::int as position,
+             data_type, is_nullable, column_default, is_identity, identity_generation
       from information_schema.columns
       where table_schema = 'public'
       order by table_name, ordinal_position`),
@@ -133,9 +136,16 @@ export async function seed(db) {
   for (const l of fixture("logs")) {
     await db.query("insert into public.logs (id, ts, user_name, action, card_id, details) values ($1,$2,$3,$4,$5,$6)", [l.id, l.ts, l.user_name, l.action, l.card_id, JSON.stringify(l.details)]);
   }
+  // done_by goes in as written: the trigger that would stamp it reads the
+  // session, and the superuser has none
+  await db.exec("alter table public.wishes disable trigger trg_wishes_stamp_done");
   for (const w of fixture("wishes")) {
-    await db.query("insert into public.wishes (id, owner, title, link, added_at) overriding system value values ($1,$2,$3,$4,$5)", [w.id, w.owner, w.title, w.link, w.added_at]);
+    await db.query(
+      "insert into public.wishes (id, owner, title, links, added_at, done_at, done_by, updated_at) overriding system value values ($1,$2,$3,$4,$5,$6,$7,$8)",
+      [w.id, w.owner, w.title, w.links, w.added_at, w.done_at, w.done_by, w.updated_at],
+    );
   }
+  await db.exec("alter table public.wishes enable trigger trg_wishes_stamp_done");
   for (const m of fixture("members")) {
     await db.query("insert into public.members (email, name) values ($1, $2)", [m.email, m.name]);
   }

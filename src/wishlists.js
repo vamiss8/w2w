@@ -37,8 +37,10 @@ function renderWishes() {
     title.textContent = w.title;
     info.appendChild(title);
 
-    const href = safeLink(w.link);
-    if (href) {
+    (w.links || []).forEach(link => {
+      const href = safeLink(link);
+      if (!href) return;
+
       const a = document.createElement("a");
       a.className = "wish-link";
       a.href = href;
@@ -46,7 +48,7 @@ function renderWishes() {
       a.rel = "noopener noreferrer";
       a.textContent = "link ↗";
       info.appendChild(a);
-    }
+    });
 
     // the × carries the site's own tooltip rather than a title attribute
     const del = document.createElement("button");
@@ -136,7 +138,7 @@ export function initializeWishlists() {
         link = "https://" + link;
       }
 
-      await remoteInsertWish(owner, title, link);
+      await remoteInsertWish(owner, title, link ? [link] : []);
       
       closeModal("wishAddModal");
       openModal("wishlistModal"); 

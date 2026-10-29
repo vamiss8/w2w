@@ -20,7 +20,7 @@
   const COLUMNS = {
     cards: ["id", "title", "tab", "state", "status", "start_date", "end_date", "vlad_score", "vika_score", "updated_at"],
     logs: ["id", "ts", "user_name", "action", "card_id", "details"],
-    wishes: ["id", "owner", "title", "link", "added_at"],
+    wishes: ["id", "owner", "title", "added_at", "links", "done_at", "done_by", "updated_at"],
     comments: ["card_id", "author", "body", "updated_at"],
   };
   const PUBLIC = new Set(["cards", "logs"]);
@@ -259,7 +259,11 @@
         const row = { ...values, id: ++seq[table] };
         if (table === "cards") Object.assign(row, { vlad_score: 0, vika_score: 0, ...values, id: row.id, updated_at: tick() });
         if (table === "logs") Object.assign(row, { ts: tick(), user_name: member, card_id: values.card_id ?? null, details: values.details ?? {} });
-        if (table === "wishes") Object.assign(row, { link: values.link ?? null, added_at: tick() });
+        if (table === "wishes") {
+          const now = tick();
+          Object.assign(row, { links: values.links ?? [], added_at: now, updated_at: now, done_at: values.done_at ?? null });
+          row.done_by = row.done_at ? member : null;
+        }
         rows.push(row);
         broadcast(table, "INSERT", { ...row }, null);
         return row;
@@ -270,11 +274,19 @@
     if (method === "PATCH") {
       for (const col of Object.keys(body || {})) if (!COLUMNS[table].includes(col)) return noColumn(table, col);
       if (body && "id" in body) return json(428, { code: "428C9", message: `column "id" can only be updated to DEFAULT` });
-      if (table === "logs" || (table === "wishes")) return json(403, { code: "42501", message: `permission denied for table ${table}` });
+      if (table === "logs") return json(403, { code: "42501", message: "permission denied for table logs" });
       const hit = member ? rows.filter(r => matches(r, filters) && (table !== "comments" || r.author === member)) : [];
       hit.forEach(r => {
+        const before = { done_at: r.done_at, done_by: r.done_by };
         Object.assign(r, body);
-        if (table === "cards" || table === "comments") r.updated_at = tick();
+        if (table === "cards" || table === "comments" || table === "wishes") r.updated_at = tick();
+        // what trg_wishes_stamp_done does: the name comes from the session,
+        // whatever the request said
+        if (table === "wishes") {
+          if (!r.done_at) r.done_by = null;
+          else if (!before.done_at) r.done_by = member;
+          else r.done_by = before.done_by;
+        }
         broadcast(table, "UPDATE", { ...r }, {});
       });
       return respond(200, wantsRows ? hit.map(r => project(r, select)) : null, accept);

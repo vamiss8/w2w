@@ -46,9 +46,10 @@ before(async () => {
     await db.query("insert into public.logs (id, ts, user_name, action, card_id, details) values ($1, now(), 'vlad', 'rate', $2, $3)",
       [9000 + i, orphan, JSON.stringify({ title: "a card deleted in april", score: 5 })]);
   }
+  // a wish had one link at most, in a column of its own
   for (const [i, w] of wishes.entries()) {
     await db.query("insert into public.wishes (id, owner, title, link, added_at) values ($1,$2,$3,$4,$5)",
-      [1781968258731961 + i * 99991, w.owner, w.title, w.link, w.added_at]);
+      [1781968258731961 + i * 99991, w.owner, w.title, w.links[0] ?? null, w.added_at]);
   }
 
   before_ = {
@@ -88,6 +89,19 @@ test("every comment moved to its own table, under the right card and author", as
     moved.sort((a, b) => (a.title + a.author).localeCompare(b.title + b.author, "en")),
     expected,
   );
+});
+
+test("every wish keeps its one link, now the first of its links", async () => {
+  const rows = (await db.query("select title, links from public.wishes")).rows;
+  for (const w of wishes) {
+    const row = rows.find(r => r.title === w.title);
+    assert.deepEqual(row.links, w.links.slice(0, 1), w.title);
+  }
+});
+
+test("no wish comes out of the migrations ticked off, or edited after it was added", async () => {
+  const rows = (await db.query("select done_at, done_by, updated_at = added_at as untouched from public.wishes")).rows;
+  assert.ok(rows.every(r => r.done_at === null && r.done_by === null && r.untouched));
 });
 
 test("every wish is kept, numbered in the order it was added", async () => {

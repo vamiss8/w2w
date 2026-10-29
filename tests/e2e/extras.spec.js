@@ -12,7 +12,8 @@ test.describe("wishlists", () => {
   test("both lists are there, each wish under its owner", async ({ page }) => {
     await expect(page.locator("#wishesVlad .wish-item")).toHaveCount(3);
     await expect(page.locator("#wishesVika .wish-item")).toHaveCount(3);
-    await expect(page.locator("#wishesVika .wish-item", { hasText: "watercolour brushes" }).locator("a.wish-link")).toHaveAttribute("href", "https://example.com/brushes");
+    const links = page.locator("#wishesVika .wish-item", { hasText: "watercolour brushes" }).locator("a.wish-link");
+    expect(await links.evaluateAll(as => as.map(a => a.href))).toEqual(["https://example.com/brushes", "https://shop.example.org/brushes-set"]);
   });
 
   test("a wish can be added, with https added to a bare link", async ({ page }) => {
@@ -21,7 +22,7 @@ test.describe("wishlists", () => {
     await page.locator("#wishInputLink").fill("example.com/camera");
     await page.locator("#wishAddSave").click();
     await expect(page.locator("#wishesVika .wish-item", { hasText: "a film camera" })).toHaveCount(1);
-    expect((await db(page, "wishes")).find(w => w.title === "a film camera").link).toBe("https://example.com/camera");
+    expect((await db(page, "wishes")).find(w => w.title === "a film camera").links).toEqual(["https://example.com/camera"]);
   });
 
   test("a wish can be deleted, after a confirmation", async ({ page }) => {
