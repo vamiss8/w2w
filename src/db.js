@@ -204,6 +204,20 @@ export async function remoteInsertWish(owner, title, links) {
   if (error) console.error("[supabase] wish insert failed", error);
 }
 
+// returns whether the database took the change
+export async function remoteUpdateWish(id, patch) {
+  const sb = getSupabase();
+  if (!sb) return false;
+
+  const { error } = await sb.from("wishes").update(patch).eq("id", parseInt(id, 10));
+  if (error) {
+    console.error("[supabase] wish update failed", error);
+    return false;
+  }
+
+  return true;
+}
+
 export async function remoteDeleteWish(id) {
   const sb = getSupabase();
   if (!sb) return;

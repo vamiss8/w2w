@@ -45,6 +45,7 @@
 
   const requests = [];
   const sockets = [];
+  const failures = [];
 
   // --- sessions ---------------------------------------------------------------
 
@@ -349,6 +350,13 @@
     const body = typeof init.body === "string" && init.body ? JSON.parse(init.body) : null;
     const token = (headers.get("authorization") || "").replace(/^Bearer /, "");
     await new Promise(r => setTimeout(r, 2));
+    const table = url.pathname.replace(/^\/(rest|auth)\/v1\//, "");
+    const failure = failures.findIndex(f => f.method === method && f.table === table);
+    if (failure >= 0) {
+      failures.splice(failure, 1);
+      requests.push({ method, table, body, as: memberOf(token) || "guest", query: "", prefer: "", failed: true });
+      return json(500, { code: "XX000", message: "the fake was told to fail this one" });
+    }
     if (url.pathname.startsWith("/auth/v1/")) return handleAuth(method, url, body, token);
     if (url.pathname.startsWith("/rest/v1/")) return handleRest(method, url, headers, body, memberOf(token));
     return json(404, {});
@@ -386,6 +394,11 @@
     },
     dropSockets() {
       sockets.forEach(s => s.readyState === 1 && s.drop());
+    },
+    // the next request with this method to this table fails, the way a
+    // dropped connection or a refusing database would
+    failNext(method, table) {
+      failures.push({ method, table });
     },
     channelEmails() {
       return sockets.flatMap(s => Object.values(s.channels)).map(ch => emailOf(ch.token || ""));

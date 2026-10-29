@@ -31,3 +31,11 @@ export function formatISOForUI(value) {
   if (!date) return DATE_PLACEHOLDER_UI;
   return DATE_FORMATTER.format(date);
 }
+
+// the same for a moment rather than a day, a timestamp the database wrote,
+// shown on the day it was where the page is open
+export function formatTimestampForUI(value) {
+  const date = new Date(value);
+  if (!value || Number.isNaN(date.getTime())) return DATE_PLACEHOLDER_UI;
+  return DATE_FORMATTER.format(date);
+}

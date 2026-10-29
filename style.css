@@ -2616,3 +2616,159 @@ li.menu-open {
   color: rgba(230, 232, 255, 0.9);
   background: rgba(255, 255, 255, 0.02);
 }
+
+/* =========================
+   WISHLIST DONE
+   ========================= */
+
+.wish-info {
+  flex: 1;
+  min-width: 0;
+}
+
+/* the round box in front of a wish. ticked, it fills with the site's violet,
+   and the wish moves down into its column's done list */
+.wish-check {
+  position: relative;
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border-radius: 999px;
+
+  background: transparent;
+  border: 1px solid rgba(230, 232, 255, 0.22);
+
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+}
+
+.wish-check::after {
+  content: "\2713";
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+
+  font-size: 0.78rem;
+  line-height: 1;
+  color: rgba(230, 232, 255, 0.95);
+
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.wish-check:hover {
+  border-color: rgba(155, 108, 255, 0.6);
+  transform: scale(1.06);
+}
+
+.wish-check:hover::after {
+  opacity: 0.35;
+}
+
+.wish-check[aria-pressed="true"] {
+  background: rgba(155, 108, 255, 0.55);
+  border-color: rgba(155, 108, 255, 0.85);
+}
+
+.wish-check[aria-pressed="true"]::after {
+  opacity: 1;
+}
+
+.wish-check:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(255, 211, 106, 0.18);
+}
+
+/* the list scrolls, so a tooltip above the box would be cut off: it opens to
+   the right instead, the way the delete button's opens to the left */
+.wish-check .tooltip {
+  top: 50%;
+  left: calc(100% + 12px);
+  right: auto;
+  bottom: auto;
+  transform: translateX(-6px) translateY(-50%);
+
+  min-width: auto;
+  padding: 8px 14px;
+  white-space: nowrap;
+  text-transform: uppercase;
+}
+
+.wish-check:hover .tooltip,
+.wish-check:focus-visible .tooltip {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(0) translateY(-50%);
+}
+
+.wish-check .tooltip::before {
+  top: 50%;
+  left: -6.5px;
+  right: auto;
+  bottom: auto;
+  transform: translateY(-50%) rotate(45deg);
+
+  border-bottom: 1px solid rgba(230, 232, 255, 0.10);
+  border-left: 1px solid rgba(230, 232, 255, 0.10);
+  border-top: 0;
+  border-right: 0;
+}
+
+.wish-check .tooltip::after {
+  display: none;
+}
+
+.wish-item.is-done .wish-title {
+  color: rgba(230, 232, 255, 0.62);
+}
+
+.wish-done-note {
+  font-family: var(--font-badge);
+  font-size: 0.62rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(155, 108, 255, 0.85);
+}
+
+/* the wishes that came true, folded under each column */
+.wishes-done {
+  border-top: 1px solid rgba(230, 232, 255, 0.06);
+  padding-top: 10px;
+}
+
+.wishes-done summary {
+  list-style: none;
+  cursor: pointer;
+  user-select: none;
+
+  font-family: var(--font-badge);
+  font-size: 0.68rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(154, 160, 214, 0.8);
+}
+
+.wishes-done summary::-webkit-details-marker {
+  display: none;
+}
+
+.wishes-done summary::before {
+  content: "\25B8";
+  display: inline-block;
+  margin-right: 8px;
+  transition: transform 0.2s ease;
+}
+
+.wishes-done[open] summary::before {
+  transform: rotate(90deg);
+}
+
+.wishes-done summary:hover {
+  color: rgba(230, 232, 255, 0.9);
+}
+
+.wishes-done .wishes-list {
+  margin-top: 10px;
+}

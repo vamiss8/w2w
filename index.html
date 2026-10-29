@@ -425,17 +425,27 @@
       <div class="modal-title">our wishlists</div>
       <div class="modal-desc">gifts we dream about</div>
 
+      <!-- a wish that came true moves down into its column's done list, which
+           stays folded until it is asked for. src/wishlists.js fills both -->
       <div class="wishlist-columns">
         <div class="wishlist-col">
           <div class="wishlist-col-header vlad">vlad</div>
           <ul class="wishes-list" id="wishesVlad"></ul>
           <button class="add-wish-btn" data-owner="vlad">+ add wish</button>
+          <details class="wishes-done" data-owner="vlad" hidden>
+            <summary>done · <span class="wishes-done-count">0</span></summary>
+            <ul class="wishes-list" id="wishesVladDone"></ul>
+          </details>
         </div>
-        
+
         <div class="wishlist-col">
           <div class="wishlist-col-header vika">vika</div>
           <ul class="wishes-list" id="wishesVika"></ul>
           <button class="add-wish-btn" data-owner="vika">+ add wish</button>
+          <details class="wishes-done" data-owner="vika" hidden>
+            <summary>done · <span class="wishes-done-count">0</span></summary>
+            <ul class="wishes-list" id="wishesVikaDone"></ul>
+          </details>
         </div>
       </div>
 
