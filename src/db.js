@@ -159,9 +159,9 @@ export async function remoteInsertLog(action, details, cardIdOrNull) {
   if (error) console.error("[supabase] insert log failed", error);
 }
 
-// one page of the activity log, newest first, and only entries older than
-// beforeTs when it is given
-export async function remoteFetchLogs(limit, beforeTs) {
+// one page of the activity log, newest first: only lines older than beforeTs
+// when it is given, and only one person's when user is
+export async function remoteFetchLogs(limit, beforeTs, user = null) {
   const sb = getSupabase();
   if (!sb) return { data: null, error: null };
 
@@ -171,9 +171,8 @@ export async function remoteFetchLogs(limit, beforeTs) {
     .order("ts", { ascending: false })
     .limit(limit);
 
-  if (beforeTs) {
-    q = q.lt("ts", beforeTs);
-  }
+  if (beforeTs) q = q.lt("ts", beforeTs);
+  if (user) q = q.eq("user_name", user);
 
   return await q;
 }

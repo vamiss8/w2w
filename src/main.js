@@ -5,11 +5,11 @@
 // the cards are still on their way. the router goes last of the wiring: the
 // section it opens is announced to everything wired before it.
 
+import { initializeActivity } from "./activity.js";
 import { initializeDialogs } from "./dialogs.js";
 import { initializeCardUi } from "./editor.js";
 import { initializeGift } from "./gift.js";
 import { initializeLists, scheduleRender } from "./lists.js";
-import { initializeActivity } from "./logs.js";
 import { initializeRatingEditing } from "./ratings.js";
 import { initializeRouter } from "./router.js";
 import { startStarfield } from "./starfield.js";

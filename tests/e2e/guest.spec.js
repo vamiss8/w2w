@@ -46,10 +46,6 @@ test("a click on a heart changes nothing", async ({ page }) => {
 
 test("the activity log is open to anyone", async ({ page }) => {
   await goTo(page, "activity");
-  await expect(page.locator("#logsList .log-item")).toHaveCount(20);
-  await page.locator("#logsMore").click();
-  await expect(page.locator("#logsList .log-item")).toHaveCount(40);
-  await page.locator("#logsMore").click();
   await expect(page.locator("#logsList .log-item")).toHaveCount(FIXTURES.logs.length);
   await expect(page.locator("#logsMore")).toHaveText("no more");
 });

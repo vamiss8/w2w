@@ -13,6 +13,9 @@ export default defineConfig({
   use: {
     baseURL: "http://w2w.test",
     trace: "retain-on-failure",
+    // one zone for every machine, so a day in the activity is the same day
+    // everywhere. east of greenwich, where a date read as utc shows
+    timezoneId: "Europe/Moscow",
   },
   projects: [
     {

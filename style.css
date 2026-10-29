@@ -1702,36 +1702,84 @@ li.is-animating {
    ACTIVITY
    ========================= */
 
+.log-who {
+  margin-bottom: 22px;
+}
+
 .logs-list {
   list-style: none;
   margin: 0;
   padding: 0;
   display: grid;
-  gap: 10px;
+  gap: 22px;
 }
 
-.log-item {
-  padding: 12px 14px;
+.log-day-title {
+  margin: 0 0 10px 2px;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: 0.66rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* a day is one panel, its lines divided by hairlines */
+.log-runs {
+  list-style: none;
+  margin: 0;
+  padding: 0;
   border-radius: 14px;
   background: var(--glass);
   border: 1px solid var(--line-soft);
 }
 
+.log-item {
+  display: grid;
+  grid-template-columns: 3.4em minmax(0, 1fr);
+  gap: 12px;
+  align-items: baseline;
+  padding: 11px 14px;
+}
+
+.log-item + .log-item {
+  border-top: 1px solid var(--line-soft);
+}
+
 .log-time {
-  margin-bottom: 6px;
   font-family: var(--font-mono);
-  font-size: 0.64rem;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
   color: rgba(154, 160, 214, 0.75);
 }
 
 .log-text {
   font-family: var(--font-content);
   font-size: 0.9rem;
-  line-height: 1.4;
+  line-height: 1.45;
   overflow-wrap: anywhere;
   color: var(--ink);
+}
+
+/* how many times in a row, for a line that stands for several */
+.log-count {
+  display: inline-block;
+  padding: 1px 7px;
+  border-radius: var(--pill);
+  font-family: var(--font-mono);
+  font-size: 0.72em;
+  letter-spacing: 0.06em;
+  color: var(--ink-soft);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--line);
+  cursor: help;
+}
+
+.log-note {
+  text-align: center;
+  font-family: var(--font-content);
+  font-size: 0.9rem;
+  color: var(--muted);
 }
 
 .log-user {

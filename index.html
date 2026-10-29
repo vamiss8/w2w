@@ -257,11 +257,21 @@
       </div>
     </section>
 
-    <!-- ACTIVITY. src/logs.js loads it the first time it is opened -->
+    <!-- ACTIVITY, a day at a time, the same thing done again folded into one
+         line. src/activity.js loads it the first time it is opened -->
     <section class="view" id="view-activity" data-section="activity" aria-labelledby="activityTitle" hidden>
       <div class="view-head">
         <h2 class="view-title" id="activityTitle">activity</h2>
         <p class="view-count">everything we did here, the newest first</p>
+      </div>
+
+      <div class="control-group log-who" role="group" aria-label="Whose activity">
+        <input type="radio" name="log-who" id="log-who-all" checked />
+        <label class="chip" for="log-who-all">everyone</label>
+        <input type="radio" name="log-who" id="log-who-vlad" />
+        <label class="chip" for="log-who-vlad">vlad</label>
+        <input type="radio" name="log-who" id="log-who-vika" />
+        <label class="chip" for="log-who-vika">vika</label>
       </div>
 
       <ul class="logs-list" id="logsList" aria-live="polite"></ul>

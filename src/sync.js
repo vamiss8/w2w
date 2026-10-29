@@ -3,7 +3,7 @@
 // socket was down.
 
 import { getSupabase, remoteFetchCards, remoteFetchComments } from "./db.js";
-import { prependRemoteLog, refreshLogsUI } from "./logs.js";
+import { addLiveLogEntry, reloadActivity } from "./activity.js";
 import { dropCard, putCard, putComment, replaceCards, replaceComments } from "./store.js";
 import { getActiveUser } from "./user.js";
 import { remotePullWishes } from "./wishlists.js";
@@ -22,7 +22,7 @@ export async function initializeRealtime() {
       else if (payload.new) putCard(payload.new);
     })
     .on("postgres_changes", { event: "INSERT", schema: "public", table: "logs" }, payload => {
-      if (payload.new) prependRemoteLog(payload.new);
+      if (payload.new) addLiveLogEntry(payload.new);
     })
     .on("postgres_changes", { event: "*", schema: "public", table: "wishes" }, () => {
       remotePullWishes();
@@ -51,7 +51,7 @@ export async function resyncFromRemote() {
   await remotePullCards();
   await remotePullComments();
   await remotePullWishes();
-  refreshLogsUI();
+  reloadActivity();
 }
 
 // the database is the whole truth, so a card it did not return is gone.
