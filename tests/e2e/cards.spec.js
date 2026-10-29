@@ -94,15 +94,16 @@ test("a comment is saved under your name and shows on the card", async ({ page }
 test("a new card appears when the saved row comes back, on top of its day", async ({ page }) => {
   await page.locator('label[for="tab-watched"]').click();
   await page.locator("#addToggle").click();
+  // added from the watched list, so it starts out watched
+  await expect(page.locator("#cardState")).toHaveValue("watched");
   await page.locator("#cardTitle").fill("Eternal Sunshine");
-  await page.locator("#cardState").selectOption("watched");
   await page.locator("#cardStart").fill("2026-09-23");
   await page.locator("#cardSave").click();
 
   await expect(page.locator(".lists ul.watched > li").first()).toContainText("Eternal Sunshine");
   const insert = (await writes(page)).find(r => r.table === "cards" && r.method === "POST");
-  expect(Object.keys(insert.body).sort()).toEqual(["end_date", "start_date", "state", "status", "tab", "title", "vika_score", "vlad_score"]);
-  expect(insert.body.tab).toBe("watched");
+  expect(Object.keys(insert.body).sort()).toEqual(["end_date", "start_date", "state", "status", "title", "vika_score", "vlad_score"]);
+  expect(insert.body.state).toBe("watched");
 });
 
 test("deleting asks first, then removes the card and logs it", async ({ page }) => {
@@ -124,7 +125,7 @@ test("a card that is only on the page goes quietly, with no log line", async ({ 
     const s = window.__fake.sockets[0];
     for (const [topic, ch] of Object.entries(s.channels)) {
       const ids = ch.bindings.filter(b => b.table === "cards").map(b => b.id);
-      s._deliver([null, null, topic, "postgres_changes", { ids, data: { schema: "public", table: "cards", type: "INSERT", errors: null, columns: [], commit_timestamp: "", old_record: {}, record: { id: 999, title: "Ghost", tab: "unwatched", state: "planned", status: "00", start_date: null, end_date: null, vlad_score: 0, vika_score: 0 } } }]);
+      s._deliver([null, null, topic, "postgres_changes", { ids, data: { schema: "public", table: "cards", type: "INSERT", errors: null, columns: [], commit_timestamp: "", old_record: {}, record: { id: 999, title: "Ghost", state: "planned", status: "00", start_date: null, end_date: null, vlad_score: 0, vika_score: 0 } } }]);
     }
   });
   await expect(card(page, 999)).toHaveCount(1);
@@ -133,4 +134,17 @@ test("a card that is only on the page goes quietly, with no log line", async ({ 
   await page.locator("#deleteConfirm").click();
   await expect(card(page, 999)).toHaveCount(0);
   expect((await writes(page)).filter(r => r.body?.action === "delete_card")).toHaveLength(0);
+});
+
+test("a card is on the list its state puts it on, with no list to pick", async ({ page }) => {
+  await openMenu(page, 3, "edit");
+  await expect(page.locator("#cardTab")).toHaveCount(0);
+  await page.locator("#cardState").selectOption("watched");
+  await page.locator("#cardStart").fill("2026-10-27");
+  await page.locator("#cardSave").click();
+
+  await expect(page.locator(".lists ul.watched > li[data-id='3']")).toHaveCount(1);
+  const patch = (await writes(page)).find(r => r.method === "PATCH" && r.table === "cards");
+  expect(patch.body).not.toHaveProperty("tab");
+  expect(patch.body.state).toBe("watched");
 });

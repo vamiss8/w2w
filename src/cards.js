@@ -10,11 +10,15 @@ export const TAB_WATCHED = "watched";
 export const UNWATCHED_LIST_SELECTOR = ".unwatched";
 export const WATCHED_LIST_SELECTOR = ".watched";
 
-// a card's progress, the state column. only watched cards sit in the watched
-// list, so the tab column always follows from it
+// a card's progress, the state column. it also says which list the card is
+// on: only a watched card sits in the watched one
 export const STATE_PLANNED = "planned";
 export const STATE_STARTED = "started";
 export const STATE_WATCHED = "watched";
+
+export function tabOfState(state) {
+  return state === STATE_WATCHED ? TAB_WATCHED : TAB_UNWATCHED;
+}
 
 function getListsUlByTab(tab) {
   return tab === TAB_WATCHED
@@ -179,7 +183,7 @@ function createCardLiFromRow(row) {
   ensureRightControls(li);
 
   // hearts on a watched card, the dash from the markup on any other
-  if (row.tab === TAB_WATCHED) {
+  if (row.state === STATE_WATCHED) {
     const meta = li.querySelector(".meta");
     if (meta) {
       renderRatings(meta, { vladScore: row.vlad_score ?? 0, vikaScore: row.vika_score ?? 0 });
@@ -206,7 +210,7 @@ function ensureCardExistsFromRow(row) {
 
   if (!li) {
     li = createCardLiFromRow(row);
-    const ul = getListsUlByTab(row.tab);
+    const ul = getListsUlByTab(tabOfState(row.state));
     if (ul) ul.appendChild(li);
 
     ensureRightControls(li);
@@ -225,7 +229,7 @@ export function applyRemoteCardToDom(row) {
 
   setCardDatasetFromRow(li, row);
 
-  moveCardToTab(li, row.tab);
+  moveCardToTab(li, tabOfState(row.state));
 
   const titleEl = li.querySelector(".filmTitle");
   if (titleEl) {
@@ -240,7 +244,7 @@ export function applyRemoteCardToDom(row) {
   }
 
   // a watched card gets its hearts drawn once and refilled after that
-  if (row.tab === TAB_WATCHED) {
+  if (row.state === STATE_WATCHED) {
     const meta = li.querySelector(".meta");
     if (meta) {
       const hasRating = !!meta.querySelector(".rating");
@@ -277,13 +281,6 @@ export function getCardId(li) {
   const n = parseInt(raw, 10);
   if (!Number.isNaN(n) && n > 0) return String(n);
   return null;
-}
-
-export function getTabFromLi(li) {
-  if (!li) return "unwatched";
-  const parent = li.closest("ul");
-  if (!parent) return "unwatched";
-  return parent.classList.contains("watched") ? "watched" : "unwatched";
 }
 
 export function readTitleFromLi(li) {

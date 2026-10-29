@@ -1,4 +1,4 @@
--- the database side of the second version of the site.
+-- the database side of the second version of the site, in three parts.
 --
 -- anon and authenticated lose every privilege nothing here uses. supabase
 -- grants both roles everything on a new table and leaves the rest to row
@@ -15,6 +15,15 @@
 -- raising the number, and starts by checking it is the one before. 004 checks
 -- for 003 the long way, by its columns: 003 was once merged without being
 -- run, and nothing could tell yet.
+--
+-- cards lose tab. it only ever repeated state, since only a watched card is on
+-- the watched list, and the edit form asked for it and then threw the answer
+-- away. every card is checked first: one whose tab said something its state
+-- does not would lose the one place that knew, so the whole migration stops
+-- there instead, and changes nothing.
+--
+-- run it right before the second version of the site goes out: the page
+-- before it still sends tab with every card it saves.
 
 begin;
 
@@ -42,5 +51,23 @@ $$;
 
 revoke all on function public.schema_version() from public;
 grant execute on function public.schema_version() to anon, authenticated;
+
+do $$
+declare
+  odd record;
+begin
+  select id, title, tab, state into odd
+  from public.cards
+  where tab <> case when state = 'watched' then 'watched' else 'unwatched' end
+  limit 1;
+
+  if found then
+    raise exception 'card % (%) is on the % list but %: settle it before dropping tab',
+      odd.id, odd.title, odd.tab, odd.state;
+  end if;
+end;
+$$;
+
+alter table public.cards drop column tab;
 
 commit;

@@ -134,9 +134,9 @@ export async function catalog(db) {
 export async function seed(db) {
   for (const c of fixture("cards")) {
     await db.query(
-      `insert into public.cards (id, title, tab, state, status, start_date, end_date, vlad_score, vika_score, updated_at)
-       overriding system value values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
-      [c.id, c.title, c.tab, c.state, c.status, c.start_date, c.end_date, c.vlad_score, c.vika_score, c.updated_at],
+      `insert into public.cards (id, title, state, status, start_date, end_date, vlad_score, vika_score, updated_at)
+       overriding system value values ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+      [c.id, c.title, c.state, c.status, c.start_date, c.end_date, c.vlad_score, c.vika_score, c.updated_at],
     );
   }
   for (const c of fixture("comments")) {

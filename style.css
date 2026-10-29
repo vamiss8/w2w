@@ -1781,15 +1781,17 @@ body {
   box-shadow: 0 0 0 3px rgba(255, 211, 106, 0.12);
 }
 
+/* a column per field, however many the row has */
 .field-grid {
   display: grid;
   gap: 12px;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
 }
 
 @media (max-width: 560px) {
   .field-grid {
-    grid-template-columns: 1fr;
+    grid-auto-flow: row;
   }
 }
 

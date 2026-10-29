@@ -18,7 +18,7 @@
   // the columns of each table, so a request naming one that does not exist
   // fails the way postgrest fails it
   const COLUMNS = {
-    cards: ["id", "title", "tab", "state", "status", "start_date", "end_date", "vlad_score", "vika_score", "updated_at"],
+    cards: ["id", "title", "state", "status", "start_date", "end_date", "vlad_score", "vika_score", "updated_at"],
     logs: ["id", "ts", "user_name", "action", "card_id", "details"],
     wishes: ["id", "owner", "title", "added_at", "links", "done_at", "done_by", "updated_at"],
     comments: ["card_id", "author", "body", "updated_at"],

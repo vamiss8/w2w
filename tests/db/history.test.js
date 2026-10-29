@@ -16,6 +16,9 @@ const wishes = fixture("wishes");
 // the first cards were typed into the page with small ids, everything after
 // got Date.now() * 1000 plus a random tail
 const legacyId = (i, id) => (i < 8 ? id : 1767400000000000 + i * 1234567);
+
+// cards had a tab until 004, and it always followed from the state
+const tabOf = c => (c.state === "watched" ? "watched" : "unwatched");
 const ORPHANS = [1767000000000001, 1767000000000002];
 
 let db;
@@ -35,7 +38,7 @@ before(async () => {
     await db.query(
       `insert into public.cards (id, title, tab, state, status, start_date, end_date, vlad_score, vika_score, updated_at, vlad_comment, vika_comment)
        values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`,
-      [id, c.title, c.tab, c.state, c.status, c.start_date, c.end_date, c.vlad_score, c.vika_score, c.updated_at, own("vlad"), own("vika")],
+      [id, c.title, tabOf(c), c.state, c.status, c.start_date, c.end_date, c.vlad_score, c.vika_score, c.updated_at, own("vlad"), own("vika")],
     );
   }
   for (const l of logs) {
@@ -109,4 +112,19 @@ test("every wish is kept, numbered in the order it was added", async () => {
   const expected = [...wishes].sort((a, b) => a.added_at.localeCompare(b.added_at));
   assert.deepEqual(rows.map(r => Number(r.id)), expected.map((_, i) => i + 1));
   assert.deepEqual(rows.map(r => r.title), expected.map(w => w.title));
+});
+
+// tab only ever repeated the state, which is why 004 drops it. should a card
+// ever have said otherwise, the drop would lose the one place that knew, so
+// 004 checks every card first and refuses as a whole
+test("004 will not drop tab while a card's tab and state disagree", async () => {
+  const db = await freshSupabase();
+  for (const m of migrations().filter(m => m < "004")) await db.exec(sql("migrations/" + m));
+  await db.query("insert into public.cards (title, tab, state, status) values ('odd one', 'watched', 'planned', '00')");
+
+  await assert.rejects(db.exec(sql("migrations/004-v2.sql")), /settle it before dropping tab/);
+  // what the sql editor does with a script that failed halfway
+  await db.exec("rollback");
+  const columns = (await db.query("select column_name from information_schema.columns where table_name = 'cards'")).rows.map(r => r.column_name);
+  assert.ok(columns.includes("tab"), "the refused migration left tab where it was");
 });

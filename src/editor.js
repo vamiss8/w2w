@@ -3,7 +3,7 @@
 // database and logged, and an added or edited card is drawn when realtime
 // brings the saved row back, so what you see is what was saved.
 
-import { STATE_PLANNED, STATE_WATCHED, TAB_UNWATCHED, TAB_WATCHED, getCardId, getState, getTabFromLi, getTitleFromCard, normalizeStatusCode, readTitleFromLi } from "./cards.js";
+import { STATE_PLANNED, STATE_STARTED, STATE_WATCHED, TAB_UNWATCHED, TAB_WATCHED, getCardId, getState, getTitleFromCard, normalizeStatusCode, readTitleFromLi } from "./cards.js";
 import { remoteDeleteCard, remoteInsertCard, remoteInsertLog, remoteSaveComment, remoteUpdateCard } from "./db.js";
 import { escapeHtml } from "./html.js";
 import { closeModal, openModal } from "./modals.js";
@@ -25,7 +25,6 @@ function fillCardModalFromLi(li) {
   const title = readTitleFromLi(li);
 
   document.getElementById("cardTitle").value = title;
-  document.getElementById("cardTab").value = getTabFromLi(li);
   document.getElementById("cardState").value = getState(li);
   document.getElementById("cardStatus").value = normalizeStatusCode(li.dataset.status || "00");
 
@@ -33,6 +32,8 @@ function fillCardModalFromLi(li) {
   document.getElementById("cardEnd").value = (li.dataset.end || "").trim();
 }
 
+// a card added from the watched list starts out watched, and one added from
+// the other list planned
 function openAddCardModal(prefTab) {
   cardModalMode = "add";
   cardModalCardId = null;
@@ -41,8 +42,7 @@ function openAddCardModal(prefTab) {
   document.getElementById("cardModalDesc").textContent = "create a new entry in the list";
 
   document.getElementById("cardTitle").value = "";
-  document.getElementById("cardTab").value = prefTab === TAB_WATCHED ? TAB_WATCHED : TAB_UNWATCHED;
-  document.getElementById("cardState").value = "planned";
+  document.getElementById("cardState").value = prefTab === TAB_WATCHED ? STATE_WATCHED : STATE_PLANNED;
   document.getElementById("cardStatus").value = "00";
   document.getElementById("cardStart").value = "";
   document.getElementById("cardEnd").value = "";
@@ -146,7 +146,6 @@ async function saveCommentForActiveUser(li, text) {
 function snapshotCardForLogs(li) {
   return {
     title: getTitleFromCard(li),
-    tab: getTabFromLi(li),
     state: getState(li),
     status: normalizeStatusCode(li.dataset.status || "00"),
     start_date: (li.dataset.start || "").trim() || null,
@@ -157,7 +156,6 @@ function snapshotCardForLogs(li) {
 function normalizeRowForLogs(row) {
   return {
     title: row.title || "unknown title",
-    tab: row.tab || TAB_UNWATCHED,
     state: row.state || STATE_PLANNED,
     status: normalizeStatusCode(row.status || "00"),
     start_date: row.start_date ? String(row.start_date) : null,
@@ -312,21 +310,16 @@ export function initializeCardUi() {
       const title = (document.getElementById("cardTitle").value || "").trim();
       if (!title) return;
 
-      const state = document.getElementById("cardState").value;
+      const picked = document.getElementById("cardState").value;
+      const state = [STATE_PLANNED, STATE_STARTED, STATE_WATCHED].includes(picked) ? picked : STATE_PLANNED;
       const status = document.getElementById("cardStatus").value;
 
       const start = (document.getElementById("cardStart").value || "").trim();
       const end = (document.getElementById("cardEnd").value || "").trim();
 
-      // the tab follows from the state, and the tab select in the form is
-      // not read at all
-      const safeTab =
-        state === STATE_WATCHED ? TAB_WATCHED :
-        TAB_UNWATCHED;
-
+      // which list the card lands on follows from the state alone
       const payload = {
         title,
-        tab: safeTab,
         state,
         status: normalizeStatusCode(status),
         start_date: start || null,

@@ -68,11 +68,11 @@ $$;
 
 -- tables ---------------------------------------------------------------------------
 
--- tab always follows from state: only a watched card is on the watched list
+-- which list a card is on follows from its state: only a watched card is on
+-- the watched one
 create table public.cards (
   id bigint generated always as identity primary key,
   title text not null,
-  tab text not null check (tab in ('unwatched','watched')),
   state text not null check (state in ('planned','started','watched')),
   status text not null check (status in ('00','01','10','11')),
   start_date date,
