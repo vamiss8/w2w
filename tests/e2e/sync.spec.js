@@ -11,7 +11,7 @@ test.beforeEach(async ({ page }) => {
 test("a change made elsewhere shows up without a reload", async ({ page }) => {
   await page.evaluate(() => window.__fake.update("cards", 12, { title: "Moonrise Kingdom (2012)", status: "11" }));
   await expect(card(page, 12).locator(".filmTitle")).toContainText("Moonrise Kingdom (2012)");
-  await expect(card(page, 12).locator(".status")).toContainText("11");
+  await expect(card(page, 12).locator(".card-status")).toHaveText("a rewatch");
 });
 
 test("a card deleted elsewhere leaves the page", async ({ page }) => {

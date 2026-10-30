@@ -18,7 +18,7 @@
   // the columns of each table, so a request naming one that does not exist
   // fails the way postgrest fails it
   const COLUMNS = {
-    cards: ["id", "title", "state", "status", "start_date", "end_date", "vlad_score", "vika_score", "updated_at"],
+    cards: ["id", "title", "state", "status", "start_date", "end_date", "vlad_score", "vika_score", "updated_at", "imdb_id"],
     logs: ["id", "ts", "user_name", "action", "card_id", "details"],
     wishes: ["id", "owner", "title", "added_at", "links", "done_at", "done_by", "updated_at"],
     comments: ["card_id", "author", "body", "updated_at"],
@@ -213,7 +213,7 @@
     if (table === "rpc/schema_version") {
       // a test can play a database from before 004, which had no such
       // function, or one a migration ahead of the page
-      const version = window.__W2W_SCHEMA_VERSION__ ?? 4;
+      const version = window.__W2W_SCHEMA_VERSION__ ?? 5;
       return version ? json(200, version) : json(404, { code: "PGRST202", message: "Could not find the function public.schema_version without parameters in the schema cache" });
     }
 

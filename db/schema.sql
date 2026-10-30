@@ -38,7 +38,7 @@ returns int
 language sql
 immutable
 as $$
-  select 4
+  select 5
 $$;
 
 create function public.touch_updated_at()
@@ -69,7 +69,7 @@ $$;
 -- tables ---------------------------------------------------------------------------
 
 -- which list a card is on follows from its state: only a watched card is on
--- the watched one
+-- the watched one. imdb_id is the tt number of its page on imdb, if any
 create table public.cards (
   id bigint generated always as identity primary key,
   title text not null,
@@ -79,7 +79,8 @@ create table public.cards (
   end_date date,
   vlad_score int not null default 0,
   vika_score int not null default 0,
-  updated_at timestamptz not null default now()
+  updated_at timestamptz not null default now(),
+  imdb_id text check (imdb_id ~ '^tt[0-9]{7,10}$')
 );
 
 create trigger trg_cards_touch_updated_at

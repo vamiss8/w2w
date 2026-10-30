@@ -82,9 +82,9 @@ export function progressLine(row) {
   const button = document.createElement("button");
   button.className = "ep-next";
   button.type = "button";
-  button.textContent = "+1";
+  button.textContent = "+1 ep";
   button.setAttribute("aria-label", `we watched ${spoken(next)}`);
-  button.title = `we watched ${spoken(next)}: written into your comment`;
+  button.dataset.hint = `we watched ${spoken(next)}: it goes into your comment, dated today`;
   box.appendChild(button);
 
   return box;

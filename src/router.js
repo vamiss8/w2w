@@ -50,7 +50,7 @@ function show(section, { first = false } = {}) {
     view.hidden = view.dataset.section !== section;
   });
 
-  document.querySelectorAll(".nav-item[data-section]").forEach(item => {
+  document.querySelectorAll(".nav-item[data-section], .side-item[data-section]").forEach(item => {
     if (item.dataset.section === section) item.setAttribute("aria-current", "page");
     else item.removeAttribute("aria-current");
   });

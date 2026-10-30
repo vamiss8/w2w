@@ -9,7 +9,7 @@
 // nothing is fetched until the section is first opened. after that, a line
 // written anywhere arrives over realtime and joins the top.
 
-import { STATE_STARTED, STATE_WATCHED } from "./cards.js";
+import { STATE_STARTED, STATE_WATCHED, STATUS_TEXT, normalizeStatusCode } from "./cards.js";
 import { formatISOForUI } from "./dates.js";
 import { remoteFetchLogs } from "./db.js";
 import { onSectionChange } from "./router.js";
@@ -94,6 +94,9 @@ function describe(entry) {
     case "episode":
       say(" watched ", el("span", "log-episode", String(d.episode || "").replace(/^s(\d+)ep/, "s$1 ep")), " of ", titleEm(title));
       break;
+    case "set_imdb":
+      say(d.imdb_id ? " linked " : " unlinked ", titleEm(title), d.imdb_id ? " to its page on imdb" : " from imdb");
+      break;
     case "add_card":
       say(" added ", titleEm(title));
       break;
@@ -104,7 +107,7 @@ function describe(entry) {
       say(" changed state of ", titleEm(title), ` from ${d.from || "—"} to ${d.to || "—"}.`);
       break;
     case "set_status":
-      say(" changed status of ", titleEm(title), ` from ${d.from || "—"} to ${d.to || "—"}.`);
+      say(" marked ", titleEm(title), ` as ${STATUS_TEXT[normalizeStatusCode(d.to)]}.`);
       break;
     case "set_watch_dates":
       say(" ", describeWatchDates(d.state, d.to_start, d.to_end), " of ", titleEm(title));

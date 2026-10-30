@@ -10,7 +10,8 @@ import { initializeDialogs } from "./dialogs.js";
 import { initializeCardUi } from "./editor.js";
 import { initializeEpisodes } from "./episodes.js";
 import { initializeGift } from "./gift.js";
-import { initializeLists, scheduleRender } from "./lists.js";
+import { initializeHints } from "./hints.js";
+import { initializeLists } from "./lists.js";
 import { initializeRatingEditing } from "./ratings.js";
 import { initializeRouter } from "./router.js";
 import { initializeSearch } from "./search.js";
@@ -19,15 +20,14 @@ import { initializeStats } from "./stats.js";
 import { initializeRealtime, resyncFromRemote } from "./sync.js";
 import { initializeTonight } from "./tonight.js";
 import { initializeTooltipAutoFlip } from "./tooltips.js";
-import { initializeAuth, onUserChange } from "./user.js";
+import { initializeAuth, onUserChange, whenIdentityKnown } from "./user.js";
 import { initializeVersionCheck } from "./version.js";
-import { initializeWishlists, remotePullWishes } from "./wishlists.js";
+import { initializeWishlists } from "./wishlists.js";
 
 startStarfield();
 
 initializeDialogs();
 initializeAuth();
-onUserChange(() => resyncFromRemote());
 initializeVersionCheck();
 initializeLists();
 initializeSearch();
@@ -38,15 +38,18 @@ initializeActivity();
 initializeStats();
 initializeRatingEditing();
 initializeTooltipAutoFlip();
+initializeHints();
 initializeWishlists();
 initializeGift();
 initializeRouter();
 
+// the first pull waits until the database has said who is here, and a later
+// sign-in or sign-out pulls again: what a member may read changes with it
 try {
-  await remotePullWishes();
+  await whenIdentityKnown();
+  onUserChange(() => resyncFromRemote());
   await initializeRealtime();
 } catch (e) {
   console.error("[supabase] initializeRealtime crashed", e);
 }
 
-scheduleRender({ animate: true });

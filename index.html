@@ -33,11 +33,11 @@
 <body class="is-guest">
   <div class="stars"></div>
 
-  <!-- the heart, the title and the sign-in share one row on a wide screen
-       and two on a phone. they used to float over the page on their own, and
-       on a phone they landed on top of the title -->
+  <!-- the heart in the top left corner, the sign-in in the top right one
+       with the three smaller sections under it, and the title between them.
+       they share a grid, so none of them can land on another -->
   <header class="top">
-    <button class="love-toggle" id="secretGiftToggle" type="button" aria-label="Our art">
+    <button class="love-toggle" id="secretGiftToggle" type="button" aria-label="Our art" data-hint="our art: the picture we keep here">
       <span class="hearts hearts-lg" aria-hidden="true"></span>
     </button>
 
@@ -46,32 +46,38 @@
       <p class="subtitle">vika &amp; vlad</p>
     </div>
 
-    <button class="user-pill" id="userToggle" type="button" aria-label="Sign in or out">SIGN IN</button>
+    <div class="corner">
+      <button class="user-pill" id="userToggle" type="button" aria-label="Sign in or out">sign in</button>
+
+      <!-- the sections that are not a list: our wishes, what we did, and the
+           numbers. smaller than the two lists, and always in the same place -->
+      <nav class="side-nav" aria-label="More">
+        <a class="side-item members-only" href="#/wishlists" data-section="wishlists" data-hint="our wishlists: gifts we dream about">
+          <svg class="side-icon icon-gift" viewBox="0 0 24 24" aria-hidden="true"><path class="box" d="M4 11h16v9H4zM3 7h18v4H3z" /><path class="ribbon" d="M12 7v13M12 7c-1.5-3-5-3.5-5-1.2C7 7 9.5 7 12 7zm0 0c1.5-3 5-3.5 5-1.2C17 7 14.5 7 12 7z" /></svg>
+          <span class="side-label">wishes</span>
+        </a>
+        <a class="side-item" href="#/activity" data-section="activity" data-hint="activity: everything we did here, day by day">
+          <svg class="side-icon icon-pulse" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h4l2.5-6 5 12 2.5-6h4" /></svg>
+          <span class="side-label">activity</span>
+        </a>
+        <a class="side-item" href="#/stats" data-section="stats" data-hint="stats: what we watched, in numbers">
+          <svg class="side-icon icon-bars" viewBox="0 0 24 24" aria-hidden="true"><path class="bar-a" d="M5 20v-8" /><path class="bar-b" d="M10 20V6" /><path class="bar-c" d="M15 20v-5" /><path class="bar-a" d="M20 20V9" /></svg>
+          <span class="side-label">stats</span>
+        </a>
+      </nav>
+    </div>
   </header>
 
-  <!-- one section at a time, each with an address: #/to-watch, #/watched,
-       #/wishlists, #/activity, #/stats. above the content on a wide screen, a
-       bar at the bottom on a phone. src/router.js -->
-  <nav class="nav" aria-label="Sections">
-    <a class="nav-item" href="#/to-watch" data-section="to-watch">
+  <!-- the two lists, the heart of the site: the main tabs, under the title,
+       in reach while a long list scrolls under them. src/router.js -->
+  <nav class="nav" aria-label="Lists">
+    <a class="nav-item" href="#/to-watch" data-section="to-watch" data-hint="the films and series we have not watched yet">
       <span class="nav-icon icon-star" aria-hidden="true"></span>
       <span class="nav-label">to watch</span>
     </a>
-    <a class="nav-item" href="#/watched" data-section="watched">
+    <a class="nav-item" href="#/watched" data-section="watched" data-hint="what we watched together, with our hearts">
       <span class="nav-icon hearts" aria-hidden="true"></span>
       <span class="nav-label">watched</span>
-    </a>
-    <a class="nav-item members-only" href="#/wishlists" data-section="wishlists">
-      <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11h16v9H4zM3 7h18v4H3zM12 7v13M12 7c-1.5-3-5-3.5-5-1.2C7 7 9.5 7 12 7zm0 0c1.5-3 5-3.5 5-1.2C17 7 14.5 7 12 7z" /></svg>
-      <span class="nav-label">wishes</span>
-    </a>
-    <a class="nav-item" href="#/activity" data-section="activity">
-      <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h4l2.5-6 5 12 2.5-6h4" /></svg>
-      <span class="nav-label">activity</span>
-    </a>
-    <a class="nav-item" href="#/stats" data-section="stats">
-      <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 20V12M10 20V6M15 20v-5M20 20V9" /></svg>
-      <span class="nav-label">stats</span>
     </a>
   </nav>
 
@@ -86,14 +92,15 @@
       <div class="view-head">
         <h2 class="view-title" id="toWatchTitle">not watched yet</h2>
         <p class="view-count" data-count></p>
+        <button class="tonight-btn" type="button" data-tonight data-hint="picks one card at random from the list below, the filters and the search included">
+          <span class="tonight-spark" aria-hidden="true">✦</span> what tonight?
+        </button>
       </div>
 
       <div class="toolbar">
         <input class="search-input" type="search" placeholder="find a title" aria-label="find a title" autocomplete="off" spellcheck="false" enterkeyhint="search" data-search />
         <div class="toolbar-buttons">
-          <button class="pill add-toggle members-only" type="button" data-add>add card</button>
-          <button class="pill" type="button" data-tonight>tonight?</button>
-          <button class="pill filters-toggle" type="button" aria-expanded="false" aria-controls="filtersToWatch">
+          <button class="pill filters-toggle" type="button" aria-expanded="false" aria-controls="filtersToWatch" data-hint="show only some of the cards: planned or started, new or a rewatch">
             filters <span class="caret" aria-hidden="true"></span>
           </button>
         </div>
@@ -128,11 +135,11 @@
 
         <div class="control-row">
           <div class="control-caption">
-            status
-            <span class="info-badge" tabindex="0" role="button" aria-label="Status info">
+            seen before
+            <span class="info-badge" tabindex="0" role="button" aria-label="Seen before info">
               ?
               <span class="tooltip tooltip-wide">
-                The first digit is <u>Vika</u>, the second <u>Vlad</u>, and a 1 means that one of us has seen it before. It <u>does not change</u> the order.
+                Which of us had <u>seen it before</u>. It <u>does not change</u> the order.
               </span>
             </span>
           </div>
@@ -142,16 +149,16 @@
             <label class="chip" for="uw-status-all">all <span class="tooltip">Displays everything.</span></label>
 
             <input type="radio" name="uw-status" id="uw-status-00" />
-            <label class="chip" for="uw-status-00">00 <span class="tooltip">Displays content that none of us watched.</span></label>
+            <label class="chip" for="uw-status-00">new to both <span class="tooltip">Displays content that none of us watched.</span></label>
 
             <input type="radio" name="uw-status" id="uw-status-01" />
-            <label class="chip" for="uw-status-01">01 <span class="tooltip">Displays content that <u>Vlad</u> watched, but not <u>Vika</u>.</span></label>
+            <label class="chip" for="uw-status-01">new to vika <span class="tooltip">Displays content that <u>Vlad</u> watched, but not <u>Vika</u>.</span></label>
 
             <input type="radio" name="uw-status" id="uw-status-10" />
-            <label class="chip" for="uw-status-10">10 <span class="tooltip">Displays content that <u>Vika</u> watched, but not <u>Vlad</u>.</span></label>
+            <label class="chip" for="uw-status-10">new to vlad <span class="tooltip">Displays content that <u>Vika</u> watched, but not <u>Vlad</u>.</span></label>
 
             <input type="radio" name="uw-status" id="uw-status-11" />
-            <label class="chip" for="uw-status-11">11 <span class="tooltip">Displays content that we want to <u>rewatch</u>.</span></label>
+            <label class="chip" for="uw-status-11">rewatch <span class="tooltip">Displays content that we want to <u>rewatch</u>.</span></label>
           </div>
         </div>
       </div>
@@ -170,8 +177,7 @@
       <div class="toolbar">
         <input class="search-input" type="search" placeholder="find a title" aria-label="find a title" autocomplete="off" spellcheck="false" enterkeyhint="search" data-search />
         <div class="toolbar-buttons">
-          <button class="pill add-toggle members-only" type="button" data-add>add card</button>
-          <button class="pill filters-toggle" type="button" aria-expanded="false" aria-controls="filtersWatched">
+          <button class="pill filters-toggle" type="button" aria-expanded="false" aria-controls="filtersWatched" data-hint="sort by our hearts, or show only some of the cards">
             filters <span class="caret" aria-hidden="true"></span>
           </button>
         </div>
@@ -209,11 +215,11 @@
 
         <div class="control-row">
           <div class="control-caption">
-            status
-            <span class="info-badge" tabindex="0" role="button" aria-label="Status info">
+            seen before
+            <span class="info-badge" tabindex="0" role="button" aria-label="Seen before info">
               ?
               <span class="tooltip tooltip-wide">
-                The first digit is <u>Vika</u>, the second <u>Vlad</u>, and a 1 means that one of us had seen it before. It <u>does not change</u> the order.
+                Which of us had <u>seen it before</u>. It <u>does not change</u> the order.
               </span>
             </span>
           </div>
@@ -223,16 +229,16 @@
             <label class="chip" for="w-status-all">all <span class="tooltip">Displays everything.</span></label>
 
             <input type="radio" name="w-status" id="w-status-00" />
-            <label class="chip" for="w-status-00">00 <span class="tooltip">Displays content that none of us watched.</span></label>
+            <label class="chip" for="w-status-00">new to both <span class="tooltip">Displays content that none of us watched.</span></label>
 
             <input type="radio" name="w-status" id="w-status-01" />
-            <label class="chip" for="w-status-01">01 <span class="tooltip">Displays content that <u>Vlad</u> watched, but not <u>Vika</u>.</span></label>
+            <label class="chip" for="w-status-01">new to vika <span class="tooltip">Displays content that <u>Vlad</u> watched, but not <u>Vika</u>.</span></label>
 
             <input type="radio" name="w-status" id="w-status-10" />
-            <label class="chip" for="w-status-10">10 <span class="tooltip">Displays content that <u>Vika</u> watched, but not <u>Vlad</u>.</span></label>
+            <label class="chip" for="w-status-10">new to vlad <span class="tooltip">Displays content that <u>Vika</u> watched, but not <u>Vlad</u>.</span></label>
 
             <input type="radio" name="w-status" id="w-status-11" />
-            <label class="chip" for="w-status-11">11 <span class="tooltip">Displays content that we want to <u>rewatch</u>.</span></label>
+            <label class="chip" for="w-status-11">rewatch <span class="tooltip">Displays content that we want to <u>rewatch</u>.</span></label>
           </div>
         </div>
       </div>
@@ -288,7 +294,7 @@
 
       <div class="control-group log-who" role="group" aria-label="Whose activity">
         <input type="radio" name="log-who" id="log-who-all" checked />
-        <label class="chip" for="log-who-all">everyone</label>
+        <label class="chip" for="log-who-all">both</label>
         <input type="radio" name="log-who" id="log-who-vlad" />
         <label class="chip" for="log-who-vlad">vlad</label>
         <input type="radio" name="log-who" id="log-who-vika" />
@@ -311,6 +317,13 @@
 
       <div class="stats" id="stats"></div>
     </section>
+
+    <!-- adding a card, the one thing done most, in the corner where a thumb
+         finds it. only on the two lists, and only for the two of us -->
+    <button class="fab members-only" type="button" data-add data-hint="add a card to this list">
+      <span class="fab-plus" aria-hidden="true">+</span>
+      <span class="fab-label">add card</span>
+    </button>
 
     <footer>
       made with love <span class="hearts" aria-hidden="true"></span> for the best couple
@@ -357,6 +370,15 @@
           <input class="field-input" id="cardTitle" type="text" autocomplete="off" placeholder="e.g. The Fifth Element" required />
         </label>
 
+        <!-- a link to its page on imdb, if we want one. only the tt number
+             is kept. the link under the field searches imdb for the title
+             typed above, to find the page to copy -->
+        <div class="field">
+          <label class="field-label" for="cardImdb">imdb link <span class="field-optional">· if you like</span></label>
+          <input class="field-input" id="cardImdb" type="text" inputmode="url" autocomplete="off" spellcheck="false" placeholder="https://www.imdb.com/title/tt0119116/" />
+          <a class="field-help" id="cardImdbFind" href="https://www.imdb.com/" target="_blank" rel="noopener noreferrer">find it on imdb ↗</a>
+        </div>
+
         <!-- no field for the list: a card is on the watched one when it is
              watched, and on the other one otherwise -->
         <div class="field-grid">
@@ -369,15 +391,17 @@
             </select>
           </label>
 
-          <label class="field">
-            <span class="field-label">status</span>
-            <select class="field-select" id="cardStatus">
-              <option value="00">00 · new to both</option>
-              <option value="01">01 · vika's first time</option>
-              <option value="10">10 · vlad's first time</option>
-              <option value="11">11 · a rewatch</option>
-            </select>
-          </label>
+          <!-- the status, asked as what it means. src/cards.js turns the
+               two answers into the two digits the database keeps -->
+          <div class="field">
+            <span class="field-label">seen it before</span>
+            <div class="control-group seen">
+              <input type="checkbox" id="cardSeenVlad" />
+              <label class="chip" for="cardSeenVlad">vlad has</label>
+              <input type="checkbox" id="cardSeenVika" />
+              <label class="chip" for="cardSeenVika">vika has</label>
+            </div>
+          </div>
         </div>
 
         <div class="field-grid">
