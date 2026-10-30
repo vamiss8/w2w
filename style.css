@@ -60,9 +60,6 @@
   --font-body: "Sora", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --font-content: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-
-  /* the bar of sections at the bottom of a phone, which the page leaves room for */
-  --nav-height: 64px;
 }
 
 /* =========================
@@ -232,9 +229,10 @@ p {
    THE HEADER
    ========================= */
 
-/* the heart and the sign-in on one line and the title under them on a phone,
-   all three on one line on a wide screen. they share a grid, so none of them
-   can land on another */
+/* the heart in the top left corner, the sign-in and the smaller sections in
+   the top right one, and the title between them on a wide screen or under
+   them on a phone. the corners sit at the top of the row: centred on a title
+   two lines tall, they used to hang halfway down it */
 .top {
   position: relative;
   z-index: 2;
@@ -242,12 +240,12 @@ p {
   display: grid;
   grid-template-columns: auto 1fr auto;
   grid-template-areas:
-    "heart . user"
+    "heart . corner"
     "brand brand brand";
-  align-items: center;
-  gap: 14px 12px;
+  align-items: start;
+  gap: 18px 12px;
 
-  padding: calc(14px + env(safe-area-inset-top)) calc(16px + env(safe-area-inset-right)) 0 calc(16px + env(safe-area-inset-left));
+  padding: calc(12px + env(safe-area-inset-top)) calc(12px + env(safe-area-inset-right)) 0 calc(12px + env(safe-area-inset-left));
 }
 
 .brand {
@@ -341,13 +339,20 @@ p {
   }
 
   50% {
-    transform: translateY(-5px);
+    transform: translateY(-4px);
   }
 }
 
-.user-pill {
-  grid-area: user;
+/* the top right corner: who is signed in, and under it the sections that
+   are not a list */
+.corner {
+  grid-area: corner;
+  display: grid;
+  justify-items: end;
+  gap: 10px;
+}
 
+.user-pill {
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -396,6 +401,83 @@ p {
   box-shadow: var(--vika-glow);
 }
 
+/* wishes, activity, stats: a coloured icon each, the way the two lists have
+   their star and their hearts, and its name under it */
+.side-nav {
+  display: flex;
+  gap: 4px;
+}
+
+.side-item {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  min-width: 54px;
+  padding: 8px 6px 6px;
+  border-radius: 14px;
+  border: 1px solid transparent;
+
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 0.56rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  text-decoration: none;
+  color: var(--muted);
+
+  transition: background 0.25s ease, border-color 0.25s ease, color 0.25s ease;
+}
+
+.side-item[aria-current="page"] {
+  color: var(--ink-strong);
+  background: var(--raised);
+  border-color: rgba(230, 232, 255, 0.12);
+  box-shadow: var(--shadow-active);
+}
+
+.side-icon {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.icon-gift .box {
+  stroke: var(--vika);
+}
+
+.icon-gift .ribbon {
+  stroke: var(--gold);
+}
+
+.icon-gift {
+  filter: drop-shadow(0 0 4px rgba(255, 122, 191, 0.45));
+}
+
+.icon-pulse {
+  stroke: var(--vlad);
+  filter: drop-shadow(0 0 4px rgba(155, 108, 255, 0.55));
+}
+
+.icon-bars {
+  stroke-width: 2.4;
+  filter: drop-shadow(0 0 4px rgba(122, 134, 232, 0.5));
+}
+
+.icon-bars .bar-a {
+  stroke: var(--vlad);
+}
+
+.icon-bars .bar-b {
+  stroke: var(--vika);
+}
+
+.icon-bars .bar-c {
+  stroke: var(--gold);
+}
+
 @media (hover: hover) {
   .love-toggle:hover {
     transform: scale(1.1) rotate(5deg);
@@ -408,15 +490,27 @@ p {
     background: var(--glass-hover);
     border-color: var(--line-strong);
   }
+
+  .side-item:hover {
+    color: var(--ink);
+    background: var(--glass-hover);
+    border-color: rgba(230, 232, 255, 0.08);
+  }
 }
 
 @media (min-width: 720px) {
   /* the sides are as wide as each other, so the title stays in the middle,
-     and wide enough for the pill, so it never reaches the title */
+     and wide enough for the corner, so it never reaches the title */
   .top {
-    grid-template-columns: minmax(140px, 1fr) minmax(0, 760px) minmax(140px, 1fr);
-    grid-template-areas: "heart brand user";
-    padding-top: calc(24px + env(safe-area-inset-top));
+    grid-template-columns: minmax(190px, 1fr) minmax(0, 700px) minmax(190px, 1fr);
+    grid-template-areas: "heart brand corner";
+    padding-top: calc(16px + env(safe-area-inset-top));
+    padding-left: calc(16px + env(safe-area-inset-left));
+    padding-right: calc(16px + env(safe-area-inset-right));
+  }
+
+  .brand {
+    padding-top: 8px;
   }
 
   .love-toggle {
@@ -424,131 +518,90 @@ p {
     width: 56px;
     height: 56px;
   }
-
-  .user-pill {
-    justify-self: end;
-  }
 }
 
 /* =========================
-   THE SECTIONS
+   THE TWO LISTS
    ========================= */
 
-/* on a phone, a bar along the bottom edge, in reach of a thumb */
+/* to watch and watched, the two tabs the site is about, under the title and
+   held at the top of the screen while a long list scrolls under them */
 .nav {
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 40;
+  position: sticky;
+  top: calc(8px + env(safe-area-inset-top));
+  z-index: 20;
 
-  display: grid;
-  grid-auto-flow: column;
-  grid-auto-columns: minmax(0, 1fr);
+  display: flex;
+  gap: 6px;
+  width: fit-content;
+  margin: 22px auto 0;
+  padding: 6px;
 
-  padding: 0 env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
-  background: rgba(5, 5, 10, 0.86);
-  border-top: 1px solid var(--line);
-  backdrop-filter: blur(14px);
+  background: rgba(8, 10, 20, 0.78);
+  border: 1px solid var(--line);
+  border-radius: var(--pill);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 18px 46px rgba(0, 0, 0, 0.55);
 }
 
 .nav-item {
   position: relative;
 
-  display: flex;
-  flex-direction: column;
+  display: inline-flex;
   align-items: center;
-  justify-content: center;
-  gap: 5px;
-  height: var(--nav-height);
+  gap: 10px;
+  padding: 11px 20px;
+  border-radius: var(--pill);
+  border: 1px solid transparent;
 
   font-family: var(--font-body);
   font-weight: 600;
-  font-size: 0.6rem;
+  font-size: 0.78rem;
+  line-height: 1;
   letter-spacing: 0.12em;
   text-transform: uppercase;
   text-decoration: none;
-  color: rgba(154, 160, 214, 0.78);
+  color: var(--muted);
 
-  transition: color 0.25s ease;
+  transition: background 0.25s ease, color 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
 }
 
+/* the star and the hearts in a box of their own, centred on the words */
 .nav-icon {
+  position: relative;
   display: grid;
   place-items: center;
-  width: 22px;
+  width: 24px;
   height: 22px;
   line-height: 1;
 }
 
-svg.nav-icon {
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1.6;
-  stroke-linecap: round;
-  stroke-linejoin: round;
+/* the hearts are drawn from the top of their box, and the glyph sits high
+   in its line, so in a tab they come down to the middle of the words */
+.nav-icon.hearts::before,
+.nav-icon.hearts::after {
+  top: 4px;
 }
 
 .nav-item[aria-current="page"] {
   color: var(--ink-strong);
+  background: var(--raised);
+  border-color: rgba(230, 232, 255, 0.12);
+  box-shadow: var(--shadow-active);
 }
 
-/* the open section glows from underneath, the way the old tabs did */
+/* the open list glows from underneath, the way the old tabs did */
 .nav-item[aria-current="page"]::after {
   content: "";
   position: absolute;
-  inset: 8px 18%;
+  inset: -6px;
   z-index: -1;
   border-radius: var(--pill);
-  background: radial-gradient(60% 120% at 50% 50%, rgba(155, 108, 255, 0.18), transparent 70%);
+  background: radial-gradient(60% 120% at 50% 50%, rgba(155, 108, 255, 0.16), transparent 70%);
   filter: blur(6px);
 }
 
-/* on a wide screen, a row of pills under the title that stays in reach
-   while a long list scrolls under it */
-@media (min-width: 720px) {
-  .nav {
-    position: sticky;
-    top: 12px;
-    bottom: auto;
-
-    display: flex;
-    gap: 6px;
-    width: fit-content;
-    margin: 26px auto 0;
-    padding: 6px;
-
-    background: rgba(8, 10, 20, 0.72);
-    border: 1px solid var(--line);
-    border-radius: var(--pill);
-    box-shadow: 0 18px 46px rgba(0, 0, 0, 0.55);
-  }
-
-  .nav-item {
-    flex-direction: row;
-    gap: 10px;
-    height: auto;
-    padding: 10px 18px;
-    border-radius: var(--pill);
-    border: 1px solid transparent;
-
-    font-size: 0.74rem;
-    color: var(--muted);
-    transition: background 0.25s ease, color 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
-  }
-
-  .nav-item[aria-current="page"] {
-    background: var(--raised);
-    border-color: rgba(230, 232, 255, 0.12);
-    box-shadow: var(--shadow-active);
-  }
-
-  .nav-item[aria-current="page"]::after {
-    inset: -6px;
-  }
-}
-
-@media (min-width: 720px) and (hover: hover) {
+@media (hover: hover) {
   .nav-item:hover {
     color: var(--ink);
     background: var(--glass-hover);
@@ -568,14 +621,12 @@ svg.nav-icon {
   max-width: 900px;
   margin: 0 auto;
 
-  /* room at the bottom for the bar of sections */
-  padding: 26px calc(16px + env(safe-area-inset-right)) calc(var(--nav-height) + env(safe-area-inset-bottom) + 32px) calc(16px + env(safe-area-inset-left));
+  padding: 26px calc(16px + env(safe-area-inset-right)) calc(env(safe-area-inset-bottom) + 96px) calc(16px + env(safe-area-inset-left));
 }
 
 @media (min-width: 720px) {
   .container {
     padding-top: 30px;
-    padding-bottom: 48px;
   }
 }
 
@@ -2690,11 +2741,11 @@ li.is-animating {
    TOASTS
    ========================= */
 
-/* above the bar of sections on a phone, at the bottom edge on a wide screen */
+/* at the bottom edge, clear of the round add button */
 .toasts {
   position: fixed;
   left: 50%;
-  bottom: calc(var(--nav-height) + env(safe-area-inset-bottom) + 12px);
+  bottom: calc(env(safe-area-inset-bottom) + 88px);
   z-index: 60;
 
   display: grid;
@@ -2702,12 +2753,6 @@ li.is-animating {
   width: min(420px, calc(100vw - 32px));
   transform: translateX(-50%);
   pointer-events: none;
-}
-
-@media (min-width: 720px) {
-  .toasts {
-    bottom: 24px;
-  }
 }
 
 .toast {

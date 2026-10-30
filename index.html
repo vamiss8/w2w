@@ -33,11 +33,11 @@
 <body class="is-guest">
   <div class="stars"></div>
 
-  <!-- the heart, the title and the sign-in share one row on a wide screen
-       and two on a phone. they used to float over the page on their own, and
-       on a phone they landed on top of the title -->
+  <!-- the heart in the top left corner, the sign-in in the top right one
+       with the three smaller sections under it, and the title between them.
+       they share a grid, so none of them can land on another -->
   <header class="top">
-    <button class="love-toggle" id="secretGiftToggle" type="button" aria-label="Our art">
+    <button class="love-toggle" id="secretGiftToggle" type="button" aria-label="Our art" data-hint="our art: the picture we keep here">
       <span class="hearts hearts-lg" aria-hidden="true"></span>
     </button>
 
@@ -46,32 +46,38 @@
       <p class="subtitle">vika &amp; vlad</p>
     </div>
 
-    <button class="user-pill" id="userToggle" type="button" aria-label="Sign in or out">SIGN IN</button>
+    <div class="corner">
+      <button class="user-pill" id="userToggle" type="button" aria-label="Sign in or out">sign in</button>
+
+      <!-- the sections that are not a list: our wishes, what we did, and the
+           numbers. smaller than the two lists, and always in the same place -->
+      <nav class="side-nav" aria-label="More">
+        <a class="side-item members-only" href="#/wishlists" data-section="wishlists" data-hint="our wishlists: gifts we dream about">
+          <svg class="side-icon icon-gift" viewBox="0 0 24 24" aria-hidden="true"><path class="box" d="M4 11h16v9H4zM3 7h18v4H3z" /><path class="ribbon" d="M12 7v13M12 7c-1.5-3-5-3.5-5-1.2C7 7 9.5 7 12 7zm0 0c1.5-3 5-3.5 5-1.2C17 7 14.5 7 12 7z" /></svg>
+          <span class="side-label">wishes</span>
+        </a>
+        <a class="side-item" href="#/activity" data-section="activity" data-hint="activity: everything we did here, day by day">
+          <svg class="side-icon icon-pulse" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h4l2.5-6 5 12 2.5-6h4" /></svg>
+          <span class="side-label">activity</span>
+        </a>
+        <a class="side-item" href="#/stats" data-section="stats" data-hint="stats: what we watched, in numbers">
+          <svg class="side-icon icon-bars" viewBox="0 0 24 24" aria-hidden="true"><path class="bar-a" d="M5 20v-8" /><path class="bar-b" d="M10 20V6" /><path class="bar-c" d="M15 20v-5" /><path class="bar-a" d="M20 20V9" /></svg>
+          <span class="side-label">stats</span>
+        </a>
+      </nav>
+    </div>
   </header>
 
-  <!-- one section at a time, each with an address: #/to-watch, #/watched,
-       #/wishlists, #/activity, #/stats. above the content on a wide screen, a
-       bar at the bottom on a phone. src/router.js -->
-  <nav class="nav" aria-label="Sections">
-    <a class="nav-item" href="#/to-watch" data-section="to-watch">
+  <!-- the two lists, the heart of the site: the main tabs, under the title,
+       in reach while a long list scrolls under them. src/router.js -->
+  <nav class="nav" aria-label="Lists">
+    <a class="nav-item" href="#/to-watch" data-section="to-watch" data-hint="the films and series we have not watched yet">
       <span class="nav-icon icon-star" aria-hidden="true"></span>
       <span class="nav-label">to watch</span>
     </a>
-    <a class="nav-item" href="#/watched" data-section="watched">
+    <a class="nav-item" href="#/watched" data-section="watched" data-hint="what we watched together, with our hearts">
       <span class="nav-icon hearts" aria-hidden="true"></span>
       <span class="nav-label">watched</span>
-    </a>
-    <a class="nav-item members-only" href="#/wishlists" data-section="wishlists">
-      <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11h16v9H4zM3 7h18v4H3zM12 7v13M12 7c-1.5-3-5-3.5-5-1.2C7 7 9.5 7 12 7zm0 0c1.5-3 5-3.5 5-1.2C17 7 14.5 7 12 7z" /></svg>
-      <span class="nav-label">wishes</span>
-    </a>
-    <a class="nav-item" href="#/activity" data-section="activity">
-      <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h4l2.5-6 5 12 2.5-6h4" /></svg>
-      <span class="nav-label">activity</span>
-    </a>
-    <a class="nav-item" href="#/stats" data-section="stats">
-      <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 20V12M10 20V6M15 20v-5M20 20V9" /></svg>
-      <span class="nav-label">stats</span>
     </a>
   </nav>
 
