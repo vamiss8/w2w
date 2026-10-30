@@ -15,7 +15,7 @@ import { getActiveUser } from "./user.js";
 
 // an entry, wherever it sits in the comment: "10.1.2026 - s3ep2;", with or
 // without the season, the spaces or the semicolon
-const ENTRY = /(\d{1,2})\.(\d{1,2})\.(\d{4})\s*-\s*(?:s(\d+)\s*)?ep\s*(\d+)\s*;?/gi;
+const ENTRY = /(?<![\w.])(\d{1,2})\.(\d{1,2})\.(\d{4})\s*-\s*(?:s(\d+)\s*)?ep\s*(\d+)(?![\w.])[ \t]*;?/gi;
 
 export function parseEntries(text) {
   return [...String(text || "").matchAll(ENTRY)].map(m => ({
@@ -24,7 +24,12 @@ export function parseEntries(text) {
     episode: Number(m[5]),
     index: m.index,
     length: m[0].length,
-  }));
+  })).filter(e => {
+    const original = String(text).slice(e.index, e.index + e.length).match(/^(\d+)\.(\d+)\.(\d+)/);
+    return e.date.getFullYear() === Number(original[3]) && e.date.getMonth() + 1 === Number(original[1]) &&
+      e.date.getDate() === Number(original[2]) && Number.isSafeInteger(e.episode) && e.episode > 0 &&
+      (e.season === null || (Number.isSafeInteger(e.season) && e.season > 0));
+  });
 }
 
 // A realtime echo may redraw the button before the request finishes.

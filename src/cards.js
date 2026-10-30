@@ -3,7 +3,7 @@
 // what they look like.
 
 import { formatISOForUI } from "./dates.js";
-import { progressLine } from "./episodes.js";
+import { parseEntries, progressLine, spoken } from "./episodes.js";
 import { renderRatings } from "./ratings.js";
 import { getComment } from "./store.js";
 import { getActiveUser } from "./user.js";
@@ -110,13 +110,44 @@ function commentToggles(row) {
     btn.dataset.hint = `show or hide what ${who} wrote about it`;
     btn.setAttribute("aria-expanded", open ? "true" : "false");
 
-    const body = el("div", "comment-body", text);
+    const body = el("div", "comment-body");
+    renderComment(body, text);
     body.dataset.open = open ? "true" : "false";
 
     box.append(btn, body);
   }
 
   return box;
+}
+
+// Keep the original comment in the store and editor. Only complete, valid
+// episode entries become rows; the prose between them stays in its place.
+function renderComment(body, text) {
+  let cursor = 0;
+  let timeline = null;
+  for (const entry of parseEntries(text)) {
+    const between = text.slice(cursor, entry.index);
+    if (between.trim()) {
+      body.append(el("div", "comment-prose", between));
+      timeline = null;
+    }
+    if (!timeline) {
+      timeline = el("ol", "episode-timeline");
+      timeline.setAttribute("aria-label", "watch history");
+      body.append(timeline);
+    }
+    const item = el("li", "episode-entry");
+    const date = entry.date;
+    const time = el("time", "episode-date", new Intl.DateTimeFormat("en-US", {
+      month: "short", day: "numeric", year: "numeric",
+    }).format(date));
+    time.dateTime = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+    item.append(time, el("span", "episode-code", spoken(entry)));
+    timeline.append(item);
+    cursor = entry.index + entry.length;
+  }
+  const tail = text.slice(cursor);
+  if (tail.trim()) body.append(el("div", "comment-prose", tail));
 }
 
 // built node by node: a title is typed by one of us, and nothing typed should

@@ -1589,6 +1589,37 @@ li.is-animating {
   display: none;
 }
 
+.comment-prose { white-space: pre-wrap; }
+.episode-timeline {
+  list-style: none;
+  margin: 8px 0;
+  padding: 0 0 0 12px;
+  border-left: 1px solid rgba(155, 108, 255, 0.35);
+  white-space: normal;
+}
+.episode-entry {
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--line-soft);
+  font-variant-numeric: tabular-nums;
+}
+.episode-entry::before {
+  content: "";
+  position: absolute;
+  left: -16px;
+  top: 16px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--vlad);
+}
+.episode-date { color: var(--muted); font-size: 0.8rem; }
+.episode-code { color: var(--ink-strong); font-family: var(--font-mono); font-size: 0.8rem; }
+
 /* =========================
    WISHLISTS
    ========================= */
