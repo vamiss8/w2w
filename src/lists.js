@@ -163,15 +163,17 @@ function drawLists() {
     const other = lists[list === LIST_WATCHED ? LIST_TO_WATCH : LIST_WATCHED];
     pointElsewhere(view, list, other.filter(passes).length);
 
-    // appending a node that is already in the list moves it, so appending in
-    // sorted order is the whole sort
+    // Leave cards already in the right place attached. Moving every node on
+    // a comment update restarts CSS animations and can disturb scroll and focus.
     let shown = 0;
+    let cursor = ul.firstElementChild;
     sorted.forEach(row => {
       const li = cardFor(row);
       const pass = passes(row);
       li.classList.toggle("is-hidden", !pass);
       if (pass) shown += 1;
-      ul.appendChild(li);
+      if (li !== cursor) ul.insertBefore(li, cursor);
+      cursor = li.nextElementSibling;
     });
 
     describeList(view, list, sorted, shown);
@@ -315,19 +317,6 @@ function restoreChecked(key, fallbackId) {
   if (el) el.checked = true;
 }
 
-// the filters of both lists open and close together, and stay as they were
-// left, closed on a first visit
-const LS_FILTERS_OPEN = "filtersOpen";
-
-function setFiltersOpen(isOpen) {
-  document.querySelectorAll(".filters-toggle").forEach(button => {
-    const menu = document.getElementById(button.getAttribute("aria-controls"));
-    if (menu) menu.dataset.open = isOpen ? "true" : "false";
-    button.setAttribute("aria-expanded", isOpen ? "true" : "false");
-  });
-  localStorage.setItem(LS_FILTERS_OPEN, isOpen ? "true" : "false");
-}
-
 export function initializeLists() {
   for (const { name, key, fallback } of CONTROLS) {
     restoreChecked(key, fallback);
@@ -339,9 +328,31 @@ export function initializeLists() {
     });
   }
 
-  setFiltersOpen(localStorage.getItem(LS_FILTERS_OPEN) === "true");
+  localStorage.removeItem("filtersOpen");
   document.querySelectorAll(".filters-toggle").forEach(button => {
-    button.addEventListener("click", () => setFiltersOpen(button.getAttribute("aria-expanded") !== "true"));
+    const panel = document.getElementById(button.getAttribute("aria-controls"));
+    panel.addEventListener("toggle", e => {
+      button.setAttribute("aria-expanded", String(e.newState === "open"));
+    });
+    button.addEventListener("click", () => {
+      const rect = button.getBoundingClientRect();
+      panel.style.setProperty("--filter-right", `${Math.max(12, innerWidth - rect.right)}px`);
+      panel.togglePopover();
+      const below = rect.bottom + 10;
+      const top = below + panel.offsetHeight <= innerHeight - 12 ? below : Math.max(12, rect.top - panel.offsetHeight - 10);
+      panel.style.setProperty("--filter-top", `${top}px`);
+    });
+    panel.querySelector("[data-filters-close]").addEventListener("click", () => {
+      panel.hidePopover();
+      button.focus({ preventScroll: true });
+    });
+    onSectionChange(() => panel.hidePopover());
+  });
+
+  document.addEventListener("animationend", e => {
+    if (e.animationName === "fade-up" && e.target.matches(".cards > li")) {
+      e.target.classList.remove("is-animating");
+    }
   });
 
   // a list fades in each time it is opened. the first time, the cards are

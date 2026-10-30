@@ -26,6 +26,15 @@ The site: https://w2w-35k.pages.dev
   started card writes the next one down.
 - **Search, filters and a pick for tonight**: one card at random from what the
   list shows.
+- **Something new**: live TMDB discovery for films, series and Japanese
+  animation, with a mood choice, an animated reveal and a draft to add a pick
+  to our list. Titles already on either list are left out when identifiable
+  by their name or IMDb ID. This is catalogue discovery, not a prediction
+  based on our ratings. Filters float above the cards instead of moving them.
+- **Watch history in comments**: valid episode entries appear as dated
+  timeline rows, with ordinary text kept between them. Editing still uses the
+  original plain text. Cards say **imdb**, linking directly when an ID is set;
+  the editor can look up the right release through TMDB.
 - **Wishlists**, only for the two of us: a wish can be ticked off, edited, and
   carry as many links as it needs.
 - **Activity**: everything we did, a day at a time, the same thing done again
@@ -111,6 +120,31 @@ A change to the database is three things in one pull request: a new file in
 The migration runs in the SQL editor right before that pull request is
 merged. If it does not, the page tells one of us which one is missing.
 
+## Connecting live discovery
+
+1. Create a [TMDB account](https://www.themoviedb.org/signup) and request API
+   access in [Settings → API](https://www.themoviedb.org/settings/api).
+2. Open **something new → catalogue settings** on W2W. Paste the **API Read
+   Access Token** (the long bearer token, not the short API key), then connect.
+3. Choose a format and mood, and draw a story. **Add to our list** opens an
+   editable draft; save it to add it. In a card's editor, **look up its page**
+   offers matching releases so we can choose the right IMDb link.
+
+The token is saved only in this browser's local storage, separately on every
+device and origin. **Forget token** removes it. It is sent only to TMDB over
+HTTPS and is never written to Supabase, source files or logs. Don't paste it
+in Git, chat, or screenshots. An existing connection is optional: all previous
+features work without it. This feature needs no new database migration.
+
+Anime uses TMDB's Japanese-language animation filter; it isn't an exhaustive
+anime catalogue. Discovery samples popular, already released titles with at
+least 100 votes, skips previous picks for the current visit, and excludes
+known names/IMDb IDs. Alternate translated names without matching IDs may
+still appear. IMDb falls back to search when TMDB has no linked ID. Catalogue
+availability depends on TMDB and the browser's network.
+
+This product uses the TMDB API but is not endorsed or certified by TMDB.
+
 ## Checks
 
 Everything lives in `tests/` and runs on every pull request
@@ -171,6 +205,14 @@ License. Details in [THIRD_PARTY.md](THIRD_PARTY.md).
   **+1** на начатой карточке дописывает следующую.
 - **Поиск, фильтры и выбор на вечер**: одна случайная карточка из тех, что
   показывает список.
+- **Something new**: поиск новых фильмов, сериалов и японской анимации через
+  TMDB, с выбором настроения и анимированным раскрытием результата. Знакомые
+  названия исключаются по названию или IMDb ID. Это поиск по каталогу, а не
+  прогноз на основе наших оценок. Фильтры открываются поверх списка.
+- **История просмотра в комментариях**: корректные записи эпизодов показаны
+  строками с датами, обычный текст остаётся между ними. Редактирование работает
+  с исходным текстом. Ссылка **imdb** ведёт прямо на страницу при наличии ID;
+  редактор умеет найти нужный релиз через TMDB.
 - **Вишлисты**, только для нас двоих: желание можно отметить сбывшимся,
   отредактировать и дать ему сколько угодно ссылок.
 - **Активность**: всё, что мы делали, по дням, а одно и то же действие подряд
@@ -255,6 +297,31 @@ insert into public.members (email, name) values ('...', 'vlad'), ('...', 'vika')
 `public.schema_version()` и в `src/version.js`, поднятый до номера нового
 файла. Миграция выполняется в SQL-редакторе прямо перед тем, как этот
 пул-реквест смержен. Если нет, страница скажет одному из нас, какой не хватает.
+
+## Подключение каталога
+
+1. Создать [аккаунт TMDB](https://www.themoviedb.org/signup) и запросить API
+   в [Settings → API](https://www.themoviedb.org/settings/api).
+2. На W2W открыть **something new → catalogue settings**, вставить **API Read
+   Access Token** (длинный токен, а не короткий API key) и нажать connect.
+3. Выбрать формат и настроение, нажать draw a story. **Add to our list**
+   открывает редактируемый черновик; сохранение добавляет карточку. В редакторе
+   карточки **look up its page** позволяет выбрать правильный релиз для IMDb.
+
+Токен хранится только в local storage этого браузера, отдельно на каждом
+устройстве и адресе сайта. **Forget token** удаляет его. Токен передаётся
+только TMDB по HTTPS, не записывается в Supabase, код или логи. Не вставлять
+его в Git, чат или скриншоты. Все прежние функции работают без подключения.
+Новая миграция базы не нужна.
+
+Для anime используется фильтр японской анимации TMDB; это не полный каталог
+аниме. Выборка включает популярные вышедшие произведения со 100 и более
+голосами. Повторы в рамках текущего посещения и знакомые названия/IMDb ID
+исключаются, но другое переводное название без совпадающего ID может пройти.
+Если TMDB не знает IMDb ID, остаётся ссылка на поиск. Доступ к каталогу зависит
+от TMDB и сети браузера.
+
+Этот продукт использует TMDB API, но не одобрен и не сертифицирован TMDB.
 
 ## Проверки
 

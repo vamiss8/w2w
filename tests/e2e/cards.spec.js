@@ -95,7 +95,7 @@ test("a comment is saved under your name and shows on the card", async ({ page }
 
 test("a new card appears when the saved row comes back, on top of its day", async ({ page }) => {
   await goTo(page, "watched");
-  await page.locator("#view-watched [data-add]").click();
+  await page.locator("[data-add]").click();
   // added from the watched list, so it starts out watched
   await expect(page.locator("#cardState")).toHaveValue("watched");
   await page.locator("#cardTitle").fill("Eternal Sunshine");

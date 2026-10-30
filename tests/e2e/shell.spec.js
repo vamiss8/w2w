@@ -42,7 +42,7 @@ test("the tab the old page remembered opens as its section", async ({ page }) =>
 test("a dialog takes the focus it opens for, and escape gives it back", async ({ page }) => {
   await signIn(page, "vlad");
 
-  await page.locator("#view-to-watch [data-add]").click();
+  await page.locator("[data-add]").click();
   await expect(page.locator("#cardTitle")).toBeFocused();
   await page.keyboard.press("Escape");
   await expect(page.locator("#cardDialog")).toBeHidden();
@@ -55,7 +55,7 @@ test("a dialog takes the focus it opens for, and escape gives it back", async ({
 
 test("a form keeps what was typed when the dark around it is clicked", async ({ page }) => {
   await signIn(page, "vlad");
-  await page.locator("#view-to-watch [data-add]").click();
+  await page.locator("[data-add]").click();
   await page.locator("#cardTitle").fill("half typed");
   await page.mouse.click(5, 5);
   await expect(page.locator("#cardDialog")).toBeVisible();
@@ -101,9 +101,12 @@ test.describe("on a phone", () => {
     }
   });
 
-  test("the sections sit in a bar along the bottom", async ({ page }) => {
+  test("the two lists stay in reach at the top while scrolling", async ({ page }) => {
     await openAsGuest(page);
+    await page.evaluate(() => window.scrollTo(0, 600));
     const nav = await page.locator(".nav").boundingBox();
-    expect(nav.y + nav.height).toBe(740);
+    expect(nav.y).toBeGreaterThanOrEqual(0);
+    expect(nav.y).toBeLessThan(20);
+    await expect(page.locator(".nav .nav-item")).toHaveCount(2);
   });
 });

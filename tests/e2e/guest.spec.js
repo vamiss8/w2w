@@ -13,8 +13,8 @@ test("a guest sees every card, and none of our controls", async ({ page }) => {
   await expect(page.locator("#userToggle")).toHaveText("sign in");
   await expect(page.locator("#authDialog")).toBeHidden();
 
-  await expect(page.locator("#view-to-watch [data-add]")).toBeHidden();
-  await expect(page.locator('.nav-item[data-section="wishlists"]')).toBeHidden();
+  await expect(page.locator("[data-add]")).toBeHidden();
+  await expect(page.locator('.side-item[data-section="wishlists"]')).toBeHidden();
   await expect(page.locator(".cards > li .card-actions").first()).toBeHidden();
 });
 

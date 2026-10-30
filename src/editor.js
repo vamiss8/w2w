@@ -5,6 +5,7 @@
 // moment later, which changes nothing.
 
 import { LIST_WATCHED, STATE_PLANNED, STATE_STARTED, STATE_WATCHED, imdbSearchUrl, imdbTitleUrl, normalizeStatusCode, seenBefore, setCommentOpen, stateOf, statusOf, titleOf } from "./cards.js";
+import { catalogueImdb, catalogueRequest, catalogueToken } from "./catalogue.js";
 import { remoteDeleteCard, remoteInsertCard, remoteInsertLog, remoteSaveComment, remoteUpdateCard } from "./db.js";
 import { closeDialog, confirmDialog, openDialog, whileSaving } from "./dialogs.js";
 import { activeList } from "./lists.js";
@@ -40,9 +41,17 @@ function openAddCard(list) {
   field("cardStart").value = "";
   field("cardEnd").value = "";
   field("cardError").textContent = "";
+  field("cardImdbResults").replaceChildren();
   syncImdbSearch();
 
   openDialog("cardDialog", "cardTitle");
+}
+
+export function openSuggestedCard(suggestion) {
+  openAddCard(null);
+  field("cardTitle").value = suggestion.title;
+  field("cardImdb").value = suggestion.imdb_id ? imdbTitleUrl(suggestion.imdb_id) : "";
+  syncImdbSearch();
 }
 
 function openEditCard(id) {
@@ -60,6 +69,7 @@ function openEditCard(id) {
   field("cardStart").value = row.start_date || "";
   field("cardEnd").value = row.end_date || "";
   field("cardError").textContent = "";
+  field("cardImdbResults").replaceChildren();
   syncImdbSearch();
 
   openDialog("cardDialog", "cardTitle");
@@ -102,12 +112,54 @@ function toggleCardMenu(li) {
 function imdbIdOf(raw) {
   const text = raw.trim();
   if (!text) return null;
-  return /tt\d{7,10}/.exec(text)?.[0];
+  return /\btt\d{7,10}\b/.exec(text)?.[0];
 }
 
 function syncImdbSearch() {
   const title = field("cardTitle").value.trim();
   field("cardImdbFind").href = title ? imdbSearchUrl(title) : "https://www.imdb.com/";
+  field("cardImdbResults").replaceChildren();
+}
+
+// Titles can name several releases. Let us choose the right one rather than
+// silently linking a remake, another series, or a similarly named film.
+async function lookupImdb() {
+  if (!catalogueToken()) {
+    field("cardError").textContent = "connect TMDB through something new first, or paste an imdb link above";
+    return;
+  }
+  const title = field("cardTitle").value.trim();
+  if (!title) return;
+  const results = field("cardImdbResults");
+  results.replaceChildren();
+  field("cardError").textContent = "";
+  try {
+    const data = await catalogueRequest("search/multi", { query: title, include_adult: "false" });
+    if (!field("cardDialog").open || field("cardTitle").value.trim() !== title) return;
+    const items = (data.results || []).filter(r => ["movie", "tv"].includes(r.media_type)).slice(0, 6);
+    if (!items.length) field("cardError").textContent = "no matching page found. you can still paste an imdb link";
+    for (const item of items) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "imdb-result";
+      button.textContent = `${item.title || item.name} · ${(item.release_date || item.first_air_date || "").slice(0, 4) || "year unknown"} · ${item.media_type === "movie" ? "film" : "series"}`;
+      button.addEventListener("click", () => whileSaving(button, async () => {
+        try {
+          const id = await catalogueImdb(item);
+          if (!field("cardDialog").open || field("cardTitle").value.trim() !== title || !button.isConnected) return;
+          if (!id) {
+            field("cardError").textContent = "this title has no imdb page linked in TMDB";
+            return;
+          }
+          field("cardImdb").value = imdbTitleUrl(id);
+          results.replaceChildren();
+          field("cardError").textContent = "";
+          field("cardImdb").focus();
+        } catch (e) { field("cardError").textContent = e.message; }
+      }));
+      results.append(button);
+    }
+  } catch (e) { field("cardError").textContent = e.message; }
 }
 
 // the fields that a change is logged for, the same way from a row on the
@@ -283,6 +335,7 @@ export function initializeCardUi() {
   });
 
   field("cardTitle")?.addEventListener("input", syncImdbSearch);
+  field("cardImdbLookup").addEventListener("click", () => whileSaving(field("cardImdbLookup"), lookupImdb));
 
   field("cardForm")?.addEventListener("submit", e => {
     e.preventDefault();

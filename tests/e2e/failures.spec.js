@@ -13,7 +13,7 @@ test.describe("signed in", () => {
 
   test("a card the database did not take stays in its form, with what went wrong", async ({ page }) => {
     await fail(page, "POST", "cards");
-    await page.locator("#view-to-watch [data-add]").click();
+    await page.locator("[data-add]").click();
     await page.locator("#cardTitle").fill("Perfect Days");
     await page.locator("#cardSave").click();
 
@@ -28,7 +28,7 @@ test.describe("signed in", () => {
   });
 
   test("two clicks on save send one card", async ({ page }) => {
-    await page.locator("#view-to-watch [data-add]").click();
+    await page.locator("[data-add]").click();
     await page.locator("#cardTitle").fill("Paterson");
     await page.locator("#cardSave").dblclick();
     await expect(page.locator("#cardDialog")).toBeHidden();

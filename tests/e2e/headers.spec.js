@@ -15,7 +15,8 @@ test("the page comes with the policy and the headers around it", async ({ page }
   const headers = response.headers();
 
   expect(headers["content-security-policy"]).toContain("script-src 'self';");
-  expect(headers["content-security-policy"]).toContain("connect-src 'self' https://esdhstxcxxgcexddkxqi.supabase.co wss://esdhstxcxxgcexddkxqi.supabase.co;");
+  expect(headers["content-security-policy"]).toContain("connect-src 'self' https://esdhstxcxxgcexddkxqi.supabase.co wss://esdhstxcxxgcexddkxqi.supabase.co https://api.themoviedb.org;");
+  expect(headers["content-security-policy"]).toContain("img-src 'self' data: https://image.tmdb.org;");
   expect(headers["content-security-policy"]).toContain("frame-ancestors 'none'");
   expect(headers["x-content-type-options"]).toBe("nosniff");
   expect(headers["x-frame-options"]).toBe("DENY");
