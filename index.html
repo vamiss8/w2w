@@ -109,7 +109,8 @@
       <!-- a title found on the other list, pointed at. src/lists.js -->
       <p class="search-hint" data-search-hint hidden><a href="#/watched" data-search-other></a></p>
 
-      <div class="controls" id="filtersToWatch" data-open="false" role="group" aria-label="Filters for the cards not watched yet">
+      <div class="controls filter-panel" id="filtersToWatch" popover role="group" aria-label="Filters for the cards not watched yet">
+        <div class="filter-heading"><strong>narrow it down</strong><button class="pill" type="button" data-filters-close aria-label="Close filters">done</button></div>
         <div class="control-row">
           <div class="control-caption">
             progress
@@ -186,7 +187,8 @@
       <!-- a title found on the other list, pointed at. src/lists.js -->
       <p class="search-hint" data-search-hint hidden><a href="#/to-watch" data-search-other></a></p>
 
-      <div class="controls" id="filtersWatched" data-open="false" role="group" aria-label="Sorting and filters for the watched cards">
+      <div class="controls filter-panel" id="filtersWatched" popover role="group" aria-label="Sorting and filters for the watched cards">
+        <div class="filter-heading"><strong>sort &amp; filter</strong><button class="pill" type="button" data-filters-close aria-label="Close filters">done</button></div>
         <div class="control-row">
           <div class="control-caption">
             favorites

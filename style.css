@@ -405,22 +405,22 @@ p {
    their star and their hearts, and its name under it */
 .side-nav {
   display: flex;
-  gap: 4px;
+  gap: 6px;
 }
 
 .side-item {
   display: grid;
   justify-items: center;
-  gap: 4px;
-  min-width: 54px;
-  padding: 8px 6px 6px;
+  gap: 7px;
+  min-width: 62px;
+  padding: 10px 8px;
   border-radius: 14px;
   border: 1px solid transparent;
 
   font-family: var(--font-body);
   font-weight: 600;
-  font-size: 0.56rem;
-  letter-spacing: 0.12em;
+  font-size: 0.65rem;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
   text-decoration: none;
   color: var(--muted);
@@ -436,8 +436,8 @@ p {
 }
 
 .side-icon {
-  width: 22px;
-  height: 22px;
+  width: 30px;
+  height: 30px;
   fill: none;
   stroke-width: 1.7;
   stroke-linecap: round;
@@ -502,7 +502,7 @@ p {
   /* the sides are as wide as each other, so the title stays in the middle,
      and wide enough for the corner, so it never reaches the title */
   .top {
-    grid-template-columns: minmax(190px, 1fr) minmax(0, 700px) minmax(190px, 1fr);
+    grid-template-columns: minmax(210px, 1fr) minmax(0, 700px) minmax(210px, 1fr);
     grid-template-areas: "heart brand corner";
     padding-top: calc(16px + env(safe-area-inset-top));
     padding-left: calc(16px + env(safe-area-inset-left));
@@ -822,7 +822,7 @@ footer.instant-hide {
    FILTERS
    ========================= */
 
-.controls {
+.controls:not(.filter-panel) {
   position: relative;
   z-index: 3; /* the tooltips open over the list */
 
@@ -842,7 +842,7 @@ footer.instant-hide {
     margin-bottom 0.42s var(--ease-out);
 }
 
-.controls[data-open="true"] {
+.controls:not(.filter-panel)[data-open="true"] {
   max-height: 420px;
   opacity: 1;
   transform: translateY(0);
@@ -851,6 +851,48 @@ footer.instant-hide {
 
   /* the tooltips reach out of it */
   overflow: visible;
+}
+
+/* The top layer keeps filters off the list, without changing its layout. */
+.filter-panel {
+  position: fixed;
+  inset: var(--filter-top, 150px) var(--filter-right, 20px) auto auto;
+  width: min(460px, calc(100vw - 24px));
+  max-height: calc(100dvh - 32px);
+  margin: 0;
+  padding: 20px;
+  overflow: auto;
+  border: 1px solid var(--line-strong);
+  border-radius: 20px;
+  background: #121221;
+  color: var(--ink);
+  box-shadow: 0 16px 55px rgba(0, 0, 0, 0.45);
+}
+
+.filter-panel:popover-open {
+  display: grid;
+  gap: 22px;
+}
+
+.filter-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+}
+
+.filter-panel .control-row { justify-items: start; }
+.filter-panel .control-group { justify-content: flex-start; }
+.filters-toggle[aria-expanded="true"] { border-color: var(--vlad); }
+
+@media (max-width: 600px) {
+  .filter-panel {
+    inset: auto 12px calc(12px + env(safe-area-inset-bottom));
+    width: auto;
+    max-height: 75dvh;
+  }
 }
 
 .control-row {
@@ -1108,7 +1150,7 @@ input[type="radio"]:focus-visible + .chip .tooltip {
   backdrop-filter: blur(4px);
   box-shadow: var(--shadow);
 
-  transition: transform 0.35s ease, box-shadow 0.35s ease;
+  transition: background 0.2s ease, border-color 0.2s ease;
 }
 
 .cards > li[data-status="01"] {
@@ -1134,10 +1176,16 @@ input[type="radio"]:focus-visible + .chip .tooltip {
 
 @media (hover: hover) {
   .cards > li:hover {
-    z-index: 2;
-    transform: translateY(-3px);
-    box-shadow: var(--shadow-lift);
+    background: #1c1b30;
+    border-top-color: rgba(185, 157, 255, 0.45);
+    border-right-color: rgba(185, 157, 255, 0.45);
+    border-bottom-color: rgba(185, 157, 255, 0.45);
   }
+}
+
+.cards > li:focus-within {
+  outline: 1px solid rgba(185, 157, 255, 0.6);
+  outline-offset: 2px;
 }
 
 li.is-animating {

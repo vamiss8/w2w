@@ -24,6 +24,22 @@ test("+1 keeps the list attached, its scroll position, and its other cards uncha
   await expect(page.locator(".cards > li.is-animating")).toHaveCount(0);
 });
 
+test("filters float without shifting cards, dismiss with escape, and return focus", async ({ page }) => {
+  await signIn(page);
+  await page.waitForFunction(() => !document.querySelector(".cards > li.is-animating"));
+  const before = await card(page, 3).boundingBox();
+  const toggle = page.locator("#view-to-watch .filters-toggle");
+  await toggle.click();
+  await expect(page.locator("#filtersToWatch")).toBeVisible();
+  expect((await card(page, 3).boundingBox()).y).toBe(before.y);
+  await page.keyboard.press("Escape");
+  await expect(page.locator("#filtersToWatch")).toBeHidden();
+  await expect(toggle).toHaveAttribute("aria-expanded", "false");
+  await toggle.click();
+  await page.locator("#filtersToWatch [data-filters-close]").click();
+  await expect(toggle).toBeFocused();
+});
+
 test("episode history renders in place among prose, preserves duplicates, and edits as plain text", async ({ page }) => {
   await signIn(page);
   const text = "before\n9.27.2026 - ep12; 10.13.2026 - ep43; 10.13.2026 - ep45;\nwhat a night!\n10.23.2026 - s2ep52;\nafter <b>still text</b> 2.30.2026 - ep99;";
@@ -40,4 +56,17 @@ test("episode history renders in place among prose, preserves duplicates, and ed
   await expect(body.locator("b")).toHaveCount(0);
   await openMenu(page, 5, "comment");
   await expect(page.locator("#commentText")).toHaveValue(text);
+});
+
+test("hover brightens the card under the pointer without a shadow over its neighbour", async ({ page }) => {
+  await signIn(page);
+  await page.waitForFunction(() => !document.querySelector(".cards > li.is-animating"));
+  const style = locator => locator.evaluate(el => ({ bg: getComputedStyle(el).backgroundColor, shadow: getComputedStyle(el).boxShadow }));
+  await page.mouse.move(0, 0);
+  const a = await style(card(page, 3));
+  const b = await style(card(page, 7));
+  await card(page, 3).hover();
+  await expect.poll(async () => (await style(card(page, 3))).bg).not.toBe(a.bg);
+  expect((await style(card(page, 3))).shadow).toBe(a.shadow);
+  expect(await style(card(page, 7))).toEqual(b);
 });

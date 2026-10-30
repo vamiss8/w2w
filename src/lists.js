@@ -317,19 +317,6 @@ function restoreChecked(key, fallbackId) {
   if (el) el.checked = true;
 }
 
-// the filters of both lists open and close together, and stay as they were
-// left, closed on a first visit
-const LS_FILTERS_OPEN = "filtersOpen";
-
-function setFiltersOpen(isOpen) {
-  document.querySelectorAll(".filters-toggle").forEach(button => {
-    const menu = document.getElementById(button.getAttribute("aria-controls"));
-    if (menu) menu.dataset.open = isOpen ? "true" : "false";
-    button.setAttribute("aria-expanded", isOpen ? "true" : "false");
-  });
-  localStorage.setItem(LS_FILTERS_OPEN, isOpen ? "true" : "false");
-}
-
 export function initializeLists() {
   for (const { name, key, fallback } of CONTROLS) {
     restoreChecked(key, fallback);
@@ -341,9 +328,25 @@ export function initializeLists() {
     });
   }
 
-  setFiltersOpen(localStorage.getItem(LS_FILTERS_OPEN) === "true");
+  localStorage.removeItem("filtersOpen");
   document.querySelectorAll(".filters-toggle").forEach(button => {
-    button.addEventListener("click", () => setFiltersOpen(button.getAttribute("aria-expanded") !== "true"));
+    const panel = document.getElementById(button.getAttribute("aria-controls"));
+    panel.addEventListener("toggle", e => {
+      button.setAttribute("aria-expanded", String(e.newState === "open"));
+    });
+    button.addEventListener("click", () => {
+      const rect = button.getBoundingClientRect();
+      panel.style.setProperty("--filter-right", `${Math.max(12, innerWidth - rect.right)}px`);
+      panel.togglePopover();
+      const below = rect.bottom + 10;
+      const top = below + panel.offsetHeight <= innerHeight - 12 ? below : Math.max(12, rect.top - panel.offsetHeight - 10);
+      panel.style.setProperty("--filter-top", `${top}px`);
+    });
+    panel.querySelector("[data-filters-close]").addEventListener("click", () => {
+      panel.hidePopover();
+      button.focus({ preventScroll: true });
+    });
+    onSectionChange(() => panel.hidePopover());
   });
 
   document.addEventListener("animationend", e => {
