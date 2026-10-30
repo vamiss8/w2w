@@ -92,9 +92,10 @@
       <div class="view-head">
         <h2 class="view-title" id="toWatchTitle">not watched yet</h2>
         <p class="view-count" data-count></p>
-        <button class="tonight-btn" type="button" data-tonight data-hint="picks one card at random from the list below, the filters and the search included">
+        <div class="tonight-choices"><button class="tonight-btn" type="button" data-tonight data-hint="picks one card at random from the list below, the filters and the search included">
           <span class="tonight-spark" aria-hidden="true">✦</span> what tonight?
         </button>
+        <button class="tonight-btn discovery-btn" type="button" data-discover data-hint="discover a new film, series or anime from the live TMDB catalogue"><span class="tonight-spark" aria-hidden="true">✧</span> something new</button></div>
       </div>
 
       <div class="toolbar">
@@ -379,6 +380,8 @@
           <label class="field-label" for="cardImdb">imdb link <span class="field-optional">· if you like</span></label>
           <input class="field-input" id="cardImdb" type="text" inputmode="url" autocomplete="off" spellcheck="false" placeholder="https://www.imdb.com/title/tt0119116/" />
           <a class="field-help" id="cardImdbFind" href="https://www.imdb.com/" target="_blank" rel="noopener noreferrer">imdb ↗</a>
+          <button class="pill" id="cardImdbLookup" type="button">look up its page</button>
+          <div class="imdb-results" id="cardImdbResults" aria-live="polite"></div>
         </div>
 
         <!-- no field for the list: a card is on the watched one when it is
@@ -476,6 +479,37 @@
         <button class="btn ghost" id="tonightAgain" type="button">another one</button>
         <button class="btn" id="tonightOk" type="button">this one</button>
       </div>
+    </div>
+  </dialog>
+
+  <!-- Live discovery is optional; each browser connects with its own read token. -->
+  <dialog class="dialog discovery-dialog" id="discoveryDialog" aria-labelledby="discoveryHeading">
+    <div class="dialog-body">
+      <div class="filter-heading"><h2 class="dialog-title" id="discoveryHeading">a new story for tonight</h2><button class="pill" type="button" data-close aria-label="Close discovery">close</button></div>
+      <p class="dialog-desc">a little luck, a whole world of stories. picks from TMDB, leaving our lists out.</p>
+      <div class="field-grid discovery-filters">
+        <label class="field"><span class="field-label">what are we in for?</span><select class="field-select" id="discoveryKind"><option value="any">anything</option><option value="film">a film</option><option value="series">a series</option><option value="anime">anime · Japanese animation</option></select></label>
+        <label class="field"><span class="field-label">tonight feels like</span><select class="field-select" id="discoveryMood"><option value="any">surprise us</option><option value="cozy">comedy &amp; romance</option><option value="mystery">a mystery</option><option value="adventure">an adventure</option></select></label>
+      </div>
+      <div class="discovery-stage" id="discoveryStage" aria-busy="false">
+        <div class="discovery-orbit" aria-hidden="true"><span>✧</span><span>✦</span><span>✧</span></div>
+        <p class="discovery-status" id="discoveryStatus" role="status">a new story is waiting</p>
+        <div class="discovery-result" id="discoveryResult" hidden>
+          <img class="discovery-poster" id="discoveryPoster" alt="" width="114" height="171" hidden />
+          <div class="discovery-copy"><h3 id="discoveryTitle"></h3><p class="tonight-meta" id="discoveryMeta"></p><p id="discoveryOverview"></p><a class="imdb-link" id="discoveryImdb" target="_blank" rel="noopener noreferrer">imdb ↗</a></div>
+        </div>
+      </div>
+      <p class="form-error" id="discoveryError" role="alert"></p>
+      <div class="dialog-actions"><button class="btn ghost" id="discoveryDraw" type="button">draw a story</button><button class="btn members-only" id="discoveryAdd" type="button" disabled>add to our list</button></div>
+      <details class="catalogue-settings" id="catalogueSettings">
+        <summary>catalogue settings <span id="catalogueConnection"></span></summary>
+        <form class="dialog-form" id="catalogueForm">
+          <p class="dialog-desc">Get an <a href="https://www.themoviedb.org/settings/api" target="_blank" rel="noopener noreferrer">API Read Access Token from TMDB</a>. It stays in this browser until you forget it. Connect separately on each device.</p>
+          <label class="field"><span class="field-label">TMDB API Read Access Token</span><input class="field-input" id="catalogueToken" type="password" autocomplete="off" spellcheck="false" required /></label>
+          <div class="dialog-actions"><button class="btn ghost" id="catalogueForget" type="button">forget token</button><button class="btn" id="catalogueConnect" type="submit">connect</button></div>
+        </form>
+      </details>
+      <div class="catalogue-credits" aria-label="Catalogue credits"><a href="https://www.themoviedb.org" target="_blank" rel="noopener noreferrer"><img src="vendor/tmdb-logo.svg" width="100" height="14" alt="TMDB" /></a><p>This product uses the TMDB API but is not endorsed or certified by TMDB.</p></div>
     </div>
   </dialog>
 

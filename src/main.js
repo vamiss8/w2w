@@ -7,6 +7,7 @@
 
 import { initializeActivity } from "./activity.js";
 import { initializeDialogs } from "./dialogs.js";
+import { initializeDiscovery } from "./discovery.js";
 import { initializeCardUi } from "./editor.js";
 import { initializeEpisodes } from "./episodes.js";
 import { initializeGift } from "./gift.js";
@@ -32,6 +33,7 @@ initializeVersionCheck();
 initializeLists();
 initializeSearch();
 initializeTonight();
+initializeDiscovery();
 initializeCardUi();
 initializeEpisodes();
 initializeActivity();
