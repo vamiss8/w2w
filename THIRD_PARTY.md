@@ -30,6 +30,17 @@ Then point the `<script>` in `index.html` at the new file, delete the old one,
 and update the version, size and checksum above
 (`sha256sum vendor/supabase-js-<version>.js`).
 
+## TMDB
+
+The optional live discovery catalogue, descriptions, scores and posters are
+provided by [TMDB](https://www.themoviedb.org). This product uses the TMDB API
+but is not endorsed or certified by TMDB.
+
+`vendor/tmdb-logo.svg` is the unmodified approved logo downloaded from
+https://www.themoviedb.org/assets/2/v4/logos/v2/blue_long_2-9665a76b1ae401a510ec1e0ca40ddcb3b0cfe45f1d51b77a308fea0845885648.svg.
+TMDB retains rights in its branding. This is not part of supabase-js's MIT
+license. See [TMDB's API terms and attribution requirements](https://developer.themoviedb.org/docs/faq).
+
 ## Fonts
 
 Cinzel Decorative, Sora, IBM Plex Sans and IBM Plex Mono, served by Google
