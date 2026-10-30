@@ -7,6 +7,7 @@
 import { LIST_WATCHED, STATE_PLANNED, STATE_STARTED, STATE_WATCHED, normalizeStatusCode, setCommentOpen, stateOf, titleOf } from "./cards.js";
 import { remoteDeleteCard, remoteInsertCard, remoteInsertLog, remoteSaveComment, remoteUpdateCard } from "./db.js";
 import { closeDialog, confirmDialog, openDialog, whileSaving } from "./dialogs.js";
+import { activeList } from "./lists.js";
 import { dropCard, getCard, getComment, putCard, putComment } from "./store.js";
 import { toast } from "./toast.js";
 import { getActiveUser, openAuthDialog } from "./user.js";
@@ -197,9 +198,9 @@ async function deleteCard(id) {
 export function initializeCardUi() {
   // one listener for every card, the ones drawn later included
   document.addEventListener("click", e => {
-    const add = e.target.closest("[data-add]");
-    if (add) {
-      openAddCard(add.closest(".view")?.dataset.list);
+    // the add button belongs to whichever list is open
+    if (e.target.closest("[data-add]")) {
+      openAddCard(activeList());
       return;
     }
 

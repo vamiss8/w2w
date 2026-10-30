@@ -92,14 +92,15 @@
       <div class="view-head">
         <h2 class="view-title" id="toWatchTitle">not watched yet</h2>
         <p class="view-count" data-count></p>
+        <button class="tonight-btn" type="button" data-tonight data-hint="picks one card at random from the list below, the filters and the search included">
+          <span class="tonight-spark" aria-hidden="true">✦</span> what tonight?
+        </button>
       </div>
 
       <div class="toolbar">
         <input class="search-input" type="search" placeholder="find a title" aria-label="find a title" autocomplete="off" spellcheck="false" enterkeyhint="search" data-search />
         <div class="toolbar-buttons">
-          <button class="pill add-toggle members-only" type="button" data-add>add card</button>
-          <button class="pill" type="button" data-tonight>tonight?</button>
-          <button class="pill filters-toggle" type="button" aria-expanded="false" aria-controls="filtersToWatch">
+          <button class="pill filters-toggle" type="button" aria-expanded="false" aria-controls="filtersToWatch" data-hint="show only some of the cards: planned or started, new or a rewatch">
             filters <span class="caret" aria-hidden="true"></span>
           </button>
         </div>
@@ -176,8 +177,7 @@
       <div class="toolbar">
         <input class="search-input" type="search" placeholder="find a title" aria-label="find a title" autocomplete="off" spellcheck="false" enterkeyhint="search" data-search />
         <div class="toolbar-buttons">
-          <button class="pill add-toggle members-only" type="button" data-add>add card</button>
-          <button class="pill filters-toggle" type="button" aria-expanded="false" aria-controls="filtersWatched">
+          <button class="pill filters-toggle" type="button" aria-expanded="false" aria-controls="filtersWatched" data-hint="sort by our hearts, or show only some of the cards">
             filters <span class="caret" aria-hidden="true"></span>
           </button>
         </div>
@@ -294,7 +294,7 @@
 
       <div class="control-group log-who" role="group" aria-label="Whose activity">
         <input type="radio" name="log-who" id="log-who-all" checked />
-        <label class="chip" for="log-who-all">everyone</label>
+        <label class="chip" for="log-who-all">both</label>
         <input type="radio" name="log-who" id="log-who-vlad" />
         <label class="chip" for="log-who-vlad">vlad</label>
         <input type="radio" name="log-who" id="log-who-vika" />
@@ -317,6 +317,13 @@
 
       <div class="stats" id="stats"></div>
     </section>
+
+    <!-- adding a card, the one thing done most, in the corner where a thumb
+         finds it. only on the two lists, and only for the two of us -->
+    <button class="fab members-only" type="button" data-add data-hint="add a card to this list">
+      <span class="fab-plus" aria-hidden="true">+</span>
+      <span class="fab-label">add card</span>
+    </button>
 
     <footer>
       made with love <span class="hearts" aria-hidden="true"></span> for the best couple

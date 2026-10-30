@@ -97,6 +97,7 @@ function commentToggles(row) {
     const btn = el("button", `comment-toggle ${who}`, `${who}'s comment`);
     btn.type = "button";
     btn.dataset.who = who;
+    btn.dataset.hint = `show or hide what ${who} wrote about it`;
     btn.setAttribute("aria-expanded", open ? "true" : "false");
 
     const body = el("div", "comment-body", text);
@@ -143,6 +144,7 @@ export function drawCard(li, row) {
   const actions = el("button", "card-actions", "⋯");
   actions.type = "button";
   actions.setAttribute("aria-label", "Card actions");
+  actions.dataset.hint = "edit, comment on or delete this card";
 
   const right = el("div", "right");
   right.append(status, actions);

@@ -658,26 +658,19 @@ p {
   display: none;
 }
 
-/* the search on a line of its own on a phone, and beside the buttons on a
-   wide screen */
+/* finding and filtering, side by side: the only two things this row does.
+   adding a card and the pick for tonight have places of their own */
 .toolbar {
   display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
   gap: 10px;
   margin-bottom: 18px;
 }
 
 .toolbar-buttons {
   display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
   gap: 10px;
-}
-
-@media (min-width: 720px) {
-  .toolbar {
-    grid-template-columns: minmax(0, 1fr) auto;
-    align-items: center;
-  }
 }
 
 .search-input {
@@ -2735,6 +2728,109 @@ li.is-animating {
   height: auto;
   max-height: calc(100dvh - 160px);
   object-fit: contain;
+}
+
+/* =========================
+   HINTS, ADD, TONIGHT
+   ========================= */
+
+/* what a button does, under it or over it: src/hints.js places it */
+.hint {
+  position: fixed;
+  z-index: 80;
+  max-width: min(280px, calc(100vw - 16px));
+  padding: 8px 12px;
+  border-radius: 12px;
+
+  font-family: var(--font-content);
+  font-size: 0.78rem;
+  line-height: 1.35;
+  color: var(--ink);
+
+  background: var(--popover);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-pop);
+  pointer-events: none;
+  animation: fade-in 0.15s ease;
+}
+
+/* adding a card: round, gold-edged, in the bottom right corner, and only on
+   the two lists */
+.fab {
+  position: fixed;
+  right: calc(18px + env(safe-area-inset-right));
+  bottom: calc(18px + env(safe-area-inset-bottom));
+  z-index: 30;
+
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  height: 56px;
+  padding: 0 22px 0 18px;
+  border-radius: var(--pill);
+
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 0.78rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-strong);
+
+  background: linear-gradient(180deg, rgba(40, 34, 70, 0.96), rgba(16, 14, 32, 0.96));
+  border: 1px solid rgba(255, 211, 106, 0.45);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.6), 0 0 22px rgba(255, 211, 106, 0.16);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.fab-plus {
+  font-size: 1.5rem;
+  line-height: 1;
+  color: var(--gold);
+}
+
+body:not([data-section="to-watch"]):not([data-section="watched"]) .fab {
+  display: none;
+}
+
+@media (hover: hover) {
+  .fab:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 22px 46px rgba(0, 0, 0, 0.65), 0 0 28px rgba(255, 211, 106, 0.26);
+  }
+}
+
+/* the pick for tonight, under the count of the list it picks from */
+.tonight-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+  padding: 9px 18px;
+  border-radius: var(--pill);
+
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 0.74rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink);
+
+  background: rgba(255, 211, 106, 0.06);
+  border: 1px solid rgba(255, 211, 106, 0.32);
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+}
+
+.tonight-spark {
+  color: var(--gold);
+  text-shadow: 0 0 10px rgba(255, 211, 106, 0.5);
+}
+
+@media (hover: hover) {
+  .tonight-btn:hover {
+    transform: translateY(-1px);
+    background: rgba(255, 211, 106, 0.1);
+    border-color: rgba(255, 211, 106, 0.5);
+  }
 }
 
 /* =========================

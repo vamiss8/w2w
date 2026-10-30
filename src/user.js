@@ -69,6 +69,9 @@ function updateUserUI() {
   if (btn) {
     btn.textContent = activeUser || (hasSession ? "?" : "sign in");
     btn.dataset.user = activeUser || "";
+    btn.dataset.hint = activeUser
+      ? `signed in as ${activeUser}. click to sign out`
+      : hasSession ? "signed in with an account that is not one of ours" : "sign in: we email you a link, no password";
     btn.setAttribute("aria-label", activeUser
       ? `signed in as ${activeUser}`
       : hasSession ? "signed in with an account that is not one of ours" : "sign in");
