@@ -370,6 +370,15 @@
           <input class="field-input" id="cardTitle" type="text" autocomplete="off" placeholder="e.g. The Fifth Element" required />
         </label>
 
+        <!-- a link to its page on imdb, if we want one. only the tt number
+             is kept. the link under the field searches imdb for the title
+             typed above, to find the page to copy -->
+        <div class="field">
+          <label class="field-label" for="cardImdb">imdb link <span class="field-optional">· if you like</span></label>
+          <input class="field-input" id="cardImdb" type="text" inputmode="url" autocomplete="off" spellcheck="false" placeholder="https://www.imdb.com/title/tt0119116/" />
+          <a class="field-help" id="cardImdbFind" href="https://www.imdb.com/" target="_blank" rel="noopener noreferrer">find it on imdb ↗</a>
+        </div>
+
         <!-- no field for the list: a card is on the watched one when it is
              watched, and on the other one otherwise -->
         <div class="field-grid">

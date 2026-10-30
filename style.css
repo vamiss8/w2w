@@ -1243,6 +1243,45 @@ li.is-animating {
   box-shadow: 0 0 8px currentColor;
 }
 
+/* the way to the film on imdb, quiet until pointed at. a card with no page
+   linked yet offers a search, a little quieter still */
+.imdb-link {
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  text-decoration: none;
+  color: var(--gold);
+}
+
+.imdb-link.is-search {
+  color: var(--muted);
+}
+
+.imdb-link:hover {
+  text-decoration: underline;
+}
+
+/* a small grey note beside a field's name, and a link under the field */
+.field-optional {
+  letter-spacing: 0.1em;
+  text-transform: none;
+  opacity: 0.7;
+}
+
+.field-help {
+  justify-self: start;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  color: var(--gold);
+  text-decoration: none;
+}
+
+.field-help:hover {
+  text-decoration: underline;
+}
+
 /* in the card form, a tick in front of whoever has seen it before */
 .seen input[type="checkbox"]:checked + .chip::before {
   content: "\2713";

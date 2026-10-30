@@ -4,7 +4,7 @@
 // so what you see is what was saved. realtime brings the same row back a
 // moment later, which changes nothing.
 
-import { LIST_WATCHED, STATE_PLANNED, STATE_STARTED, STATE_WATCHED, normalizeStatusCode, seenBefore, setCommentOpen, stateOf, statusOf, titleOf } from "./cards.js";
+import { LIST_WATCHED, STATE_PLANNED, STATE_STARTED, STATE_WATCHED, imdbSearchUrl, imdbTitleUrl, normalizeStatusCode, seenBefore, setCommentOpen, stateOf, statusOf, titleOf } from "./cards.js";
 import { remoteDeleteCard, remoteInsertCard, remoteInsertLog, remoteSaveComment, remoteUpdateCard } from "./db.js";
 import { closeDialog, confirmDialog, openDialog, whileSaving } from "./dialogs.js";
 import { activeList } from "./lists.js";
@@ -36,9 +36,11 @@ function openAddCard(list) {
   field("cardTitle").value = "";
   field("cardState").value = list === LIST_WATCHED ? STATE_WATCHED : STATE_PLANNED;
   setSeen("00");
+  field("cardImdb").value = "";
   field("cardStart").value = "";
   field("cardEnd").value = "";
   field("cardError").textContent = "";
+  syncImdbSearch();
 
   openDialog("cardDialog", "cardTitle");
 }
@@ -54,9 +56,11 @@ function openEditCard(id) {
   field("cardTitle").value = titleOf(row);
   field("cardState").value = stateOf(row);
   setSeen(normalizeStatusCode(row.status));
+  field("cardImdb").value = row.imdb_id ? imdbTitleUrl(row.imdb_id) : "";
   field("cardStart").value = row.start_date || "";
   field("cardEnd").value = row.end_date || "";
   field("cardError").textContent = "";
+  syncImdbSearch();
 
   openDialog("cardDialog", "cardTitle");
 }
@@ -92,6 +96,20 @@ function toggleCardMenu(li) {
   li.classList.toggle("menu-open", !open);
 }
 
+// the tt number out of whatever was pasted: a whole address, from the app or
+// the site, or the number alone. undefined when there is something that holds
+// no number, null when the field is empty
+function imdbIdOf(raw) {
+  const text = raw.trim();
+  if (!text) return null;
+  return /tt\d{7,10}/.exec(text)?.[0];
+}
+
+function syncImdbSearch() {
+  const title = field("cardTitle").value.trim();
+  field("cardImdbFind").href = title ? imdbSearchUrl(title) : "https://www.imdb.com/";
+}
+
 // the fields that a change is logged for, the same way from a row on the
 // page and from the row the database saved
 function snapshot(row) {
@@ -101,6 +119,7 @@ function snapshot(row) {
     status: normalizeStatusCode(row.status),
     start_date: row.start_date || null,
     end_date: row.end_date || null,
+    imdb_id: row.imdb_id || null,
   };
 }
 
@@ -117,6 +136,10 @@ async function logEditDiffs(before, after, cardId) {
 
   if (before.status !== after.status) {
     await remoteInsertLog("set_status", { title: after.title, from: before.status, to: after.status }, cardId);
+  }
+
+  if (before.imdb_id !== after.imdb_id) {
+    await remoteInsertLog("set_imdb", { title: after.title, imdb_id: after.imdb_id }, cardId);
   }
 
   if (before.start_date !== after.start_date || before.end_date !== after.end_date) {
@@ -137,6 +160,13 @@ async function saveCardForm() {
 
   const picked = field("cardState").value;
 
+  const imdb = imdbIdOf(field("cardImdb").value);
+  if (imdb === undefined) {
+    field("cardError").textContent = "that does not look like a page on imdb: paste the address of the film's page, or leave it empty";
+    field("cardImdb").focus();
+    return;
+  }
+
   // which list the card lands on follows from the state alone
   const payload = {
     title,
@@ -144,6 +174,7 @@ async function saveCardForm() {
     status: statusOf({ vika: field("cardSeenVika").checked, vlad: field("cardSeenVlad").checked }),
     start_date: field("cardStart").value.trim() || null,
     end_date: field("cardEnd").value.trim() || null,
+    imdb_id: imdb,
   };
 
   // no id when adding: the database numbers cards itself and rejects one sent
@@ -250,6 +281,8 @@ export function initializeCardUi() {
   document.addEventListener("keydown", e => {
     if (e.key === "Escape") closeAllCardMenus();
   });
+
+  field("cardTitle")?.addEventListener("input", syncImdbSearch);
 
   field("cardForm")?.addEventListener("submit", e => {
     e.preventDefault();

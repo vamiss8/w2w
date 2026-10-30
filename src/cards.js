@@ -52,6 +52,10 @@ export function normalizeStatusCode(value) {
 
 export const titleOf = row => row?.title || "unknown title";
 
+// imdb: the page of a film, and a search for a title that has none yet
+export const imdbTitleUrl = id => `https://www.imdb.com/title/${id}/`;
+export const imdbSearchUrl = title => `https://www.imdb.com/find/?q=${encodeURIComponent(title)}&s=tt`;
+
 // the line next to the title: nothing for a planned card, the start for a
 // started one, the day or the span for a watched one
 function watchDateText(row) {
@@ -133,6 +137,14 @@ export function drawCard(li, row) {
   const status = el("span", `card-status s-${code}`);
   status.append(el("span", "status-dot"), STATUS_TEXT[code]);
   sub.append(status);
+
+  // its page on imdb, or a search there for a card nobody linked yet
+  const imdb = el("a", row.imdb_id ? "imdb-link" : "imdb-link is-search", row.imdb_id ? "imdb ↗" : "find on imdb ↗");
+  imdb.href = row.imdb_id ? imdbTitleUrl(row.imdb_id) : imdbSearchUrl(titleOf(row));
+  imdb.target = "_blank";
+  imdb.rel = "noopener noreferrer";
+  imdb.dataset.hint = row.imdb_id ? "open its page on imdb" : "no page linked yet: search imdb for this title";
+  sub.append(imdb);
   title.append(sub);
 
   // under the title: the hearts of a watched card, how far into a started

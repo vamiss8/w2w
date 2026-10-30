@@ -9,7 +9,7 @@ import { getActiveUser, onUserChange } from "./user.js";
 
 // raised together with public.schema_version() by every migration.
 // tests/db/schema.test.js holds the two to the newest file in db/migrations
-export const SCHEMA_VERSION = 4;
+export const SCHEMA_VERSION = 5;
 
 const BANNER_ID = "dbBanner";
 

@@ -104,7 +104,7 @@ test("a new card appears when the saved row comes back, on top of its day", asyn
 
   await expect(page.locator("ul.cards.watched > li").first()).toContainText("Eternal Sunshine");
   const insert = (await writes(page)).find(r => r.table === "cards" && r.method === "POST");
-  expect(Object.keys(insert.body).sort()).toEqual(["end_date", "start_date", "state", "status", "title", "vika_score", "vlad_score"]);
+  expect(Object.keys(insert.body).sort()).toEqual(["end_date", "imdb_id", "start_date", "state", "status", "title", "vika_score", "vlad_score"]);
   expect(insert.body.state).toBe("watched");
 });
 

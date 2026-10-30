@@ -94,6 +94,9 @@ function describe(entry) {
     case "episode":
       say(" watched ", el("span", "log-episode", String(d.episode || "").replace(/^s(\d+)ep/, "s$1 ep")), " of ", titleEm(title));
       break;
+    case "set_imdb":
+      say(d.imdb_id ? " linked " : " unlinked ", titleEm(title), d.imdb_id ? " to its page on imdb" : " from imdb");
+      break;
     case "add_card":
       say(" added ", titleEm(title));
       break;

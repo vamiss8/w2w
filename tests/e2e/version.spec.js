@@ -18,7 +18,7 @@ test("a database from before 004 is called behind, with what to do about it", as
   await page.addInitScript(() => { window.__W2W_SCHEMA_VERSION__ = 0; });
   await signIn(page, "vika");
   await expect(banner(page)).toBeVisible();
-  await expect(banner(page)).toContainText("needs migration 4");
+  await expect(banner(page)).toContainText("needs migration 5");
   await expect(banner(page)).toContainText("db/migrations");
 
   await page.locator("#userToggle").click();
@@ -27,7 +27,7 @@ test("a database from before 004 is called behind, with what to do about it", as
 });
 
 test("a database ahead of the page asks for a reload", async ({ page }) => {
-  await page.addInitScript(() => { window.__W2W_SCHEMA_VERSION__ = 5; });
+  await page.addInitScript(() => { window.__W2W_SCHEMA_VERSION__ = 6; });
   await signIn(page, "vlad");
   await expect(banner(page)).toContainText("reload to get the new one");
 });
