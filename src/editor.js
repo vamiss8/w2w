@@ -102,7 +102,7 @@ function toggleCardMenu(li) {
 function imdbIdOf(raw) {
   const text = raw.trim();
   if (!text) return null;
-  return /tt\d{7,10}/.exec(text)?.[0];
+  return /\btt\d{7,10}\b/.exec(text)?.[0];
 }
 
 function syncImdbSearch() {

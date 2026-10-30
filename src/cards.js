@@ -171,7 +171,7 @@ export function drawCard(li, row) {
   sub.append(status);
 
   // its page on imdb, or a search there for a card nobody linked yet
-  const imdb = el("a", row.imdb_id ? "imdb-link" : "imdb-link is-search", row.imdb_id ? "imdb ↗" : "find on imdb ↗");
+  const imdb = el("a", row.imdb_id ? "imdb-link" : "imdb-link is-search", "imdb ↗");
   imdb.href = row.imdb_id ? imdbTitleUrl(row.imdb_id) : imdbSearchUrl(titleOf(row));
   imdb.target = "_blank";
   imdb.rel = "noopener noreferrer";
