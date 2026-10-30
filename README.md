@@ -126,7 +126,7 @@ merged. If it does not, the page tells one of us which one is missing.
    access in [Settings → API](https://www.themoviedb.org/settings/api).
 2. Open **something new → catalogue settings** on W2W. Paste the **API Read
    Access Token** (the long bearer token, not the short API key), then connect.
-3. Choose a format and mood, and draw a story. **Add to our list** opens an
+3. Choose a format and genre, and draw a story. **Add to our list** opens an
    editable draft; save it to add it. In a card's editor, **look up its page**
    offers matching releases so we can choose the right IMDb link.
 
@@ -135,6 +135,11 @@ device and origin. **Forget token** removes it. It is sent only to TMDB over
 HTTPS and is never written to Supabase, source files or logs. Don't paste it
 in Git, chat, or screenshots. An existing connection is optional: all previous
 features work without it. This feature needs no new database migration.
+
+The genre selector includes all 27 movie/TV genres supported by TMDB: 19 for
+films and 16 for series, with shared genres combined. Switching format keeps
+the selected genre when supported, or resets to **surprise us**. Anime combines
+animation with the selected genre in the catalogue query.
 
 Anime uses TMDB's Japanese-language animation filter; it isn't an exhaustive
 anime catalogue. Discovery samples popular, already released titles with at
@@ -304,7 +309,7 @@ insert into public.members (email, name) values ('...', 'vlad'), ('...', 'vika')
    в [Settings → API](https://www.themoviedb.org/settings/api).
 2. На W2W открыть **something new → catalogue settings**, вставить **API Read
    Access Token** (длинный токен, а не короткий API key) и нажать connect.
-3. Выбрать формат и настроение, нажать draw a story. **Add to our list**
+3. Выбрать формат и жанр, нажать draw a story. **Add to our list**
    открывает редактируемый черновик; сохранение добавляет карточку. В редакторе
    карточки **look up its page** позволяет выбрать правильный релиз для IMDb.
 
@@ -313,6 +318,11 @@ insert into public.members (email, name) values ('...', 'vlad'), ('...', 'vika')
 только TMDB по HTTPS, не записывается в Supabase, код или логи. Не вставлять
 его в Git, чат или скриншоты. Все прежние функции работают без подключения.
 Новая миграция базы не нужна.
+
+Список жанров включает все 27 жанров фильмов и сериалов TMDB: 19 для фильмов
+и 16 для сериалов, с объединением общих жанров. При смене формата выбранный
+жанр сохраняется, если доступен, иначе сбрасывается на **surprise us**.
+Для anime в запросе одновременно задаются анимация и выбранный жанр.
 
 Для anime используется фильтр японской анимации TMDB; это не полный каталог
 аниме. Выборка включает популярные вышедшие произведения со 100 и более

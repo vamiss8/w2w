@@ -2,7 +2,7 @@
 // The reveal is decorative; the result and all actions work with less motion.
 
 import { imdbSearchUrl, imdbTitleUrl } from "./cards.js";
-import { catalogueImdb, catalogueRequest, catalogueToken, discoverCatalogue, keepCatalogueToken } from "./catalogue.js";
+import { catalogueGenres, catalogueImdb, catalogueRequest, catalogueToken, discoverCatalogue, keepCatalogueToken } from "./catalogue.js";
 import { closeDialog, openDialog, whileSaving } from "./dialogs.js";
 import { openSuggestedCard } from "./editor.js";
 import { fold } from "./search.js";
@@ -91,7 +91,7 @@ async function draw() {
     }
     // A later draw fetches another page, while the seen set prevents repeats.
     deck = [];
-    field("discoveryStatus").textContent = "we have seen this batch. draw again for more, or change the mood";
+    field("discoveryStatus").textContent = "we have seen this batch. draw again for more, or change the genre";
   } catch (e) {
     if (!work.signal.aborted) {
       field("discoveryError").textContent = e.message;
@@ -121,6 +121,15 @@ function show(item) {
 }
 
 export function initializeDiscovery() {
+  function updateGenres() {
+    const select = field("discoveryMood");
+    const before = select.value;
+    const choices = [{ id: "any", name: "surprise us" }, ...catalogueGenres(field("discoveryKind").value)];
+    select.replaceChildren(...choices.map(({ id, name }) => new Option(name, id)));
+    select.value = choices.some(choice => choice.id === before) ? before : "any";
+  }
+  updateGenres();
+  field("discoveryKind").addEventListener("change", updateGenres);
   document.querySelector("[data-discover]").addEventListener("click", () => {
     field("catalogueSettings").open = !catalogueToken();
     field("catalogueConnection").textContent = catalogueToken() ? "connected in this browser" : "connect once to start";
