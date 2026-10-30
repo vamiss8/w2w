@@ -878,9 +878,10 @@ footer.instant-hide {
   gap: 8px;
 }
 
-/* a radio is there for the keyboard and the screen reader, and its label is
-   what the eye sees */
-input[type="radio"] {
+/* a radio or a checkbox is there for the keyboard and the screen reader,
+   and its label is what the eye sees */
+input[type="radio"],
+.control-group input[type="checkbox"] {
   position: absolute;
   width: 1px;
   height: 1px;
@@ -916,14 +917,16 @@ input[type="radio"] {
   transition: background 0.25s ease, color 0.25s ease, border-color 0.25s ease, transform 0.25s ease, box-shadow 0.25s ease;
 }
 
-input[type="radio"]:checked + .chip {
+input[type="radio"]:checked + .chip,
+input[type="checkbox"]:checked + .chip {
   color: var(--ink);
   background: var(--raised);
   border-color: rgba(230, 232, 255, 0.14);
   box-shadow: var(--shadow-active);
 }
 
-input[type="radio"]:focus-visible + .chip {
+input[type="radio"]:focus-visible + .chip,
+input[type="checkbox"]:focus-visible + .chip {
   border-color: var(--focus-line);
   box-shadow: var(--focus-ring), var(--shadow-active);
 }
@@ -1206,49 +1209,45 @@ li.is-animating {
   gap: 8px;
 }
 
-/* the status badge, with what its two digits mean on hover */
-.status {
-  position: relative;
-  padding: 6px 11px;
-  border-radius: var(--pill);
-
-  font-family: var(--font-mono);
-  font-size: 0.74rem;
-  letter-spacing: 0.12em;
-
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid var(--line-soft);
-  cursor: default;
+/* the line under a title: its dates, and who has seen it before in words,
+   after a dot of the colour of the card's edge */
+.card-sub {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 14px;
+  margin-top: 6px;
 }
 
-/* the badge sits by the right edge, so its tooltip grows to the left */
-.status .tooltip {
-  min-width: 0;
-  width: max-content;
-  left: auto;
-  right: -8px;
-  transform: translateY(-6px);
+.card-sub .watch-date {
+  margin-top: 0;
+}
+
+.card-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--font-mono);
+  font-weight: 400;
+  font-size: 0.68rem;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
 }
 
-.status .tooltip::before {
-  left: auto;
-  right: 18px;
-  transform: rotate(45deg);
+.status-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 8px currentColor;
 }
 
-.status .tooltip.tooltip-down {
-  transform: translateY(6px);
-}
-
-@media (hover: hover) {
-  .status:hover .tooltip {
-    transform: translateY(0);
-  }
-}
-
-.status:focus-visible .tooltip {
-  transform: translateY(0);
+/* in the card form, a tick in front of whoever has seen it before */
+.seen input[type="checkbox"]:checked + .chip::before {
+  content: "\2713";
+  margin-right: 6px;
+  color: var(--gold);
 }
 
 /* the edge colour of 00 is too dark to read as text */

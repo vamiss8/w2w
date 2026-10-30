@@ -29,15 +29,21 @@ export function listOf(row) {
 }
 
 // the status is two digits, vika's and then vlad's, and a 1 means that person
-// had seen it before: 01 is a first time for vika, 11 a rewatch for both
+// had seen it before: 01 is new to vika, 11 a rewatch for both. the database
+// keeps the digits; the page says them in words, since there is room on a
+// card and the digits had to be learnt
 export const STATUS_CODES = ["00", "01", "10", "11"];
 
 export const STATUS_TEXT = {
-  "00": "no one watched.",
-  "01": "vika's first time.",
-  "10": "vlad's first time.",
-  "11": "rewatch.",
+  "00": "new to both of us",
+  "01": "new to vika",
+  "10": "new to vlad",
+  "11": "a rewatch",
 };
+
+// who has seen it before, by the digits
+export const seenBefore = code => ({ vika: code[0] === "1", vlad: code[1] === "1" });
+export const statusOf = ({ vika, vlad }) => `${vika ? 1 : 0}${vlad ? 1 : 0}`;
 
 export function normalizeStatusCode(value) {
   const s = String(value || "").trim();
@@ -118,9 +124,16 @@ export function drawCard(li, row) {
   li.dataset.status = code;
   li.dataset.state = stateOf(row);
 
+  // under the title, the dates and who has seen it before, in words, with a
+  // dot of the colour the card's edge has
   const title = el("div", "filmTitle", titleOf(row));
+  const sub = el("span", "card-sub");
   const date = watchDateText(row);
-  if (date) title.append(el("span", "watch-date", date));
+  if (date) sub.append(el("span", "watch-date", date));
+  const status = el("span", `card-status s-${code}`);
+  status.append(el("span", "status-dot"), STATUS_TEXT[code]);
+  sub.append(status);
+  title.append(sub);
 
   // under the title: the hearts of a watched card, how far into a started
   // one we are, and the comments. a card with none of them has nothing there
@@ -135,19 +148,13 @@ export function drawCard(li, row) {
   const left = el("div", "left");
   left.append(title, meta);
 
-  const status = el("div", `status s-${code}`, code);
-  status.tabIndex = 0;
-  status.setAttribute("role", "button");
-  status.setAttribute("aria-label", `Status ${code} info`);
-  status.append(el("span", "tooltip", STATUS_TEXT[code]));
-
   const actions = el("button", "card-actions", "⋯");
   actions.type = "button";
   actions.setAttribute("aria-label", "Card actions");
   actions.dataset.hint = "edit, comment on or delete this card";
 
   const right = el("div", "right");
-  right.append(status, actions);
+  right.append(actions);
 
   const menu = el("div", "card-menu");
   menu.dataset.open = "false";

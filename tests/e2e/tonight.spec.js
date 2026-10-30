@@ -12,7 +12,7 @@ test("it picks from what the list shows, and never the same card twice in a row"
   await page.locator("#view-to-watch [data-tonight]").click();
   await expect(page.locator("#tonightDialog")).toBeVisible();
   await expect(page.locator("#tonightPick")).toHaveText("The Grand Budapest Hotel");
-  await expect(page.locator("#tonightMeta")).toHaveText("not started yet · vika's first time");
+  await expect(page.locator("#tonightMeta")).toHaveText("not started yet · new to vika");
 
   await page.locator("#tonightAgain").click();
   await expect(page.locator("#tonightPick")).toHaveText("Tom & Jerry: The Movie");
@@ -25,7 +25,7 @@ test("the filters and the search say what it may pick from", async ({ page }) =>
 
   await page.locator("#view-to-watch [data-tonight]").click();
   await expect(page.locator("#tonightPick")).toHaveText("Severance");
-  await expect(page.locator("#tonightMeta")).toHaveText("started on 10/02/2026 · no one watched");
+  await expect(page.locator("#tonightMeta")).toHaveText("started on 10/02/2026 · new to both of us");
 
   // the only card there is, offered again rather than nothing
   await page.locator("#tonightAgain").click();

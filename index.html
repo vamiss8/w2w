@@ -135,11 +135,11 @@
 
         <div class="control-row">
           <div class="control-caption">
-            status
-            <span class="info-badge" tabindex="0" role="button" aria-label="Status info">
+            seen before
+            <span class="info-badge" tabindex="0" role="button" aria-label="Seen before info">
               ?
               <span class="tooltip tooltip-wide">
-                The first digit is <u>Vika</u>, the second <u>Vlad</u>, and a 1 means that one of us has seen it before. It <u>does not change</u> the order.
+                Which of us had <u>seen it before</u>. It <u>does not change</u> the order.
               </span>
             </span>
           </div>
@@ -149,16 +149,16 @@
             <label class="chip" for="uw-status-all">all <span class="tooltip">Displays everything.</span></label>
 
             <input type="radio" name="uw-status" id="uw-status-00" />
-            <label class="chip" for="uw-status-00">00 <span class="tooltip">Displays content that none of us watched.</span></label>
+            <label class="chip" for="uw-status-00">new to both <span class="tooltip">Displays content that none of us watched.</span></label>
 
             <input type="radio" name="uw-status" id="uw-status-01" />
-            <label class="chip" for="uw-status-01">01 <span class="tooltip">Displays content that <u>Vlad</u> watched, but not <u>Vika</u>.</span></label>
+            <label class="chip" for="uw-status-01">new to vika <span class="tooltip">Displays content that <u>Vlad</u> watched, but not <u>Vika</u>.</span></label>
 
             <input type="radio" name="uw-status" id="uw-status-10" />
-            <label class="chip" for="uw-status-10">10 <span class="tooltip">Displays content that <u>Vika</u> watched, but not <u>Vlad</u>.</span></label>
+            <label class="chip" for="uw-status-10">new to vlad <span class="tooltip">Displays content that <u>Vika</u> watched, but not <u>Vlad</u>.</span></label>
 
             <input type="radio" name="uw-status" id="uw-status-11" />
-            <label class="chip" for="uw-status-11">11 <span class="tooltip">Displays content that we want to <u>rewatch</u>.</span></label>
+            <label class="chip" for="uw-status-11">rewatch <span class="tooltip">Displays content that we want to <u>rewatch</u>.</span></label>
           </div>
         </div>
       </div>
@@ -215,11 +215,11 @@
 
         <div class="control-row">
           <div class="control-caption">
-            status
-            <span class="info-badge" tabindex="0" role="button" aria-label="Status info">
+            seen before
+            <span class="info-badge" tabindex="0" role="button" aria-label="Seen before info">
               ?
               <span class="tooltip tooltip-wide">
-                The first digit is <u>Vika</u>, the second <u>Vlad</u>, and a 1 means that one of us had seen it before. It <u>does not change</u> the order.
+                Which of us had <u>seen it before</u>. It <u>does not change</u> the order.
               </span>
             </span>
           </div>
@@ -229,16 +229,16 @@
             <label class="chip" for="w-status-all">all <span class="tooltip">Displays everything.</span></label>
 
             <input type="radio" name="w-status" id="w-status-00" />
-            <label class="chip" for="w-status-00">00 <span class="tooltip">Displays content that none of us watched.</span></label>
+            <label class="chip" for="w-status-00">new to both <span class="tooltip">Displays content that none of us watched.</span></label>
 
             <input type="radio" name="w-status" id="w-status-01" />
-            <label class="chip" for="w-status-01">01 <span class="tooltip">Displays content that <u>Vlad</u> watched, but not <u>Vika</u>.</span></label>
+            <label class="chip" for="w-status-01">new to vika <span class="tooltip">Displays content that <u>Vlad</u> watched, but not <u>Vika</u>.</span></label>
 
             <input type="radio" name="w-status" id="w-status-10" />
-            <label class="chip" for="w-status-10">10 <span class="tooltip">Displays content that <u>Vika</u> watched, but not <u>Vlad</u>.</span></label>
+            <label class="chip" for="w-status-10">new to vlad <span class="tooltip">Displays content that <u>Vika</u> watched, but not <u>Vlad</u>.</span></label>
 
             <input type="radio" name="w-status" id="w-status-11" />
-            <label class="chip" for="w-status-11">11 <span class="tooltip">Displays content that we want to <u>rewatch</u>.</span></label>
+            <label class="chip" for="w-status-11">rewatch <span class="tooltip">Displays content that we want to <u>rewatch</u>.</span></label>
           </div>
         </div>
       </div>
@@ -382,15 +382,17 @@
             </select>
           </label>
 
-          <label class="field">
-            <span class="field-label">status</span>
-            <select class="field-select" id="cardStatus">
-              <option value="00">00 · new to both</option>
-              <option value="01">01 · vika's first time</option>
-              <option value="10">10 · vlad's first time</option>
-              <option value="11">11 · a rewatch</option>
-            </select>
-          </label>
+          <!-- the status, asked as what it means. src/cards.js turns the
+               two answers into the two digits the database keeps -->
+          <div class="field">
+            <span class="field-label">seen it before</span>
+            <div class="control-group seen">
+              <input type="checkbox" id="cardSeenVlad" />
+              <label class="chip" for="cardSeenVlad">vlad has</label>
+              <input type="checkbox" id="cardSeenVika" />
+              <label class="chip" for="cardSeenVika">vika has</label>
+            </div>
+          </div>
         </div>
 
         <div class="field-grid">

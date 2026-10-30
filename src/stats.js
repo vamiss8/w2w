@@ -213,7 +213,7 @@ function draw() {
   const firsts = el("div", "stat-row");
   for (const code of STATUS_CODES) {
     const box = tile(FIRSTS[code], watched.filter(r => normalizeStatusCode(r.status) === code).length);
-    box.querySelector(".stat-label").prepend(el("span", `status s-${code}`, code));
+    box.querySelector(".stat-label").prepend(el("span", `status-dot s-${code}`));
     firsts.appendChild(box);
   }
 

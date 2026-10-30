@@ -4,7 +4,7 @@
 // so what you see is what was saved. realtime brings the same row back a
 // moment later, which changes nothing.
 
-import { LIST_WATCHED, STATE_PLANNED, STATE_STARTED, STATE_WATCHED, normalizeStatusCode, setCommentOpen, stateOf, titleOf } from "./cards.js";
+import { LIST_WATCHED, STATE_PLANNED, STATE_STARTED, STATE_WATCHED, normalizeStatusCode, seenBefore, setCommentOpen, stateOf, statusOf, titleOf } from "./cards.js";
 import { remoteDeleteCard, remoteInsertCard, remoteInsertLog, remoteSaveComment, remoteUpdateCard } from "./db.js";
 import { closeDialog, confirmDialog, openDialog, whileSaving } from "./dialogs.js";
 import { activeList } from "./lists.js";
@@ -18,6 +18,13 @@ let commentCardId = null;
 
 const field = id => document.getElementById(id);
 
+// the status, asked as what it means: which of us has seen it before
+function setSeen(code) {
+  const seen = seenBefore(code);
+  field("cardSeenVlad").checked = seen.vlad;
+  field("cardSeenVika").checked = seen.vika;
+}
+
 // a card added from the watched list starts out watched, and one added from
 // the other list planned
 function openAddCard(list) {
@@ -28,7 +35,7 @@ function openAddCard(list) {
 
   field("cardTitle").value = "";
   field("cardState").value = list === LIST_WATCHED ? STATE_WATCHED : STATE_PLANNED;
-  field("cardStatus").value = "00";
+  setSeen("00");
   field("cardStart").value = "";
   field("cardEnd").value = "";
   field("cardError").textContent = "";
@@ -46,7 +53,7 @@ function openEditCard(id) {
 
   field("cardTitle").value = titleOf(row);
   field("cardState").value = stateOf(row);
-  field("cardStatus").value = normalizeStatusCode(row.status);
+  setSeen(normalizeStatusCode(row.status));
   field("cardStart").value = row.start_date || "";
   field("cardEnd").value = row.end_date || "";
   field("cardError").textContent = "";
@@ -134,7 +141,7 @@ async function saveCardForm() {
   const payload = {
     title,
     state: [STATE_PLANNED, STATE_STARTED, STATE_WATCHED].includes(picked) ? picked : STATE_PLANNED,
-    status: normalizeStatusCode(field("cardStatus").value),
+    status: statusOf({ vika: field("cardSeenVika").checked, vlad: field("cardSeenVlad").checked }),
     start_date: field("cardStart").value.trim() || null,
     end_date: field("cardEnd").value.trim() || null,
   };

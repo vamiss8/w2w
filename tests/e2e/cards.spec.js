@@ -63,12 +63,14 @@ test("editing a card saves it and logs each kind of change", async ({ page }) =>
   await expect(page.locator("#cardState")).toHaveValue("started");
 
   await page.locator("#cardTitle").fill("Twin Peaks: The Return");
-  await page.locator("#cardStatus").selectOption("11");
+  // twin peaks was new to both of us; now both have seen it before
+  await page.locator('label[for="cardSeenVlad"]').click();
+  await page.locator('label[for="cardSeenVika"]').click();
   await page.locator("#cardStart").fill("2026-09-20");
   await page.locator("#cardSave").click();
 
   await expect(card(page, 5).locator(".filmTitle")).toContainText("Twin Peaks: The Return");
-  await expect(card(page, 5).locator(".status")).toContainText("11");
+  await expect(card(page, 5).locator(".card-status")).toHaveText("a rewatch");
   await expect(card(page, 5).locator(".watch-date")).toHaveText("started on 09/20/2026");
 
   const actions = (await writes(page)).filter(r => r.table === "logs").map(r => r.body.action);
