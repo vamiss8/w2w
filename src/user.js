@@ -33,6 +33,18 @@ export function onUserChange(fn) {
   listeners.push(fn);
 }
 
+// settled once the first session supabase-js reports, the one restored from
+// the last visit or brought by a link, has been put to the database. the
+// first pull waits for it, so a member's cards arrive with their comments in
+// one go instead of a guest's first and ours a moment later
+let settle;
+const settled = new Promise(resolve => { settle = resolve; });
+
+export function whenIdentityKnown() {
+  // and never longer than a few seconds, should supabase not answer at all
+  return Promise.race([settled, new Promise(resolve => setTimeout(resolve, 4000))]);
+}
+
 async function refreshIdentity(session) {
   hasSession = !!session;
   const next = session ? await remoteWhoAmI() : null;
@@ -41,6 +53,7 @@ async function refreshIdentity(session) {
 
   updateUserUI();
   if (changed) listeners.forEach(fn => fn(activeUser));
+  settle();
 
   if (activeUser && ARRIVED_FROM_LINK && !arrivalLogged) {
     arrivalLogged = true;
@@ -140,12 +153,13 @@ export function initializeAuth() {
     if (e.target.closest("[data-sign-in]")) openAuthDialog();
   });
 
-  onAuthChange((event, session) => {
+  // with no supabase-js there is no session to wait for
+  if (!onAuthChange((event, session) => {
     // supabase-js holds a lock while it runs this callback, and a query
     // started from inside it would wait for that lock forever. the work is
     // moved out of the callback instead
     setTimeout(() => refreshIdentity(session), 0);
-  });
+  })) settle();
 
   // a link that expired or was already used lands here with an error instead
   // of a session. it is said once, and taken out of the address bar

@@ -326,9 +326,11 @@ export async function remoteWhoAmI() {
 
 // every change of session: the one restored on load, a sign-in through a
 // link, a refresh, a sign-out
+// false when there is no supabase-js to listen to
 export function onAuthChange(callback) {
   const sb = getSupabase();
-  if (!sb) return;
+  if (!sb) return false;
 
   sb.auth.onAuthStateChange(callback);
+  return true;
 }

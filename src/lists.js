@@ -244,6 +244,7 @@ function showFooterAfter(seconds) {
   footer.classList.remove("visible");
   footer.classList.add("instant-hide");
   footerTimer = setTimeout(() => {
+    footerTimer = 0;
     footer.classList.remove("instant-hide");
     footer.classList.add("visible");
   }, seconds * 1000);
@@ -274,6 +275,12 @@ export function activeList() {
 let renderRaf = 0;
 let renderAnimate = false;
 
+// whether the cards have faded in yet. the first drawing with cards in it is
+// the one that fades them in. the page used to draw them as they arrived and
+// then fade the same cards in again, from nothing, once everything else had
+// loaded, so they seemed to load twice
+let introduced = false;
+
 // realtime can bring a burst of rows at once, and every one of them asks for
 // a redraw. they are drawn once per frame instead of once per row
 export function scheduleRender({ animate = false } = {}) {
@@ -282,13 +289,19 @@ export function scheduleRender({ animate = false } = {}) {
 
   renderRaf = requestAnimationFrame(() => {
     renderRaf = 0;
-    const doAnimate = renderAnimate;
+    let doAnimate = renderAnimate;
     renderAnimate = false;
+
+    if (!introduced && cardsLoadState() === "loaded") {
+      introduced = true;
+      doAnimate = true;
+    }
 
     drawLists();
     const list = activeList();
     if (doAnimate && list) animateList(list);
-    else showFooterAfter(0);
+    // a quiet redraw in the middle of a fade-in leaves the footer to its timer
+    else if (!footerTimer) showFooterAfter(0);
   });
 }
 
