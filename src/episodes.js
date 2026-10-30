@@ -27,6 +27,9 @@ export function parseEntries(text) {
   }));
 }
 
+// A realtime echo may redraw the button before the request finishes.
+const pending = new Set();
+
 // later means a later day, then a later season, then a later episode
 function later(a, b) {
   return (a.date - b.date) || ((a.season ?? 0) - (b.season ?? 0)) || (a.episode - b.episode);
@@ -82,6 +85,7 @@ export function progressLine(row) {
   const button = document.createElement("button");
   button.className = "ep-next";
   button.type = "button";
+  button.disabled = pending.has(String(row.id));
   button.textContent = "+1 ep";
   button.setAttribute("aria-label", `we watched ${spoken(next)}`);
   button.dataset.hint = `we watched ${spoken(next)}: it goes into your comment, dated today`;
@@ -94,22 +98,28 @@ async function nextEpisode(button) {
   const me = getActiveUser();
   const id = button.closest("li")?.dataset.id;
   const row = id && getCard(id);
-  if (!me || !row) return;
+  if (!me || !row || pending.has(id)) return;
 
   const next = nextAfter(furthest([getComment(id, "vlad"), getComment(id, "vika")]));
   const text = withEpisode(getComment(id, me), next);
+  const hadFocus = document.activeElement === button;
 
+  pending.add(id);
   button.disabled = true;
-  const saved = await remoteSaveComment(id, me, text);
-  button.disabled = false;
-
-  if (!saved) {
-    toast(`could not write down ${spoken(next)}, try again`);
-    return;
+  try {
+    if (!await remoteSaveComment(id, me, text)) {
+      toast(`could not write down ${spoken(next)}, try again`);
+      return;
+    }
+    putComment(id, me, text);
+    await remoteInsertLog("episode", { title: row.title, episode: codeOf(next) }, id);
+  } finally {
+    pending.delete(id);
+    const current = document.querySelector(`.cards > li[data-id="${id}"] .ep-next`);
+    if (current) current.disabled = false;
+    button.disabled = false;
+    if (hadFocus && current && document.activeElement === document.body) current.focus({ preventScroll: true });
   }
-
-  putComment(id, me, text);
-  await remoteInsertLog("episode", { title: row.title, episode: codeOf(next) }, id);
 }
 
 export function initializeEpisodes() {

@@ -122,6 +122,7 @@ function commentToggles(row) {
 // built node by node: a title is typed by one of us, and nothing typed should
 // ever be read as markup
 export function drawCard(li, row) {
+  const restoreEpisodeFocus = li.contains(document.activeElement) && document.activeElement.matches(".ep-next");
   const code = normalizeStatusCode(row.status);
 
   li.dataset.id = String(row.id);
@@ -179,4 +180,5 @@ export function drawCard(li, row) {
   }
 
   li.replaceChildren(left, right, menu);
+  if (restoreEpisodeFocus) li.querySelector(".ep-next")?.focus({ preventScroll: true });
 }

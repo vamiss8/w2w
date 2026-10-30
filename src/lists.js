@@ -163,15 +163,17 @@ function drawLists() {
     const other = lists[list === LIST_WATCHED ? LIST_TO_WATCH : LIST_WATCHED];
     pointElsewhere(view, list, other.filter(passes).length);
 
-    // appending a node that is already in the list moves it, so appending in
-    // sorted order is the whole sort
+    // Leave cards already in the right place attached. Moving every node on
+    // a comment update restarts CSS animations and can disturb scroll and focus.
     let shown = 0;
+    let cursor = ul.firstElementChild;
     sorted.forEach(row => {
       const li = cardFor(row);
       const pass = passes(row);
       li.classList.toggle("is-hidden", !pass);
       if (pass) shown += 1;
-      ul.appendChild(li);
+      if (li !== cursor) ul.insertBefore(li, cursor);
+      cursor = li.nextElementSibling;
     });
 
     describeList(view, list, sorted, shown);
@@ -342,6 +344,12 @@ export function initializeLists() {
   setFiltersOpen(localStorage.getItem(LS_FILTERS_OPEN) === "true");
   document.querySelectorAll(".filters-toggle").forEach(button => {
     button.addEventListener("click", () => setFiltersOpen(button.getAttribute("aria-expanded") !== "true"));
+  });
+
+  document.addEventListener("animationend", e => {
+    if (e.animationName === "fade-up" && e.target.matches(".cards > li")) {
+      e.target.classList.remove("is-animating");
+    }
   });
 
   // a list fades in each time it is opened. the first time, the cards are
