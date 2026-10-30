@@ -115,7 +115,7 @@ export async function signIn(page, who = "vlad") {
 
 // opens a section the way a click in the navigation does
 export async function goTo(page, section) {
-  await page.locator(`.nav-item[data-section="${section}"]`).click();
+  await page.locator(`.nav-item[data-section="${section}"], .side-item[data-section="${section}"]`).click();
   await expect(page.locator(`#view-${section}`)).toBeVisible();
 }
 

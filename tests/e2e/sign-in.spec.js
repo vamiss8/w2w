@@ -9,8 +9,8 @@ test("arriving through the link signs vlad in, and logs it once", async ({ page 
 
   expect(new URL(page.url()).hash).not.toContain("access_token");
   await expect(page.locator("body")).not.toHaveClass(/is-guest/);
-  await expect(page.locator("#view-to-watch [data-add]")).toBeVisible();
-  await expect(page.locator('.nav-item[data-section="wishlists"]')).toBeVisible();
+  await expect(page.locator("[data-add]")).toBeVisible();
+  await expect(page.locator('.side-item[data-section="wishlists"]')).toBeVisible();
   await expect(page.locator(".comment-toggle")).toHaveCount(FIXTURES.comments.length);
 
   await expect.poll(async () => (await requests(page)).filter(r => r.body?.action === "login").length).toBe(1);
