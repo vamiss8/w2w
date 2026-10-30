@@ -1,0 +1,4 @@
+# a vendored file is kept byte for byte, so it stays the one its checksum in
+# THIRD_PARTY.md names. git would otherwise turn its line endings into crlf
+# on a windows checkout
+vendor/** -text

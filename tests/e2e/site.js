@@ -1,7 +1,7 @@
 // what every spec starts from: the site, served straight from the repo, with
 // tests/fake/supabase.js standing in for supabase and tests/fixtures as its
-// data. supabase-js itself is the real one, from node_modules, the same
-// version and the same bytes the page loads from the cdn.
+// data. supabase-js itself is the real one: the copy in vendor/, which
+// vendor.spec.js holds to the one in node_modules.
 
 import { test as base, expect } from "@playwright/test";
 import fs from "node:fs";
@@ -18,11 +18,35 @@ export const FIXTURES = {
   members: fixture("members"),
 };
 
-const SUPABASE_JS = path.join(ROOT, "tests/node_modules/@supabase/supabase-js/dist/umd/supabase.js");
 const TYPES = {
   ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".json": "application/json",
   ".png": "image/png", ".webp": "image/webp", ".svg": "image/svg+xml", ".webmanifest": "application/manifest+json",
 };
+
+// the headers cloudflare pages adds, read from the same _headers file, so the
+// site is tested under the policy it is served with. a block is a path
+// pattern, where * stands for anything, and the indented lines under it
+function headersFor(pathname) {
+  const headers = {};
+  let applies = false;
+
+  for (const line of fs.readFileSync(path.join(ROOT, "_headers"), "utf8").split(/\r?\n/)) {
+    if (!line.trim() || line.trim().startsWith("#")) continue;
+
+    if (!/^\s/.test(line)) {
+      const pattern = line.trim().split("*").map(part => part.replace(/[.+?^${}()|[\]\\]/g, "\\$&")).join(".*");
+      applies = new RegExp(`^${pattern}$`).test(pathname);
+      continue;
+    }
+
+    if (applies) {
+      const colon = line.indexOf(":");
+      headers[line.slice(0, colon).trim().toLowerCase()] = line.slice(colon + 1).trim();
+    }
+  }
+
+  return headers;
+}
 
 async function serve(route) {
   const url = new URL(route.request().url());
@@ -33,11 +57,13 @@ async function serve(route) {
     if (!file.startsWith(ROOT) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) {
       return route.fulfill({ status: 404, body: "not found" });
     }
-    return route.fulfill({ path: file, contentType: TYPES[path.extname(file).toLowerCase()] || "application/octet-stream" });
-  }
-
-  if (url.host === "cdn.jsdelivr.net" && url.pathname.includes("/@supabase/supabase-js@")) {
-    return route.fulfill({ path: SUPABASE_JS, contentType: "text/javascript" });
+    return route.fulfill({
+      path: file,
+      headers: {
+        "content-type": TYPES[path.extname(file).toLowerCase()] || "application/octet-stream",
+        ...headersFor(url.pathname),
+      },
+    });
   }
 
   // fonts and anything else from outside: a run stays offline
@@ -49,7 +75,19 @@ export const test = base.extend({
     await page.route("**/*", serve);
     await page.addInitScript(fixtures => { window.__W2W_FIXTURES__ = fixtures; }, FIXTURES);
     await page.addInitScript({ path: path.join(ROOT, "tests/fake/supabase.js") });
+
+    // whatever the policy turned down, in any test
+    await page.addInitScript(() => {
+      window.__cspViolations = [];
+      document.addEventListener("securitypolicyviolation", e => {
+        window.__cspViolations.push(`${e.effectiveDirective} ${e.blockedURI || "inline"}`);
+      });
+    });
+
     await use(page);
+
+    const refused = await page.evaluate(() => window.__cspViolations || []).catch(() => []);
+    expect(refused, "the content security policy refused something").toEqual([]);
   },
 });
 

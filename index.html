@@ -18,9 +18,13 @@
   <link rel="stylesheet" href="style.css" />
 
   <!-- both run once the whole page is parsed, in this order: defer on the
-       first, and a module is deferred without asking. supabase-js is pinned,
-       since @2 takes whatever 2.x is newest -->
-  <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js"></script>
+       first, and a module is deferred without asking.
+
+       supabase-js is served by the site itself, the same file the page used
+       to take from jsdelivr. a cdn is one more party that can be blocked,
+       slow, or changed under us, and without this one script the page shows
+       nothing at all. THIRD_PARTY.md says where it came from -->
+  <script defer src="vendor/supabase-js-2.117.2.js"></script>
   <script type="module" src="src/main.js"></script>
 </head>
 <!-- every visit starts as a guest. src/user.js takes the class away once the

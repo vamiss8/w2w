@@ -70,7 +70,7 @@ test.describe("signed in", () => {
 
 test("a page that cannot reach the database says so instead of staying empty", async ({ page }) => {
   // supabase-js itself never arrives: a blocked cdn, or no network
-  await page.route(/supabase-js@/, route => route.abort());
+  await page.route(/vendor\/supabase-js/, route => route.abort());
   await page.goto("/");
   await expect(page.locator("#view-to-watch [data-empty]")).toHaveText("could not reach the database. reload to try again");
 });
