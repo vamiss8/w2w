@@ -128,3 +128,49 @@ test("discovery fits a phone and works without motion or results", async ({ page
   await expect(page.locator("#discoveryAdd")).toBeDisabled();
   expect(await page.locator("#discoveryDialog").evaluate(d => d.scrollWidth <= d.clientWidth)).toBe(true);
 });
+
+test("all supported genres are available and the format keeps its own genre IDs", async ({ page }) => {
+  await catalogue(page);
+  await signIn(page);
+  await connect(page);
+  const genre = page.locator("#discoveryMood");
+  await expect(genre.locator("option")).toHaveCount(28);
+  await expect(page.locator('#discoveryKind option[value="anime"]')).toHaveText("anime");
+  for (const label of ["horror", "romance", "science fiction", "drama", "thriller", "documentary"]) {
+    await expect(genre.locator("option", { hasText: new RegExp(`^${label}$`) })).toHaveCount(1);
+  }
+  const requested = [];
+  page.on("request", r => { if (r.url().includes("/discover/")) requested.push(new URL(r.url())); });
+  await genre.selectOption("27");
+  await page.locator("#discoveryDraw").click();
+  await expect(page.locator("#discoveryStage")).toHaveAttribute("aria-busy", "false");
+  expect(requested).toHaveLength(1);
+  expect(requested[0].pathname).toBe("/3/discover/movie");
+  expect(requested[0].searchParams.get("with_genres")).toBe("27");
+
+  await page.locator("#discoveryKind").selectOption("series");
+  await expect(genre).toHaveValue("any");
+  await expect(genre.locator("option")).toHaveCount(17);
+  await expect(genre.locator('option[value="27"]')).toHaveCount(0);
+  await genre.selectOption("10765");
+  requested.length = 0;
+  await page.locator("#discoveryDraw").click();
+  await expect(page.locator("#discoveryStage")).toHaveAttribute("aria-busy", "false");
+  expect(requested).toHaveLength(1);
+  expect(requested[0].pathname).toBe("/3/discover/tv");
+  expect(requested[0].searchParams.get("with_genres")).toBe("10765");
+});
+
+test("anime applies the chosen genre together with animation on the server", async ({ page }) => {
+  await catalogue(page);
+  await signIn(page);
+  await connect(page);
+  await page.locator("#discoveryKind").selectOption("anime");
+  await page.locator("#discoveryMood").selectOption("9648");
+  const requested = [];
+  page.on("request", r => { if (r.url().includes("/discover/")) requested.push(new URL(r.url())); });
+  await page.locator("#discoveryDraw").click();
+  await expect(page.locator("#discoveryStage")).toHaveAttribute("aria-busy", "false");
+  expect(requested).toHaveLength(2);
+  expect(requested.every(url => url.searchParams.get("with_genres") === "16,9648" && url.searchParams.get("with_original_language") === "ja")).toBe(true);
+});
