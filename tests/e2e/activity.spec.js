@@ -84,11 +84,11 @@ test("a long log comes a page at a time", async ({ page }) => {
   await expect(page.locator("#logsMore")).toHaveText("no more");
 });
 
-test("an episode reads as one, and an evening of them folds into the last", async ({ page }) => {
+test("episode marks credit the account that recorded them, and an evening folds into the last", async ({ page }) => {
   await signIn(page, "vlad");
   await goTo(page, "activity");
   await write(page, { user_name: "vlad", action: "episode", card_id: 21, details: { title: "The Office", episode: "s3ep3" } });
   await write(page, { user_name: "vlad", action: "episode", card_id: 21, details: { title: "The Office", episode: "s3ep4" } });
-  await expect(lines(page).first()).toContainText("Vlad watched s3 ep4 of The Office");
+  await expect(lines(page).first()).toContainText("Vlad marked s3 ep4 of The Office as watched");
   await expect(lines(page).first().locator(".log-count")).toHaveText("×2");
 });
