@@ -92,7 +92,8 @@ function describe(entry) {
       say(" left a comment on ", titleEm(title));
       break;
     case "episode":
-      say(" watched ", el("span", "log-episode", String(d.episode || "").replace(/^s(\d+)ep/, "s$1 ep")), " of ", titleEm(title));
+      // The account identifies who marked our shared progress, not a viewer.
+      say(" marked ", el("span", "log-episode", String(d.episode || "").replace(/^s(\d+)ep/, "s$1 ep")), " of ", titleEm(title), " as watched");
       break;
     case "set_imdb":
       say(d.imdb_id ? " linked " : " unlinked ", titleEm(title), d.imdb_id ? " to its page on imdb" : " from imdb");
