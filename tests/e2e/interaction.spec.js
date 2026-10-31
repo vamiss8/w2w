@@ -16,7 +16,7 @@ test("+1 keeps the list attached, its scroll position, and its other cards uncha
   });
   const url = page.url();
   await card(page, 5).locator(".ep-next").click();
-  await expect(card(page, 5).locator(".progress-now")).toHaveText("ep8");
+  await expect(card(page, 5).locator(".progress-now")).toHaveText("ep7");
   expect(page.url()).toBe(url);
   expect(await page.evaluate(() => window.__movedCards)).toEqual([]);
   expect(await page.evaluate(() => document.querySelector('.cards > li[data-id="3"] .filmTitle') === window.__unrelatedTitle)).toBe(true);
@@ -51,6 +51,7 @@ test("episode history renders in place among prose, preserves duplicates, and ed
   await expect(body.locator(".episode-entry")).toHaveCount(4);
   await expect(body.locator(".episode-timeline")).toHaveCount(2);
   await expect(body.locator(".episode-code")).toHaveText(["ep12", "ep43", "ep45", "s2 ep52"]);
+  await expect(card(page, 5).locator(".progress-now")).toHaveText("s2 ep52");
   await expect(body).toContainText("what a night!");
   await expect(body).toContainText("<b>still text</b> 2.30.2026 - ep99;");
   await expect(body.locator("b")).toHaveCount(0);

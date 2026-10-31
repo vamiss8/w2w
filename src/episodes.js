@@ -2,12 +2,12 @@
 // comment, an entry per evening, the month first. "9.25.2026 - ep2;" for a
 // show with one season, "8.20.2026 - s2ep10;" for one with several.
 //
-// a started card shows the next episode after the latest entry either of us
-// wrote down, or ep1 when there are none. +1 records the displayed episode as
-// watched in the comment of whoever pressed it, then advances the display. an
-// evening has one entry: a second +1 on the same day moves that day's entry
-// on rather than adding another. it all stays plain text, so a new season, or
-// a mistake, is fixed the way it always was, by editing the comment.
+// a started card and the latest entry either of us wrote down show the same
+// stopping point: the episode to resume from, or ep1 when there are no entries.
+// +1 marks the displayed episode as watched and saves the next stopping point
+// in the comment of whoever pressed it. an evening has one entry: a second +1
+// on the same day moves that day's entry on; a new day adds a new entry. it all
+// stays plain text, so a new season or a mistake is fixed by editing the comment.
 
 import { remoteInsertLog, remoteSaveComment } from "./db.js";
 import { getCard, getComment, putComment } from "./store.js";
@@ -68,24 +68,24 @@ export function nextAfter(latest) {
   return latest ? { season: latest.season, episode: latest.episode + 1 } : { season: null, episode: 1 };
 }
 
-// the line on a started card: what to watch next, and the button that logs it
+// the line on a started card: our saved stopping point, and the button to move on
 export function progressLine(row) {
   const latest = furthest([getComment(row.id, "vlad"), getComment(row.id, "vika")]);
-  const next = nextAfter(latest);
+  const current = latest || { season: null, episode: 1 };
 
   const box = document.createElement("div");
   box.className = "progress";
 
   const now = document.createElement("span");
   now.className = "progress-now";
-  now.textContent = spoken(next);
-  now.dataset.hint = "the next episode to watch";
+  now.textContent = spoken(current);
+  now.dataset.hint = "the episode where we stopped";
   box.appendChild(now);
 
   if (latest) {
     const when = document.createElement("span");
     when.className = "progress-when";
-    when.textContent = `last watched ${latest.date.getMonth() + 1}/${latest.date.getDate()}`;
+    when.textContent = `stopped ${latest.date.getMonth() + 1}/${latest.date.getDate()}`;
     box.appendChild(when);
   }
 
@@ -94,8 +94,8 @@ export function progressLine(row) {
   button.type = "button";
   button.disabled = pending.has(String(row.id));
   button.textContent = "+1 ep";
-  button.setAttribute("aria-label", `we watched ${spoken(next)}`);
-  button.dataset.hint = `we watched ${spoken(next)}: it goes into your comment, dated today`;
+  button.setAttribute("aria-label", `we watched ${spoken(current)}`);
+  button.dataset.hint = `we watched ${spoken(current)}: save ${spoken(nextAfter(current))} as today's stopping point`;
   box.appendChild(button);
 
   return box;
@@ -107,7 +107,8 @@ async function nextEpisode(button) {
   const row = id && getCard(id);
   if (!me || !row || pending.has(id)) return;
 
-  const next = nextAfter(furthest([getComment(id, "vlad"), getComment(id, "vika")]));
+  const current = furthest([getComment(id, "vlad"), getComment(id, "vika")]) || { season: null, episode: 1 };
+  const next = nextAfter(current);
   const text = withEpisode(getComment(id, me), next);
   const hadFocus = document.activeElement === button;
 
@@ -119,7 +120,7 @@ async function nextEpisode(button) {
       return;
     }
     putComment(id, me, text);
-    await remoteInsertLog("episode", { title: row.title, episode: codeOf(next) }, id);
+    await remoteInsertLog("episode", { title: row.title, episode: codeOf(current) }, id);
   } finally {
     pending.delete(id);
     const current = document.querySelector(`.cards > li[data-id="${id}"] .ep-next`);
