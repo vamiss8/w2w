@@ -23,8 +23,11 @@ The site: https://w2w-35k.pages.dev
 - **Hearts.** Each of us rates a watched card out of ten, in our own row only.
 - **Comments**, one per card for each of us. They also keep how far into a
   series we are, an entry per evening (`9.25.2026 - ep2;`), and **+1** on a
-  started card records the episode shown as watched. The card shows what to
-  watch next: `ep1` before any entries, or `ep7` after logging `ep6`.
+  started card marks the episode shown as watched and saves the next stopping
+  point. The card and latest comment entry show the same episode to resume
+  from, starting at `ep1` before any entries. Two clicks on October 30 save
+  `10.30.2026 - ep3;`; three more on October 31 add `10.31.2026 - ep6;`.
+  Clicks on the same day update its entry; earlier dates and prose stay intact.
 - **Search, filters and a pick for tonight**: one card at random from what the
   list shows.
 - **Something new**: live TMDB discovery for films, series and Japanese
@@ -208,9 +211,12 @@ License. Details in [THIRD_PARTY.md](THIRD_PARTY.md).
   в своей строке.
 - **Комментарии**, по одному на карточку у каждого из нас. В них же хранится,
   докуда мы досмотрели сериал, по записи на вечер (`9.25.2026 - ep2;`), а
-  **+1** на начатой карточке записывает показанный эпизод как просмотренный.
-  Карточка показывает, что смотреть дальше: `ep1` без записей или `ep7`
-  после записи о просмотренном `ep6`.
+  **+1** на начатой карточке отмечает показанный эпизод просмотренным и
+  сохраняет следующий как точку остановки. Карточка и последняя запись в
+  комментарии показывают один эпизод, с которого продолжать; без записей это
+  `ep1`. Два нажатия 30 октября сохраняют `10.30.2026 - ep3;`, ещё три
+  31 октября добавляют `10.31.2026 - ep6;`. Нажатия в один день обновляют
+  его запись; предыдущие даты и обычный текст сохраняются.
 - **Поиск, фильтры и выбор на вечер**: одна случайная карточка из тех, что
   показывает список.
 - **Something new**: поиск новых фильмов, сериалов и японской анимации через
