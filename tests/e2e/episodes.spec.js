@@ -1,6 +1,5 @@
-// +1 episode: how far into a series we are, read from the comments it was
-// always kept in, and moved on by writing the next entry into the comment of
-// whoever pressed it.
+// A started card shows what to watch next. +1 records that episode as watched
+// in the caller's comment, then advances the card without changing history.
 
 import { FIXTURES, card, db, expect, openAsGuest, requests, signIn, test } from "./site.js";
 
@@ -11,25 +10,26 @@ const today = page => page.evaluate(() => {
   return { entry: `${d.getMonth() + 1}.${d.getDate()}.${d.getFullYear()}`, short: `${d.getMonth() + 1}/${d.getDate()}` };
 });
 
-test("a started card shows the furthest entry either of us wrote down", async ({ page }) => {
+test("a started card shows the episode after the latest entry either of us wrote down", async ({ page }) => {
   await signIn(page, "vika");
-  await expect(progress(page, 5).locator(".progress-now")).toHaveText("ep6");
-  await expect(progress(page, 5).locator(".progress-when")).toHaveText("on 10/1");
-  await expect(progress(page, 21).locator(".progress-now")).toHaveText("s3 ep2");
-  await expect(progress(page, 11).locator(".progress-now")).toHaveText("no episode yet");
+  await expect(progress(page, 5).locator(".progress-now")).toHaveText("ep7");
+  await expect(progress(page, 5).locator(".progress-when")).toHaveText("last watched 10/1");
+  await expect(progress(page, 21).locator(".progress-now")).toHaveText("s3 ep3");
+  await expect(progress(page, 11).locator(".progress-now")).toHaveText("ep1");
 
   // only a started card has one
   await expect(progress(page, 3)).toHaveCount(0);
   await expect(page.locator(".progress")).toHaveCount(FIXTURES.cards.filter(c => c.state === "started").length);
 });
 
-test("+1 writes the next episode into your own comment, and logs it", async ({ page }) => {
+test("+1 records the displayed episode in your own comment and activity, then shows the next one", async ({ page }) => {
   await signIn(page, "vika");
   const { entry, short } = await today(page);
 
   await progress(page, 21).locator(".ep-next").click();
-  await expect(progress(page, 21).locator(".progress-now")).toHaveText("s3 ep3");
-  await expect(progress(page, 21).locator(".progress-when")).toHaveText(`on ${short}`);
+  await expect(progress(page, 21).locator(".progress-now")).toHaveText("s3 ep4");
+  await expect(progress(page, 21).locator(".progress-when")).toHaveText(`last watched ${short}`);
+  await expect(progress(page, 21).locator(".ep-next")).toHaveAttribute("aria-label", "we watched s3 ep4");
   expect(await comment(page, 21, "vika")).toBe(`${entry} - s3ep3;`);
 
   // vlad's comment, where the earlier entries are, is left alone
@@ -46,9 +46,9 @@ test("a second +1 the same evening moves that evening's entry on", async ({ page
   const before = FIXTURES.comments.find(c => c.card_id === 5 && c.author === "vlad").body;
 
   await progress(page, 5).locator(".ep-next").click();
-  await expect(progress(page, 5).locator(".progress-now")).toHaveText("ep7");
-  await progress(page, 5).locator(".ep-next").click();
   await expect(progress(page, 5).locator(".progress-now")).toHaveText("ep8");
+  await progress(page, 5).locator(".ep-next").click();
+  await expect(progress(page, 5).locator(".progress-now")).toHaveText("ep9");
 
   expect(await comment(page, 5, "vlad")).toBe(`${before} ${entry} - ep8;`);
 });
@@ -56,8 +56,9 @@ test("a second +1 the same evening moves that evening's entry on", async ({ page
 test("a series with no entries starts at the first episode", async ({ page }) => {
   await signIn(page, "vlad");
   const { entry } = await today(page);
-  await progress(page, 11).locator(".ep-next").click();
   await expect(progress(page, 11).locator(".progress-now")).toHaveText("ep1");
+  await progress(page, 11).locator(".ep-next").click();
+  await expect(progress(page, 11).locator(".progress-now")).toHaveText("ep2");
   expect(await comment(page, 11, "vlad")).toBe(`${entry} - ep1;`);
 });
 
@@ -66,7 +67,28 @@ test("a +1 the database refused says so, and changes nothing", async ({ page }) 
   await page.evaluate(() => window.__fake.failNext("POST", "comments"));
   await progress(page, 5).locator(".ep-next").click();
   await expect(page.locator("#toasts .toast")).toHaveText(["could not write down ep7, try again"]);
-  await expect(progress(page, 5).locator(".progress-now")).toHaveText("ep6");
+  await expect(progress(page, 5).locator(".progress-now")).toHaveText("ep7");
+});
+
+test("creating a started series shows ep1 without logging it, then +1 records ep1 and shows ep2", async ({ page }) => {
+  await signIn(page, "vlad");
+  await page.locator("[data-add]").click();
+  await page.locator("#cardTitle").fill("A fresh series");
+  await page.locator("#cardState").selectOption("started");
+  await page.locator("#cardSave").click();
+
+  const created = page.locator(".cards > li", { hasText: "A fresh series" });
+  await expect(created.locator(".progress-now")).toHaveText("ep1");
+  await expect(created.locator(".progress-when")).toHaveCount(0);
+  await expect(created.locator(".comment-toggle")).toHaveCount(0);
+  const id = Number(await created.getAttribute("data-id"));
+  expect(await comment(page, id, "vlad")).toBeUndefined();
+  await expect(created.locator(".ep-next")).toHaveAttribute("aria-label", "we watched ep1");
+
+  const { entry } = await today(page);
+  await created.locator(".ep-next").click();
+  await expect(created.locator(".progress-now")).toHaveText("ep2");
+  expect(await comment(page, id, "vlad")).toBe(`${entry} - ep1;`);
 });
 
 test("a guest sees no episodes: they come out of our comments", async ({ page }) => {

@@ -23,7 +23,8 @@ The site: https://w2w-35k.pages.dev
 - **Hearts.** Each of us rates a watched card out of ten, in our own row only.
 - **Comments**, one per card for each of us. They also keep how far into a
   series we are, an entry per evening (`9.25.2026 - ep2;`), and **+1** on a
-  started card writes the next one down.
+  started card records the episode shown as watched. The card shows what to
+  watch next: `ep1` before any entries, or `ep7` after logging `ep6`.
 - **Search, filters and a pick for tonight**: one card at random from what the
   list shows.
 - **Something new**: live TMDB discovery for films, series and Japanese
@@ -207,7 +208,9 @@ License. Details in [THIRD_PARTY.md](THIRD_PARTY.md).
   в своей строке.
 - **Комментарии**, по одному на карточку у каждого из нас. В них же хранится,
   докуда мы досмотрели сериал, по записи на вечер (`9.25.2026 - ep2;`), а
-  **+1** на начатой карточке дописывает следующую.
+  **+1** на начатой карточке записывает показанный эпизод как просмотренный.
+  Карточка показывает, что смотреть дальше: `ep1` без записей или `ep7`
+  после записи о просмотренном `ep6`.
 - **Поиск, фильтры и выбор на вечер**: одна случайная карточка из тех, что
   показывает список.
 - **Something new**: поиск новых фильмов, сериалов и японской анимации через

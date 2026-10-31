@@ -2,8 +2,9 @@
 // comment, an entry per evening, the month first. "9.25.2026 - ep2;" for a
 // show with one season, "8.20.2026 - s2ep10;" for one with several.
 //
-// a started card shows the furthest entry either of us wrote down, and +1
-// writes the episode after it into the comment of whoever pressed it. an
+// a started card shows the next episode after the latest entry either of us
+// wrote down, or ep1 when there are none. +1 records the displayed episode as
+// watched in the comment of whoever pressed it, then advances the display. an
 // evening has one entry: a second +1 on the same day moves that day's entry
 // on rather than adding another. it all stays plain text, so a new season, or
 // a mistake, is fixed the way it always was, by editing the comment.
@@ -67,7 +68,7 @@ export function nextAfter(latest) {
   return latest ? { season: latest.season, episode: latest.episode + 1 } : { season: null, episode: 1 };
 }
 
-// the line on a started card: where we are, and the button that moves it on
+// the line on a started card: what to watch next, and the button that logs it
 export function progressLine(row) {
   const latest = furthest([getComment(row.id, "vlad"), getComment(row.id, "vika")]);
   const next = nextAfter(latest);
@@ -77,13 +78,14 @@ export function progressLine(row) {
 
   const now = document.createElement("span");
   now.className = "progress-now";
-  now.textContent = latest ? spoken(latest) : "no episode yet";
+  now.textContent = spoken(next);
+  now.dataset.hint = "the next episode to watch";
   box.appendChild(now);
 
   if (latest) {
     const when = document.createElement("span");
     when.className = "progress-when";
-    when.textContent = `on ${latest.date.getMonth() + 1}/${latest.date.getDate()}`;
+    when.textContent = `last watched ${latest.date.getMonth() + 1}/${latest.date.getDate()}`;
     box.appendChild(when);
   }
 

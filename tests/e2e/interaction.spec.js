@@ -16,7 +16,7 @@ test("+1 keeps the list attached, its scroll position, and its other cards uncha
   });
   const url = page.url();
   await card(page, 5).locator(".ep-next").click();
-  await expect(card(page, 5).locator(".progress-now")).toHaveText("ep7");
+  await expect(card(page, 5).locator(".progress-now")).toHaveText("ep8");
   expect(page.url()).toBe(url);
   expect(await page.evaluate(() => window.__movedCards)).toEqual([]);
   expect(await page.evaluate(() => document.querySelector('.cards > li[data-id="3"] .filmTitle') === window.__unrelatedTitle)).toBe(true);
